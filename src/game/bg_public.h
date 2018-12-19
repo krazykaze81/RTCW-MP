@@ -171,6 +171,8 @@ typedef enum {
 #define CS_TARGETEFFECT         35      //----(SA)
 
 #define CS_WOLFINFO             36      // NERVE - SMF
+#define CS_VERSIONINFO          37      // Versioning info for demo playback compatibility //original ET-OSP value was 30
+#define CS_REINFSEEDS           38      // Reinforcement seeds // original ET-OSP value was 31
 
 #define CS_MODELS               64
 #define CS_SOUNDS               ( CS_MODELS + MAX_MODELS )
@@ -448,7 +450,9 @@ typedef enum {
 	PW_BLUEFLAG,
 	PW_BALL,
 
-	PW_NUM_POWERUPS
+	PW_NUM_POWERUPS,
+	PW_BLACKOUT = 14,       // OSP - spec blackouts. FIXME: we don't need 32bits here...relocate
+	PW_MVCLIENTLIST = 15   // OSP - MV client info.. need a full 32 bits
 } powerup_t;
 
 typedef enum {
@@ -1095,6 +1099,45 @@ typedef enum {
 // How many players on the overlay
 #define TEAM_MAXOVERLAY     8
 
+// OSP - weapon stat info: mapping between MOD_ and WP_ types (FIXME for new ET weapons)
+typedef enum extWeaponStats_s
+{
+	WS_KNIFE,               // 0
+	WS_LUGER,               // 1
+	WS_COLT,                // 2
+	WS_MP40,                // 3
+	WS_THOMPSON,            // 4
+	WS_STEN,                // 5
+	WS_FG42,                // 6	-- Also includes WS_BAR (allies version of fg42)
+	WS_PANZERFAUST,         // 7
+	WS_FLAMETHROWER,        // 8
+	WS_GRENADE,             // 9	-- Includes axis and allies grenade types
+	WS_MORTAR,              // 10
+	WS_DYNAMITE,            // 11
+	WS_AIRSTRIKE,           // 12	-- Lt. smoke grenade attack
+	WS_ARTILLERY,           // 13	-- Lt. binocular attack
+	WS_SYRINGE,             // 14	-- Medic syringe uses/successes
+
+	WS_SMOKE,               // 15
+	WS_SATCHEL,             // 16
+	WS_GRENADELAUNCHER,     // 17
+	WS_LANDMINE,            // 18
+	WS_MG42,                // 19
+	WS_GARAND,              // 20 // Gordon: (carbine and garand)
+	WS_K43,                 // 21 // Gordon: (kar98 and k43)
+
+	WS_MAX
+} extWeaponStats_t;
+
+typedef struct {
+	qboolean fHasHeadShots;
+	const char *pszCode;
+	const char *pszName;
+} weap_ws_t;
+
+extern const weap_ws_t aWeaponInfo[WS_MAX];
+// -OSP
+
 // means of death
 typedef enum {
 	MOD_UNKNOWN,
@@ -1183,7 +1226,12 @@ typedef enum {
 	MOD_ENGINEER,   // not sure if we'll use
 	MOD_MEDIC,      // these like this or not
 //
-	MOD_BAT
+	MOD_BAT,
+
+	// OSP -- keep these 2 entries last
+	MOD_SWITCHTEAM,
+
+	MOD_NUM_MODS
 
 } meansOfDeath_t;
 

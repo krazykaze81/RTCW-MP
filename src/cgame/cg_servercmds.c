@@ -177,6 +177,7 @@ NERVE - SMF
 ==================
 */
 void CG_ParseWolfinfo( void ) {
+	int old_gs = cgs.gamestate;
 	const char  *info;
 
 	info = CG_ConfigString( CS_WOLFINFO );
@@ -184,8 +185,21 @@ void CG_ParseWolfinfo( void ) {
 	cgs.currentRound = atoi( Info_ValueForKey( info, "g_currentRound" ) );
 	cgs.nextTimeLimit = atof( Info_ValueForKey( info, "g_nextTimeLimit" ) );
 	cgs.gamestate = atoi( Info_ValueForKey( info, "gamestate" ) );
+
+	// OSP - Announce game in progress if we are really playing
+	if (old_gs != GS_PLAYING && cgs.gamestate == GS_PLAYING) {
+		//		if(cg_announcer.integer > 0) trap_S_StartLocalSound(cgs.media.countFight, CHAN_ANNOUNCER);
+		Pri("^1FIGHT!\n");
+		CPri("^1FIGHT!\n");
+	}
+
 	if ( !cgs.localServer ) {
 		trap_Cvar_Set( "gamestate", va( "%i", cgs.gamestate ) );
+	}
+
+	// OSP
+	if (old_gs != GS_WARMUP_COUNTDOWN && cgs.gamestate == GS_WARMUP_COUNTDOWN) {
+		CG_ParseWarmup();
 	}
 }
 
@@ -297,6 +311,11 @@ void CG_SetConfigValues( void ) {
 	}
 #endif
 	cg.warmup = atoi( CG_ConfigString( CS_WARMUP ) );
+
+	// OSP
+	CG_ParseServerVersionInfo(CG_ConfigString(CS_VERSIONINFO));
+	CG_ParseReinforcementTimes(CG_ConfigString(CS_REINFSEEDS));
+	// OSP
 }
 
 /*
@@ -431,6 +450,11 @@ static void CG_ConfigStringModified( void ) {
 //----(SA)
 	} else if ( num == CS_SHADERSTATE )   {
 		CG_ShaderStateChanged();
+	} else if (num == CS_VERSIONINFO) {
+		CG_ParseServerVersionInfo(str);         // OSP - set versioning info for older demo playback
+	}
+	else if (num == CS_REINFSEEDS) {
+		CG_ParseReinforcementTimes(str);        // OSP - set reinforcement times for each team
 	}
 }
 
@@ -1398,6 +1422,480 @@ const char* CG_LocalizeServerCommand( const char *buf ) {
 }
 // -NERVE - SMF
 
+// OSP
+void CG_wstatsParse_cmd(void) {
+	if (cg.showStats) {
+		if (cg.statsWindow == NULL
+			|| cg.statsWindow->id != WID_STATS
+			|| cg.statsWindow->inuse == qfalse
+			) {
+			CG_createStatsWindow();
+		}
+		else if (cg.statsWindow->state == WSTATE_SHUTDOWN) {
+			cg.statsWindow->state = WSTATE_START;
+			cg.statsWindow->time = trap_Milliseconds();
+		}
+
+		if (cg.statsWindow == NULL) {
+			cg.showStats = qfalse;
+		}
+		else {
+			cg.statsWindow->effects |= WFX_TEXTSIZING;
+			cg.statsWindow->lineCount = 0;
+			cg.windowCurrent = cg.statsWindow;
+			CG_parseWeaponStats_cmd(CG_printWindow);
+		}
+	}
+}
+
+void CG_topshotsParse_cmd(qboolean doBest) {
+	int iArg = 1;
+	int iWeap = atoi(CG_Argv(iArg++));
+	topshotStats_t *ts = &cgs.topshots;
+
+	ts->cWeapons = 0;
+
+	while (iWeap) {
+		int cnum = atoi(CG_Argv(iArg++));
+		int hits = atoi(CG_Argv(iArg++));
+		int atts = atoi(CG_Argv(iArg++));
+		int kills = atoi(CG_Argv(iArg++));
+		// rain - unused
+		//int deaths = atoi(CG_Argv(iArg++));
+		float acc = (atts > 0) ? (float)(hits * 100) / (float)atts : 0.0f;
+		char name[32];
+
+		// rain - bump up iArg since we didn't push it into deaths, above
+		iArg++;
+
+		if (ts->cWeapons < WS_MAX * 2) {
+			BG_cleanName(cgs.clientinfo[cnum].name, name, 17, qfalse);
+			Q_strncpyz(ts->strWS[ts->cWeapons++],
+				va("%-12s %5.1f %4d/%-4d %5d  %s",
+					aWeaponInfo[iWeap - 1].pszName,
+					acc, hits, atts,
+					kills,
+					name),
+				sizeof(ts->strWS[0]));
+		}
+
+		iWeap = atoi(CG_Argv(iArg++));
+	}
+}
+
+void CG_ParseWeaponStats(void) {
+	cgs.ccWeaponShots = atoi(CG_Argv(1));
+	cgs.ccWeaponHits = atoi(CG_Argv(2));
+}
+
+void CG_ParsePortalPos(void) {
+	int i;
+
+	cgs.ccCurrentCamObjective = atoi(CG_Argv(1));
+	cgs.ccPortalEnt = atoi(CG_Argv(8));
+
+	for (i = 0; i < 3; i++) {
+		cgs.ccPortalPos[i] = atoi(CG_Argv(i + 2));
+	}
+
+	for (i = 0; i < 3; i++) {
+		cgs.ccPortalAngles[i] = atoi(CG_Argv(i + 5));
+	}
+}
+
+
+// Cached stats
+void CG_parseWeaponStatsGS_cmd(void) {
+	clientInfo_t *ci;
+	gameStats_t *gs = &cgs.gamestats;
+	int i, iArg = 1;
+	int nClientID = atoi(CG_Argv(iArg++));
+	int nRounds = atoi(CG_Argv(iArg++));
+	int weaponMask = atoi(CG_Argv(iArg++));
+	int skillMask, xp = 0;
+
+	gs->cWeapons = 0;
+	gs->cSkills = 0;
+	gs->fHasStats = qfalse;
+
+	gs->nClientID = nClientID;
+	gs->nRounds = nRounds;
+
+	ci = &cgs.clientinfo[nClientID];
+
+	//	Q_strncpyz(strName, ci->name, sizeof(strName));
+	//	BG_cleanName(cgs.clientinfo[gs->nClientID].name, strName, sizeof(strName), qfalse);
+
+	if (weaponMask != 0) {
+		char strName[MAX_STRING_CHARS];
+
+		for (i = WS_KNIFE; i < WS_MAX; i++) {
+			if (weaponMask & (1 << i)) {
+				int nHits = atoi(CG_Argv(iArg++));
+				int nShots = atoi(CG_Argv(iArg++));
+				int nKills = atoi(CG_Argv(iArg++));
+				int nDeaths = atoi(CG_Argv(iArg++));
+				int nHeadshots = atoi(CG_Argv(iArg++));
+
+				Q_strncpyz(strName, va("%-12s  ", aWeaponInfo[i].pszName), sizeof(strName));
+				if (nShots > 0 || nHits > 0) {
+					Q_strcat(strName, sizeof(strName), va("%5.1f %4d/%-4d ",
+						((nShots == 0) ? 0.0 : (float)(nHits * 100.0 / (float)nShots)),
+						nHits, nShots));
+				}
+				else {
+					Q_strcat(strName, sizeof(strName), va("                "));
+				}
+
+				Q_strncpyz(gs->strWS[gs->cWeapons++],
+					va("%s%5d %6d%s", strName, nKills, nDeaths, ((aWeaponInfo[i].fHasHeadShots) ? va(" %9d", nHeadshots) : "")),
+					sizeof(gs->strWS[0]));
+
+				if (nShots > 0 || nHits > 0 || nKills > 0 || nDeaths) {
+					gs->fHasStats = qtrue;
+				}
+			}
+		}
+
+		if (gs->fHasStats) {
+			int dmg_given = atoi(CG_Argv(iArg++));
+			int dmg_rcvd = atoi(CG_Argv(iArg++));
+			int team_dmg = atoi(CG_Argv(iArg++));
+
+			Q_strncpyz(gs->strExtra[0], va("Damage Given: %-6d  Team Damage: %d", dmg_given, team_dmg), sizeof(gs->strExtra[0]));
+			Q_strncpyz(gs->strExtra[1], va("Damage Recvd: %d", dmg_rcvd), sizeof(gs->strExtra[0]));
+		}
+	}
+
+	// Derive XP from individual skill XP
+	skillMask = atoi(CG_Argv(iArg++));
+	for (i = SK_BATTLE_SENSE; i < SK_NUM_SKILLS; i++) {
+		if (skillMask & (1 << i)) {
+			ci->skillpoints[i] = atoi(CG_Argv(iArg++));
+			xp += ci->skillpoints[i];
+		}
+	}
+
+	Q_strncpyz(gs->strRank, va("%-13s %d", ((ci->team == TEAM_AXIS) ? rankNames_Axis : rankNames_Allies)[ci->rank], xp), sizeof(gs->strRank));
+
+	if (skillMask != 0) {
+		char *str;
+
+		for (i = SK_BATTLE_SENSE; i < SK_NUM_SKILLS; i++) {
+
+			if ((skillMask & (1 << i)) == 0) {
+				continue;
+			}
+
+			if (ci->skill[i] < NUM_SKILL_LEVELS - 1) {
+				str = va("%4d/%-4d", ci->skillpoints[i], skillLevels[ci->skill[i] + 1]);
+			}
+			else {
+				str = va("%d", ci->skillpoints[i]);
+			}
+
+			if (cgs.gametype == GT_WOLF_CAMPAIGN) {
+				Q_strncpyz(gs->strSkillz[gs->cSkills++], va("%-15s %3d %s %12d", skillNames[i], ci->skill[i], str, ci->medals[i]), sizeof(gs->strSkillz[0]));
+			}
+			else {
+				Q_strncpyz(gs->strSkillz[gs->cSkills++], va("%-15s %3d %s", skillNames[i], ci->skill[i], str), sizeof(gs->strSkillz[0]));
+			}
+		}
+	}
+}
+
+
+// Client-side stat presentation
+void CG_parseWeaponStats_cmd(void(txt_dump)(char *)) {
+	clientInfo_t *ci;
+	qboolean fFull = (txt_dump != CG_printWindow);
+	qboolean fHasStats = qfalse;
+	char strName[MAX_STRING_CHARS];
+	int atts, deaths, dmg_given, dmg_rcvd, hits, kills, team_dmg, headshots;
+	unsigned int i, iArg = 1;
+	unsigned int nClient = atoi(CG_Argv(iArg++));
+	unsigned int nRounds = atoi(CG_Argv(iArg++));
+	unsigned int dwWeaponMask = atoi(CG_Argv(iArg++));
+	unsigned int dwSkillPointMask, xp = 0;
+
+	ci = &cgs.clientinfo[nClient];
+
+	Q_strncpyz(strName, ci->name, sizeof(strName));
+	BG_cleanName(cgs.clientinfo[nClient].name, strName, sizeof(strName), qfalse);
+	txt_dump(va("^7Overall stats for: ^3%s ^7(^2%d^7 Round%s)\n\n", strName, nRounds, ((nRounds != 1) ? "s" : "")));
+	//	txt_dump(va("^7Overall stats for: ^3%s\n\n", strName));
+
+	if (fFull) {
+		txt_dump("Weapon     Acrcy Hits/Atts Kills Deaths Headshots\n");
+		txt_dump("-------------------------------------------------\n");
+	}
+	else {
+		txt_dump("Weapon     Acrcy Hits/Atts Kll Dth HS\n");
+		//txt_dump(     "-------------------------------------\n");
+		txt_dump("\n");
+	}
+
+	if (!dwWeaponMask) {
+		txt_dump("^3No weapon info available.\n");
+	}
+	else {
+		for (i = WS_KNIFE; i < WS_MAX; i++) {
+			if (dwWeaponMask & (1 << i)) {
+				hits = atoi(CG_Argv(iArg++));
+				atts = atoi(CG_Argv(iArg++));
+				kills = atoi(CG_Argv(iArg++));
+				deaths = atoi(CG_Argv(iArg++));
+				headshots = atoi(CG_Argv(iArg++));
+
+				Q_strncpyz(strName, va("^3%-9s: ", aWeaponInfo[i].pszName), sizeof(strName));
+				if (atts > 0 || hits > 0) {
+					fHasStats = qtrue;
+					Q_strcat(strName, sizeof(strName), va("^7%5.1f ^5%4d/%-4d ",
+						((atts == 0) ? 0.0 : (float)(hits * 100.0 / (float)atts)),
+						hits, atts));
+				}
+				else {
+					Q_strcat(strName, sizeof(strName), va("                "));
+					if (kills > 0 || deaths > 0) {
+						fHasStats = qtrue;
+					}
+				}
+
+				if (fFull) {
+					txt_dump(va("%s^2%5d ^1%6d%s\n", strName, kills, deaths, ((aWeaponInfo[i].fHasHeadShots) ? va(" ^3%9d", headshots) : "")));
+				}
+				else {
+					txt_dump(va("%s^2%3d ^1%3d%s\n", strName, kills, deaths, ((aWeaponInfo[i].fHasHeadShots) ? va(" ^3%2d", headshots) : "")));
+				}
+			}
+		}
+
+		if (fHasStats) {
+			dmg_given = atoi(CG_Argv(iArg++));
+			dmg_rcvd = atoi(CG_Argv(iArg++));
+			team_dmg = atoi(CG_Argv(iArg++));
+
+			if (!fFull) {
+				txt_dump("\n\n");
+			}
+
+			txt_dump(va("\n^3Damage Given: ^7%-6d  ^3Team Damage: ^7%d\n", dmg_given, team_dmg));
+			txt_dump(va("^3Damage Recvd: ^7%d\n", dmg_rcvd));
+		}
+	}
+
+	if (!fFull) {
+		txt_dump("\n\n\n");
+	}
+
+	// Derive XP from individual skill XP
+	dwSkillPointMask = atoi(CG_Argv(iArg++));
+	for (i = SK_BATTLE_SENSE; i < SK_NUM_SKILLS; i++) {
+		if (dwSkillPointMask & (1 << i)) {
+			ci->skillpoints[i] = atoi(CG_Argv(iArg++));
+			xp += ci->skillpoints[i];
+		}
+	}
+
+	txt_dump(va("\n^2Rank: ^7%s (%d XP)\n", ((ci->team == TEAM_AXIS) ? rankNames_Axis : rankNames_Allies)[ci->rank], xp));
+
+	if (!fFull) {
+		txt_dump("\n\n\n");
+	}
+
+	// Medals only in campaign mode
+	txt_dump(va("Skills         Level/Points%s\n", ((cgs.gametype == GT_WOLF_CAMPAIGN) ? "  Medals" : "")));
+	if (fFull) {
+		txt_dump(va("---------------------------%s\n", ((cgs.gametype == GT_WOLF_CAMPAIGN) ? "--------" : "")));
+	}
+	else {
+		txt_dump("\n");
+	}
+
+	if (dwSkillPointMask == 0) {
+		txt_dump("^3No skills acquired!\n");
+	}
+	else {
+		char *str;
+
+		for (i = SK_BATTLE_SENSE; i < SK_NUM_SKILLS; i++) {
+
+			if ((dwSkillPointMask & (1 << i)) == 0) {
+				continue;
+			}
+
+			if (ci->skill[i] < NUM_SKILL_LEVELS - 1) {
+				str = va("%d (%d/%d)", ci->skill[i], ci->skillpoints[i], skillLevels[ci->skill[i] + 1]);
+			}
+			else {
+				str = va("%d (%d)", ci->skill[i], ci->skillpoints[i]);
+			}
+
+			if (cgs.gametype == GT_WOLF_CAMPAIGN) {
+				txt_dump(va("%-14s ^3%-12s  ^2%6d\n", skillNames[i], str, ci->medals[i]));
+			}
+			else {
+				txt_dump(va("%-14s ^3%-12s\n", skillNames[i], str));
+			}
+		}
+	}
+}
+
+void CG_parseBestShotsStats_cmd(qboolean doTop, void(txt_dump)(char *)) {
+	int iArg = 1;
+	qboolean fFull = (txt_dump != CG_printWindow);
+
+	int iWeap = atoi(CG_Argv(iArg++));
+	if (!iWeap) {
+		txt_dump(va("^3No qualifying %sshot info available.\n", ((doTop) ? "top" : "bottom")));
+		return;
+	}
+
+	txt_dump(va("^2%s Match Accuracies:\n", (doTop) ? "BEST" : "WORST"));
+	if (fFull) {
+		txt_dump("\n^3WP   Acrcy Hits/Atts Kills Deaths\n");
+		txt_dump("-------------------------------------------------------------\n");
+	}
+	else {
+		txt_dump("^3WP   Acrcy Hits/Atts Kll Dth\n");
+		//	txt_dump(    "-------------------------------------------\n");
+		txt_dump("\n");
+	}
+
+	while (iWeap) {
+		int cnum = atoi(CG_Argv(iArg++));
+		int hits = atoi(CG_Argv(iArg++));
+		int atts = atoi(CG_Argv(iArg++));
+		int kills = atoi(CG_Argv(iArg++));
+		int deaths = atoi(CG_Argv(iArg++));
+		float acc = (atts > 0) ? (float)(hits * 100) / (float)atts : 0.0;
+		char name[32];
+
+		if (fFull) {
+			BG_cleanName(cgs.clientinfo[cnum].name, name, 30, qfalse);
+			txt_dump(va("^3%s ^7%5.1f ^5%4d/%-4d ^2%5d ^1%6d ^7%s\n",
+				aWeaponInfo[iWeap - 1].pszCode, acc, hits, atts, kills, deaths, name));
+		}
+		else {
+			BG_cleanName(cgs.clientinfo[cnum].name, name, 12, qfalse);
+			txt_dump(va("^3%s ^7%5.1f ^5%4d/%-4d ^2%3d ^1%3d ^7%s\n",
+				aWeaponInfo[iWeap - 1].pszCode, acc, hits, atts, kills, deaths, name));
+		}
+
+		iWeap = atoi(CG_Argv(iArg++));
+	}
+}
+
+void CG_parseTopShotsStats_cmd(qboolean doTop, void(txt_dump)(char *)) {
+	int i, iArg = 1;
+	int cClients = atoi(CG_Argv(iArg++));
+	int iWeap = atoi(CG_Argv(iArg++));
+	int wBestAcc = atoi(CG_Argv(iArg++));
+
+	txt_dump(va("Weapon accuracies for: ^3%s\n",
+		(iWeap >= WS_KNIFE && iWeap < WS_MAX) ? aWeaponInfo[iWeap].pszName : "UNKNOWN"));
+
+	txt_dump("\n^3  Acc Hits/Atts Kills Deaths\n");
+	txt_dump("----------------------------------------------------------\n");
+
+	if (!cClients) {
+		txt_dump("NO QUALIFYING WEAPON INFO AVAILABLE.\n");
+		return;
+	}
+
+	for (i = 0; i < cClients; i++) {
+		int cnum = atoi(CG_Argv(iArg++));
+		int hits = atoi(CG_Argv(iArg++));
+		int atts = atoi(CG_Argv(iArg++));
+		int kills = atoi(CG_Argv(iArg++));
+		int deaths = atoi(CG_Argv(iArg++));
+		float acc = (atts > 0) ? (float)(hits * 100) / (float)atts : 0.0;
+		const char* color = (((doTop) ? acc : ((float)wBestAcc) + 0.999) >= ((doTop) ? wBestAcc : acc)) ? "^3" : "^7";
+		char name[32];
+
+		BG_cleanName(cgs.clientinfo[cnum].name, name, 30, qfalse);
+		txt_dump(va("%s%5.1f ^5%4d/%-4d ^2%5d ^1%6d %s%s\n", color, acc, hits, atts, kills, deaths, color, name));
+	}
+}
+
+void CG_scores_cmd(void) {
+	const char *str = CG_Argv(1);
+
+	CG_Printf("[skipnotify]%s", str);
+	if (cgs.dumpStatsFile > 0) {
+		char s[MAX_STRING_CHARS];
+
+		BG_cleanName(str, s, sizeof(s), qtrue);
+		trap_FS_Write(s, strlen(s), cgs.dumpStatsFile);
+	}
+
+	if (trap_Argc() > 2) {
+		if (cgs.dumpStatsFile > 0) {
+			qtime_t ct;
+
+			trap_RealTime(&ct);
+			str = va("\nStats recorded: %02d:%02d:%02d (%02d %s %d)\n\n\n",
+				ct.tm_hour, ct.tm_min, ct.tm_sec,
+				ct.tm_mday, aMonths[ct.tm_mon], 1900 + ct.tm_year);
+
+			trap_FS_Write(str, strlen(str), cgs.dumpStatsFile);
+
+			CG_Printf("[cgnotify]\n^3>>> Stats recorded to: ^7%s\n\n", cgs.dumpStatsFileName);
+			trap_FS_FCloseFile(cgs.dumpStatsFile);
+			cgs.dumpStatsFile = 0;
+		}
+		cgs.dumpStatsTime = 0;
+	}
+}
+
+void CG_printFile(char *str) {
+	CG_Printf(str);
+	if (cgs.dumpStatsFile > 0) {
+		char s[MAX_STRING_CHARS];
+
+		BG_cleanName(str, s, sizeof(s), qtrue);
+		trap_FS_Write(s, strlen(s), cgs.dumpStatsFile);
+	}
+}
+
+void CG_dumpStats(void) {
+	qtime_t ct;
+	qboolean fDoScores = qfalse;
+	const char *info = CG_ConfigString(CS_SERVERINFO);
+	char *s = va("^3>>> %s: ^2%s\n\n", CG_TranslateString("Map"), Info_ValueForKey(info, "mapname"));
+
+	trap_RealTime(&ct);
+	// /me holds breath (using circular va() buffer)
+	if (cgs.dumpStatsFile == 0) {
+		fDoScores = qtrue;
+		cgs.dumpStatsFileName = va("stats/%d.%02d.%02d/%02d%02d%02d.txt",
+			1900 + ct.tm_year, ct.tm_mon + 1, ct.tm_mday,
+			ct.tm_hour, ct.tm_min, ct.tm_sec);
+	}
+
+	if (cgs.dumpStatsFile != 0) {
+		trap_FS_FCloseFile(cgs.dumpStatsFile);
+	}
+	trap_FS_FOpenFile(cgs.dumpStatsFileName, &cgs.dumpStatsFile, FS_APPEND);
+
+	CG_printFile(s);
+	CG_parseWeaponStats_cmd(CG_printFile);
+	if (cgs.dumpStatsFile == 0) {
+		CG_Printf("[cgnotify]\n^3>>> %s: %s\n\n", CG_TranslateString("Could not create logfile"), cgs.dumpStatsFileName);
+	}
+
+	// Daisy-chain to scores info
+	//	-- we play a game here for a statsall dump:
+	//		1. we still have more ws entries in the queue to parse
+	//		2. on the 1st ws entry, go ahead and send out the scores request
+	//		3. we'll just continue to parse the remaining ws entries and dump them to the log
+	//		   before the scores result would ever hit us.. thus, we still keep proper ordering :)
+	if (fDoScores) {
+		trap_SendClientCommand("scores");
+	}
+}
+// -OSP
+
 /*
 =================
 CG_ServerCommand
@@ -1437,6 +1935,11 @@ static void CG_ServerCommand( void ) {
 
 			if ( args == 4 ) {
 				s = va( "%s%s", CG_Argv( 3 ), s );
+			}
+
+			// OSP - for client logging
+			if (cg_printObjectiveInfo.integer > 0 && (args == 4 || atoi(CG_Argv(2)) > 1)) {
+				CG_Printf("[cgnotify]*** ^3INFO: ^5%s\n", CG_LocalizeServerCommand(CG_Argv(1)));
 			}
 
 			CG_PriorityCenterPrint( s, SCREEN_HEIGHT - ( SCREEN_HEIGHT * 0.25 ), SMALLCHAR_WIDTH, atoi( CG_Argv( 2 ) ) );
@@ -1570,6 +2073,31 @@ static void CG_ServerCommand( void ) {
 
 	if ( !strcmp( cmd, "map_restart" ) ) {
 		CG_MapRestart();
+		return;
+	}
+
+	// OSP - match stats
+	if (!Q_stricmp(cmd, "sc")) {
+		CG_scores_cmd();
+		return;
+	}
+
+	// OSP - weapon stats parsing
+	if (!Q_stricmp(cmd, "ws")) {
+		if (cgs.dumpStatsTime > cg.time) {
+			CG_dumpStats();
+		}
+		else {
+			CG_parseWeaponStats_cmd(CG_printConsoleString);
+			cgs.dumpStatsTime = 0;
+		}
+
+		return;
+	}
+
+	// OSP - "topshots"-related commands
+	if (!Q_stricmp(cmd, "astats")) {
+		CG_parseTopShotsStats_cmd(qtrue, CG_printConsoleString);
 		return;
 	}
 

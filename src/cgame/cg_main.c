@@ -2380,6 +2380,10 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 	CG_ParseServerinfo();
 	CG_ParseWolfinfo();     // NERVE - SMF
 
+	// OSP
+	CG_ParseServerVersionInfo(CG_ConfigString(CS_VERSIONINFO));
+	CG_ParseReinforcementTimes(CG_ConfigString(CS_REINFSEEDS));
+
 	// load the new map
 	CG_LoadingString( "collision map" );
 
@@ -2438,6 +2442,10 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 	}
 	// jpw
 	// -NERVE - SMF
+
+	// OSP
+	cgs.dumpStatsFile = 0;
+	cgs.dumpStatsTime = 0;
 }
 
 /*
@@ -2452,3 +2460,6 @@ void CG_Shutdown( void ) {
 	// like closing files or archiving session data
 }
 
+void CG_printConsoleString(char *str) { // OSP
+	CG_Printf("[skipnotify]%s", str);
+}

@@ -117,6 +117,79 @@ If you have questions concerning this license or the applicable additional terms
 #define LIMBO_3D_H  312
 // -NERVE - SMF
 
+
+// MV overlay
+#define MVINFO_TEXTSIZE     10
+#define MVINFO_RIGHT        640 - 3
+#define MVINFO_TOP          100
+
+#define MAX_WINDOW_COUNT        10
+#define MAX_WINDOW_LINES        64
+
+#define MAX_STRINGS             80
+#define MAX_STRING_POOL_LENGTH  128
+
+#define WINDOW_FONTWIDTH    8       // For non-true-type: width to scale from
+#define WINDOW_FONTHEIGHT   8       // For non-true-type: height to scale from
+
+#define WID_NONE            0x00    // General window
+#define WID_STATS           0x01    // Stats (reusable due to scroll effect)
+#define WID_TOPSHOTS        0x02    // Top/Bottom-shots
+#define WID_MOTD            0x04    // MOTD
+//#define WID_DEMOHELP		0x08	// Demo key control info
+//#define WID_SPECHELP		0x10	// MV spectator key control info
+
+#define WFX_TEXTSIZING      0x01    // Size the window based on text/font setting
+#define WFX_FLASH           0x02    // Alternate between bg and b2 every half second
+#define WFX_TRUETYPE        0x04    // Use truetype fonts for text
+#define WFX_MULTIVIEW       0x08    // Multiview window
+// These need to be last
+#define WFX_FADEIN          0x10    // Fade the window in (and back out when closing)
+#define WFX_SCROLLUP        0x20    // Scroll window up from the bottom (and back down when closing)
+#define WFX_SCROLLDOWN      0x40    // Scroll window down from the top (and back up when closing)
+#define WFX_SCROLLLEFT      0x80    // Scroll window in from the left (and back right when closing)
+#define WFX_SCROLLRIGHT     0x100   // Scroll window in from the right (and back left when closing)
+
+#define WSTATE_COMPLETE     0x00    // Window is up with startup effects complete
+#define WSTATE_START        0x01    // Window is "initializing" w/effects
+#define WSTATE_SHUTDOWN     0x02    // Window is shutting down with effects
+#define WSTATE_OFF          0x04    // Window is completely shutdown
+
+#define MV_PID              0x00FF  // Bits available for player IDs for MultiView windows
+#define MV_SELECTED         0x0100  // MultiView selected window flag is the 9th bit
+
+typedef struct {
+	vec4_t colorBorder;         // Window border color
+	vec4_t colorBackground;     // Window fill color
+	vec4_t colorBackground2;    // Window fill color2 (for flashing)
+	int curX;                   // Scrolling X position
+	int curY;                   // Scrolling Y position
+	int effects;                // Window effects
+	int flashMidpoint;          // Flashing transition point (in ms)
+	int flashPeriod;            // Background flashing period (in ms)
+	int fontHeight;             // For non-truetype font drawing
+	float fontScaleX;           // Font scale factor
+	float fontScaleY;           // Font scale factor
+	int fontWidth;              // For non-truetype font drawing
+	float h;                    // Height
+	int id;                     // Window ID for special handling (i.e. stats, motd, etc.)
+	qboolean inuse;             // Activity flag
+	int lineCount;              // Number of lines to display
+	int lineHeight[MAX_WINDOW_LINES];   // Height property for each line
+	char *lineText[MAX_WINDOW_LINES];   // Text info
+	float m_x;                  // Mouse X position
+	float m_y;                  // Mouse Y position
+	int mvInfo;                 // lower 8 = player id, 9 = is_selected
+	int targetTime;             // Time to complete any defined effect
+	int state;                  // Current state of the window
+	int time;                   // Current window time
+	float w;                    // Width
+	float x;                    // Target x-coordinate
+								//    negative values will align the window from the right minus the (window width + offset(x))
+	float y;                    // Target y-coordinate
+								//    negative values will align the window from the bottom minus the (window height + offset(y))
+} cg_window_t;
+
 //=================================================
 
 // player entities need to track more information
@@ -998,7 +1071,27 @@ typedef struct {
 	char thirtySecondSound_a[MAX_QPATH];
 
 	pmoveExt_t pmext;
-	int demohelpWindow; // OSP
+
+	// OSP
+	qboolean showStats;
+	int demohelpWindow;
+	qboolean showStats;				
+	cg_window_t *statsWindow;
+	int aviDemoRate;                                    // Demo playback recording
+	int aReinfOffset[TEAM_NUM_TEAMS];                   // Team reinforcement offsets
+	int cursorUpdate;                                   // Timeout for mouse pointer view
+	fileHandle_t dumpStatsFile;                         // File to dump stats
+	char*               dumpStatsFileName;              // Name of file to dump stats
+	int dumpStatsTime;                                  // Next stats command that comes back will be written to a logfile
+	int game_versioninfo;                               // game base version
+	gameStats_t gamestats;
+	topshotStats_t topshots;
+	qboolean fResize;                                   // MV window "resize" status
+	qboolean fSelect;                                   // MV window "select" status
+	qboolean fKeyPressed[256];                          // Key status to get around console issues
+	int timescaleUpdate;                                // Timescale display for demo playback
+	int thirdpersonUpdate;
+	// -OSP
 } cg_t;
 
 #define NUM_FUNNEL_SPRITES  21
@@ -1598,6 +1691,22 @@ typedef struct {
 	int complaintClient;        // DHM - Nerve
 	int complaintEndTime;       // DHM - Nerve
 	float smokeWindDir; // JPW NERVE for smoke puffs & wind (arty, airstrikes, bullet impacts)
+
+	// OSP
+	int aviDemoRate;                                    // Demo playback recording
+	int aReinfOffset[TEAM_NUM_TEAMS];                   // Team reinforcement offsets
+	int cursorUpdate;                                   // Timeout for mouse pointer view
+	fileHandle_t dumpStatsFile;                         // File to dump stats
+	char*               dumpStatsFileName;              // Name of file to dump stats
+	int dumpStatsTime;                                  // Next stats command that comes back will be written to a logfile
+	int game_versioninfo;                               // game base version
+	gameStats_t gamestats;
+	topshotStats_t topshots;
+	qboolean fResize;                                   // MV window "resize" status
+	qboolean fSelect;                                   // MV window "select" status
+	qboolean fKeyPressed[256];                          // Key status to get around console issues
+	int timescaleUpdate;                                // Timescale display for demo playback
+	int thirdpersonUpdate;
 } cgs_t;
 
 //==============================================================================
@@ -1851,7 +1960,7 @@ qboolean CG_GetTag( int clientNum, char *tagname, orientation_t * or );
 qboolean CG_GetWeaponTag( int clientNum, char *tagname, orientation_t * or );
 
 qboolean CG_CheckCenterView();
-
+void CG_printConsoleString(char *str);
 //
 // cg_view.c
 //
@@ -2254,6 +2363,7 @@ void CG_DrawTourneyScoreboard( void );
 //
 qboolean CG_ConsoleCommand( void );
 void CG_InitConsoleCommands( void );
+void CG_dumpStats_f(void); // OSP
 
 //
 // cg_servercmds.c
@@ -2515,3 +2625,84 @@ void        CG_StartCamera( const char *name, qboolean startBlack );
 int         CG_LoadCamera( const char *name );
 void        CG_FreeCamera( int camNum );
 //----(SA)	end
+
+// OSP
+#define Pri( x ) CG_Printf( "[cgnotify]%s", CG_LocalizeServerCommand( x ) )
+#define CPri( x ) CG_CenterPrint( CG_LocalizeServerCommand( x ), SCREEN_HEIGHT - ( SCREEN_HEIGHT * 0.2 ), SMALLCHAR_WIDTH );
+
+// cg_multiview.c
+void CG_mvDelete_f(void);
+void CG_mvHideView_f(void);
+void CG_mvNew_f(void);
+void CG_mvShowView_f(void);
+void CG_mvSwapViews_f(void);
+void CG_mvToggleAll_f(void);
+void CG_mvToggleView_f(void);
+//
+cg_window_t *CG_mvClientLocate(int pID);
+void CG_mvCreate(int pID);
+cg_window_t *CG_mvCurrent(void);
+void CG_mvDraw(cg_window_t *sw);
+cg_window_t *CG_mvFindNonMainview(void);
+void CG_mvFree(int pID);
+void CG_mvMainviewSwap(cg_window_t *av);
+qboolean CG_mvMergedClientLocate(int pID);
+void CG_mvOverlayDisplay(void);
+void CG_mvOverlayUpdate(void);
+void CG_mvOverlayClientUpdate(int pID, int index);
+void CG_mvProcessClientList(void);
+void CG_mvTransitionPlayerState(playerState_t* ps);
+void CG_mvUpdateClientInfo(int pID);
+void CG_mvWindowOverlay(int pID, float b_x, float b_y, float b_w, float b_h, float s, int wState, qboolean fSelected);
+void CG_mvZoomBinoc(float x, float y, float w, float h);
+void CG_mvZoomSniper(float x, float y, float w, float h);
+
+// cg_window.c
+qboolean CG_addString(cg_window_t *w, char *buf);
+//void CG_createDemoHelpWindow(void);
+//void CG_createSpecHelpWindow(void);
+void CG_createStatsWindow(void);
+void CG_createTopShotsWindow(void);
+void CG_createWstatsMsgWindow(void);
+void CG_createWtopshotsMsgWindow(void);
+void CG_createMOTDWindow(void);
+void CG_cursorUpdate(void);
+void CG_initStrings(void);
+void CG_printWindow(char *str);
+void CG_removeStrings(cg_window_t *w);
+cg_window_t *CG_windowAlloc(int fx, int startupLength);
+void CG_windowDraw(void);
+void CG_windowFree(cg_window_t *w);
+void CG_windowInit(void);
+void CG_windowNormalizeOnText(cg_window_t *w);
+
+typedef struct cg_weaponstats_s {
+	int numKills;
+	int numHits;
+	int numShots;
+} cg_weaponstats_t;
+
+typedef struct {
+	char strWS[WS_MAX][MAX_STRING_TOKENS];
+	char strExtra[2][MAX_STRING_TOKENS];
+	char strRank[MAX_STRING_TOKENS];
+	char strSkillz[SK_NUM_SKILLS][MAX_STRING_TOKENS];
+	int cWeapons;
+	int cSkills;
+	qboolean fHasStats;
+	int nClientID;
+	int nRounds;
+	int fadeTime;
+	int show;
+	int requestTime;
+} gameStats_t;
+
+typedef struct {
+	char strWS[WS_MAX * 2][MAX_STRING_TOKENS];
+	int cWeapons;
+	int fadeTime;
+	int show;
+	int requestTime;
+} topshotStats_t;
+
+// -OSP

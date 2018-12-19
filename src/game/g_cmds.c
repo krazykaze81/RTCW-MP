@@ -2456,8 +2456,11 @@ void ClientCommand( int clientNum ) {
 		Cmd_Where_f( ent );
 	} else if ( Q_stricmp( cmd, "callvote" ) == 0 )  {
 		Cmd_CallVote_f( ent );
-	} else if ( Q_stricmp( cmd, "vote" ) == 0 )  {
-		Cmd_Vote_f( ent );
+	} else if (Q_stricmp(cmd, "vote") == 0) {
+		Cmd_Vote_f(ent);
+	} else if (Q_stricmp(cmd, "showstats") == 0) { // OSP
+		G_PrintAccuracyLog(ent);
+		return;
 	} else if ( Q_stricmp( cmd, "gc" ) == 0 )  {
 		Cmd_GameCommand_f( ent );
 	}
