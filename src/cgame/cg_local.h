@@ -104,6 +104,12 @@ If you have questions concerning this license or the applicable additional terms
 #define TJFL_NOPOLYMERGE    ( 1 << 5 )
 // done.
 
+// OSP
+// Autoaction values
+#define AA_DEMORECORD   0x01
+#define AA_SCREENSHOT   0x02
+#define AA_STATSDUMP    0x04
+
 // NERVE - SMF - limbo mode 3d view position
 #define LIMBO_3D_X  10
 #define LIMBO_3D_Y  158
@@ -974,6 +980,7 @@ typedef struct {
 	float cameraShakeScale;
 	float cameraShakeLength;
 
+	qboolean latchAutoActions; // OSP
 	qboolean latchVictorySound;
 	// -NERVE - SMF
 
@@ -991,7 +998,7 @@ typedef struct {
 	char thirtySecondSound_a[MAX_QPATH];
 
 	pmoveExt_t pmext;
-
+	int demohelpWindow; // OSP
 } cg_t;
 
 #define NUM_FUNNEL_SPRITES  21
@@ -1772,6 +1779,47 @@ extern vmCvar_t cg_quickMessageAlt;
 extern vmCvar_t cg_popupLimboMenu;
 extern vmCvar_t cg_descriptiveText;
 // -NERVE - SMF
+
+// OSP
+extern vmCvar_t authLevel;
+extern vmCvar_t cf_wstats;
+extern vmCvar_t cf_wtopshots;
+//extern vmCvar_t			cg_announcer;
+extern vmCvar_t cg_autoAction;
+extern vmCvar_t cg_autoReload;
+extern vmCvar_t cg_bloodDamageBlend;
+extern vmCvar_t cg_bloodFlash;
+extern vmCvar_t cg_complaintPopUp;
+extern vmCvar_t cg_crosshairAlpha;
+extern vmCvar_t cg_crosshairAlphaAlt;
+extern vmCvar_t cg_crosshairColor;
+extern vmCvar_t cg_crosshairColorAlt;
+extern vmCvar_t cg_crosshairPulse;
+extern vmCvar_t cg_drawReinforcementTime;
+extern vmCvar_t cg_drawWeaponIconFlash;
+extern vmCvar_t cg_muzzleFlash;
+extern vmCvar_t cg_noAmmoAutoSwitch;
+extern vmCvar_t cg_printObjectiveInfo;
+extern vmCvar_t cg_specHelp;
+extern vmCvar_t cg_specSwing;
+extern vmCvar_t cg_uinfo;
+extern vmCvar_t cg_useScreenshotJPEG;
+extern vmCvar_t ch_font;
+extern vmCvar_t demo_avifpsF1;
+extern vmCvar_t demo_avifpsF2;
+extern vmCvar_t demo_avifpsF3;
+extern vmCvar_t demo_avifpsF4;
+extern vmCvar_t demo_avifpsF5;
+extern vmCvar_t demo_drawTimeScale;
+extern vmCvar_t demo_infoWindow;
+extern vmCvar_t mv_sensitivity;
+// engine mappings
+extern vmCvar_t int_cl_maxpackets;
+extern vmCvar_t int_cl_timenudge;
+extern vmCvar_t int_m_pitch;
+extern vmCvar_t int_sensitivity;
+extern vmCvar_t int_ui_blackout;
+// -OSP
 
 // TTimo
 extern vmCvar_t cg_autoReload;

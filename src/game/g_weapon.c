@@ -1183,7 +1183,7 @@ int G_GetWeaponDamage( int weapon ) {
 		case WP_AKIMBO: return 18;      //----(SA)	added
 		case WP_VENOM_FULL: return 10;
 		case WP_VENOM: return 20;
-		case WP_MP40: return 14;
+		case WP_MP40: return 250;
 		case WP_THOMPSON: return 18;
 		case WP_STEN: return 14;
 		case WP_FG42SCOPE:

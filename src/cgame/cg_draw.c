@@ -2210,6 +2210,31 @@ static void CG_DrawIntermission( void ) {
 
 	cg.scoreFadeTime = cg.time;
 	CG_DrawScoreboard();
+
+	static int doScreenshot = 0, doDemostop = 0;
+	// OSP - End-of-level autoactions
+	if(!cg.demoPlayback) {
+		if(!cg.latchVictorySound) {
+			if(cg_autoAction.integer & AA_SCREENSHOT) {
+				doScreenshot = cg.time + 1000;
+			}
+			if(cg_autoAction.integer & AA_STATSDUMP) {
+				CG_dumpStats_f();
+			}
+			if((cg_autoAction.integer & AA_DEMORECORD) && (cgs.gametype == GT_WOLF_STOPWATCH && cgs.currentRound != 1)) {
+				doDemostop = cg.time + 5000;	// stats should show up within 5 seconds
+			}
+		}
+		if(doScreenshot > 0 && doScreenshot < cg.time) {
+			CG_autoScreenShot_f();
+			doScreenshot = 0;
+		}
+		if(doDemostop > 0 && doDemostop < cg.time) {
+			trap_SendConsoleCommand("stoprecord\n");
+			doDemostop = 0;
+		}
+	}
+	//-OSP
 }
 
 /*
