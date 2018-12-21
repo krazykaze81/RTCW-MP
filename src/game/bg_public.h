@@ -124,6 +124,11 @@ typedef enum {
 #define MAX_OID_TRIGGERS    16
 // dhm
 
+// OSP Multiview settings
+#define MAX_MVCLIENTS               32
+#define MV_SCOREUPDATE_INTERVAL     5000    // in msec
+// -OSP
+
 //
 // config strings are a general means of communicating variable length strings
 // from the server to all connected clients.
@@ -173,6 +178,7 @@ typedef enum {
 #define CS_WOLFINFO             36      // NERVE - SMF
 #define CS_VERSIONINFO          37      // Versioning info for demo playback compatibility //original ET-OSP value was 30
 #define CS_REINFSEEDS           38      // Reinforcement seeds // original ET-OSP value was 31
+#define CS_ENDGAME_STATS        39		// original ET-osp value was 37
 
 #define CS_MODELS               64
 #define CS_SOUNDS               ( CS_MODELS + MAX_MODELS )
@@ -187,7 +193,6 @@ typedef enum {
 #define CS_CLIPBOARDS           ( CS_DLIGHTS + MAX_DLIGHT_CONFIGSTRINGS )
 #define CS_SPLINES              ( CS_CLIPBOARDS + MAX_CLIPBOARD_CONFIGSTRINGS )
 #define CS_TAGCONNECTS          ( CS_SPLINES + MAX_SPLINE_CONFIGSTRINGS )
-
 #define CS_MAX                  ( CS_TAGCONNECTS + MAX_TAGCONNECTS )
 
 #if ( CS_MAX ) > MAX_CONFIGSTRINGS
@@ -253,6 +258,14 @@ typedef enum {
 	WEAPON_FIRINGALT,
 	WEAPON_RELOADING    //----(SA)	added
 } weaponstate_t;
+
+// OSP
+typedef enum {
+	WSTATE_IDLE,
+	WSTATE_SWITCH,
+	WSTATE_FIRE,
+	WSTATE_RELOAD
+} weaponstateCompact_t;
 
 // pmove->pm_flags	(sent as max 16 bits in msg.c)
 #define PMF_DUCKED          1
@@ -378,6 +391,7 @@ typedef enum {
 
 	PERS_ACCURACY_SHOTS,
 	PERS_ACCURACY_HITS,
+    PERS_REVIVE_COUNT, // KK - added this in case we can use in the stats
 
 	// Rafael - mg42		// (SA) I don't understand these here.  can someone explain?
 	PERS_HWEAPON_USE,
@@ -450,9 +464,10 @@ typedef enum {
 	PW_BLUEFLAG,
 	PW_BALL,
 
-	PW_NUM_POWERUPS,
 	PW_BLACKOUT = 14,       // OSP - spec blackouts. FIXME: we don't need 32bits here...relocate
-	PW_MVCLIENTLIST = 15   // OSP - MV client info.. need a full 32 bits
+	PW_MVCLIENTLIST = 15,   // OSP - MV client info.. need a full 32 bits
+
+	PW_NUM_POWERUPS
 } powerup_t;
 
 typedef enum {
@@ -476,6 +491,7 @@ typedef enum {
 	KEY_14,
 	KEY_15,
 	KEY_16,
+	KEY_LOCKED_PICKABLE, // KK added this in case we can use it - TDF: ent can be unlocked with the WP_LOCKPICK.
 	KEY_NUM_KEYS
 } wkey_t;           // conflicts with types.h
 
@@ -618,8 +634,8 @@ typedef enum {
 	WP_SMOKE_GRENADE,       // 45
 	// -NERVE - SMF
 	WP_BINOCULARS,          // 46
-
-	WP_NUM_WEAPONS          // 47   NOTE: this cannot be larger than 64 for AI/player weapons!
+	WP_MEDIC_ADRENALINE,    // 47 OSP
+	WP_NUM_WEAPONS          // 48 originally 47   NOTE: this cannot be larger than 64 for AI/player weapons!
 
 } weapon_t;
 
@@ -627,6 +643,48 @@ typedef enum {
 extern int weapBanksMultiPlayer[MAX_WEAP_BANKS_MP][MAX_WEAPS_IN_BANK_MP];
 // jpw
 
+
+
+// OSP
+typedef struct {
+	int kills, teamkills, killedby;
+} weaponStats_t;
+
+typedef enum {
+	HR_HEAD,
+	HR_ARMS,
+	HR_BODY,
+	HR_LEGS,
+	HR_NUM_HITREGIONS,
+} hitRegion_t;
+
+typedef enum {
+	SK_BATTLE_SENSE,
+	SK_EXPLOSIVES_AND_CONSTRUCTION,
+	SK_FIRST_AID,
+	SK_SIGNALS,
+	SK_LIGHT_WEAPONS,
+	SK_HEAVY_WEAPONS,
+	SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS,
+	SK_NUM_SKILLS
+} skillType_t;
+
+// KK do we need these in RtCW? Or is this part of the ET-XP functionality?
+extern const char* mpSkillNames[SK_NUM_SKILLS];       // KK renamed these to mp* to not conflict with SP SkilNames
+extern const char* mpSkillNamesLine1[SK_NUM_SKILLS];  // KK renamed these to mp* to not conflict with SP SkilNames
+extern const char* mpSkillNamesLine2[SK_NUM_SKILLS];  // KK renamed these to mp* to not conflict with SP SkilNames
+extern const char* mpMedalNames[SK_NUM_SKILLS];       // KK renamed these to mp* to not conflict with SP SkilNames
+
+#define NUM_SKILL_LEVELS 5
+extern const int mpSkillLevels[NUM_SKILL_LEVELS];     // KK renamed these to mp* to not conflict with SP
+
+typedef struct {
+	weaponStats_t weaponStats[WP_NUM_WEAPONS];
+	int suicides;
+	int hitRegions[HR_NUM_HITREGIONS];
+	int objectiveStats[MAX_OBJECTIVES];
+} playerStats_t;
+// -OSP
 typedef struct ammotable_s {
 	int maxammo;            //
 	int uses;               //
@@ -674,7 +732,7 @@ typedef enum {
 	WPOS_NUM_POSITIONS
 } pose_t;
 
-// reward sounds
+// reward sounds - from Quake3
 typedef enum {
 	REWARD_BAD,
 
@@ -1086,10 +1144,9 @@ typedef struct headAnimation_s {
 
 typedef enum {
 	TEAM_FREE,
-	TEAM_RED,
-	TEAM_BLUE,
+	TEAM_RED,   // KK - ET has TEAM_RED
+	TEAM_BLUE,  // KK - ET has TEAM_BLUE
 	TEAM_SPECTATOR,
-
 	TEAM_NUM_TEAMS
 } team_t;
 
@@ -1430,6 +1487,7 @@ typedef enum {
 	HINT_DISARM,            // DHM - Nerve
 	HINT_REVIVE,            // DHM - Nerve
 	HINT_DYNAMITE,          // DHM - Nerve
+	HINT_LOCKPICK, // KK - added this in case we can use it
 
 	HINT_BAD_USER,  // invisible user with no target
 
@@ -1759,3 +1817,12 @@ int BG_GetAnimScriptEvent( playerState_t *ps, scriptAnimEventTypes_t event );
 
 extern animStringItem_t animStateStr[];
 extern animStringItem_t animBodyPartsStr[];
+// OSP
+#define NUM_EXPERIENCE_LEVELS 11
+extern const char* rankNames_Axis[NUM_EXPERIENCE_LEVELS];
+extern const char* rankNames_Allies[NUM_EXPERIENCE_LEVELS];
+extern const char* miniRankNames_Axis[NUM_EXPERIENCE_LEVELS];
+extern const char* miniRankNames_Allies[NUM_EXPERIENCE_LEVELS];
+extern const char* rankSoundNames_Axis[NUM_EXPERIENCE_LEVELS];
+extern const char* rankSoundNames_Allies[NUM_EXPERIENCE_LEVELS];
+// -OSP

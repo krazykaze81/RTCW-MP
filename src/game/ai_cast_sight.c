@@ -389,7 +389,7 @@ void AICast_UpdateVisibility( gentity_t *srcent, gentity_t *destent, qboolean sh
 	}
 
 	// if they are friendly, then we should help them out if they are in trouble
-	if ( AICast_SameTeam( cs, destent->s.number ) && ( srcent->aiTeam == AITEAM_ALLIES || srcent->aiTeam == AITEAM_NAZI ) ) {
+	if ( AICast_SameTeam( cs, destent->s.number ) && ( srcent->aiTeam == AITEAM_BLUE || srcent->aiTeam == AITEAM_NAZI ) ) {
 		// if they are dead, we should check them out
 		if ( destent->health <= 0 ) {
 			// if we haven't already checked them out

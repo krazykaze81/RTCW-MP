@@ -44,7 +44,7 @@ If you have questions concerning this license or the applicable additional terms
 
 
 #define POWERUP_BLINKS      5
-
+#define STATS_FADE_TIME     200.0f
 #define POWERUP_BLINK_TIME  1000
 #define FADE_TIME           200
 #define PULSE_TIME          200
@@ -105,18 +105,20 @@ If you have questions concerning this license or the applicable additional terms
 // done.
 
 // OSP
+// OSP
 // Autoaction values
 #define AA_DEMORECORD   0x01
 #define AA_SCREENSHOT   0x02
 #define AA_STATSDUMP    0x04
 
-// NERVE - SMF - limbo mode 3d view position
-#define LIMBO_3D_X  10
-#define LIMBO_3D_Y  158
-#define LIMBO_3D_W  420
-#define LIMBO_3D_H  312
-// -NERVE - SMF
+// Cursor
+#define CURSOR_OFFSETX  13
+#define CURSOR_OFFSETY  12
 
+// Demo controls
+#define DEMO_THIRDPERSONUPDATE  0
+#define DEMO_RANGEDELTA         6
+#define DEMO_ANGLEDELTA         4
 
 // MV overlay
 #define MVINFO_TEXTSIZE     10
@@ -189,6 +191,106 @@ typedef struct {
 	float y;                    // Target y-coordinate
 								//    negative values will align the window from the bottom minus the (window height + offset(y))
 } cg_window_t;
+
+typedef struct {
+	qboolean fActive;
+	char str[MAX_STRING_POOL_LENGTH];
+} cg_string_t;
+
+typedef struct {
+	int activeWindows[MAX_WINDOW_COUNT];                // List of active windows
+	int numActiveWindows;                               // Number of active windows in use
+	cg_window_t window[MAX_WINDOW_COUNT];           // Static allocation of all windows
+} cg_windowHandler_t;
+
+typedef struct {
+	int pID;                    // Player ID
+	int classID;                // Player's current class
+	int width;                  // Width of text box
+	char info[8];               // On-screen info (w/color coding)
+	qboolean fActive;           // Overlay element is active
+	cg_window_t *w;         // Window handle (may be NULL)
+} cg_mvinfo_t;
+// -OSP
+
+// NERVE - SMF - limbo mode 3d view position
+#define LIMBO_3D_X  10
+#define LIMBO_3D_Y  158
+#define LIMBO_3D_W  420
+#define LIMBO_3D_H  312
+// -NERVE - SMF
+
+
+// MV overlay
+#define MVINFO_TEXTSIZE     10
+#define MVINFO_RIGHT        640 - 3
+#define MVINFO_TOP          100
+
+#define MAX_WINDOW_COUNT        10
+#define MAX_WINDOW_LINES        64
+
+#define MAX_STRINGS             80
+#define MAX_STRING_POOL_LENGTH  128
+
+#define WINDOW_FONTWIDTH    8       // For non-true-type: width to scale from
+#define WINDOW_FONTHEIGHT   8       // For non-true-type: height to scale from
+
+#define WID_NONE            0x00    // General window
+#define WID_STATS           0x01    // Stats (reusable due to scroll effect)
+#define WID_TOPSHOTS        0x02    // Top/Bottom-shots
+#define WID_MOTD            0x04    // MOTD
+//#define WID_DEMOHELP		0x08	// Demo key control info
+//#define WID_SPECHELP		0x10	// MV spectator key control info
+
+#define WFX_TEXTSIZING      0x01    // Size the window based on text/font setting
+#define WFX_FLASH           0x02    // Alternate between bg and b2 every half second
+#define WFX_TRUETYPE        0x04    // Use truetype fonts for text
+#define WFX_MULTIVIEW       0x08    // Multiview window
+// These need to be last
+#define WFX_FADEIN          0x10    // Fade the window in (and back out when closing)
+#define WFX_SCROLLUP        0x20    // Scroll window up from the bottom (and back down when closing)
+#define WFX_SCROLLDOWN      0x40    // Scroll window down from the top (and back up when closing)
+#define WFX_SCROLLLEFT      0x80    // Scroll window in from the left (and back right when closing)
+#define WFX_SCROLLRIGHT     0x100   // Scroll window in from the right (and back left when closing)
+
+#define WSTATE_COMPLETE     0x00    // Window is up with startup effects complete
+#define WSTATE_START        0x01    // Window is "initializing" w/effects
+#define WSTATE_SHUTDOWN     0x02    // Window is shutting down with effects
+#define WSTATE_OFF          0x04    // Window is completely shutdown
+
+#define MV_PID              0x00FF  // Bits available for player IDs for MultiView windows
+#define MV_SELECTED         0x0100  // MultiView selected window flag is the 9th bit
+
+// OSP
+typedef struct cg_weaponstats_s {
+	int numKills;
+	int numHits;
+	int numShots;
+} cg_weaponstats_t;
+
+typedef struct {
+	char strWS[WS_MAX][MAX_STRING_TOKENS];
+	char strExtra[2][MAX_STRING_TOKENS];
+	char strRank[MAX_STRING_TOKENS];
+	char strSkillz[SK_NUM_SKILLS][MAX_STRING_TOKENS];
+	int cWeapons;
+	int cSkills;
+	qboolean fHasStats;
+	int nClientID;
+	int nRounds;
+	int fadeTime;
+	int show;
+	int requestTime;
+} gameStats_t;
+
+typedef struct {
+	char strWS[WS_MAX * 2][MAX_STRING_TOKENS];
+	int cWeapons;
+	int fadeTime;
+	int show;
+	int requestTime;
+} topshotStats_t;
+// -OSP
 
 //=================================================
 
@@ -677,6 +779,22 @@ typedef struct {
 	char headModelName[MAX_QPATH];
 	gender_t gender;                // from model
 	// -NERVE - SMF
+
+	// OSP - per client MV ps info
+	int ammo;
+	int ammoclip;
+	int chargeTime;
+	qboolean fCrewgun;
+	int cursorHint;
+	int grenadeTimeLeft;                // Actual time remaining
+	int grenadeTimeStart;               // Time trigger base to compute TimeLeft
+	int hintTime;
+	int sprintTime;
+	int weapHeat;
+	int weaponState;
+	int weaponState_last;
+	// -OSP
+
 } clientInfo_t;
 
 
@@ -781,7 +899,6 @@ typedef struct {
 } viewDamage_t;
 
 //======================================================================
-
 // all cg.stepTime, cg.duckTime, cg.landTime, etc are set to cg.time when the action
 // occurs, and they will have visible effects for #define STEP_TIME or whatever msec after
 
@@ -789,6 +906,12 @@ typedef struct {
 
 #define MAX_SPAWN_VARS          64
 #define MAX_SPAWN_VARS_CHARS    2048
+
+typedef enum {
+	SHOW_OFF,
+	SHOW_SHUTDOWN,
+	SHOW_ON
+} showView_t;
 
 typedef struct {
 	int clientFrame;                // incremented each frame
@@ -1074,8 +1197,8 @@ typedef struct {
 
 	// OSP
 	qboolean showStats;
+	cg_string_t aStringPool[MAX_STRINGS];
 	int demohelpWindow;
-	qboolean showStats;				
 	cg_window_t *statsWindow;
 	int aviDemoRate;                                    // Demo playback recording
 	int aReinfOffset[TEAM_NUM_TEAMS];                   // Team reinforcement offsets
@@ -1091,6 +1214,50 @@ typedef struct {
 	qboolean fKeyPressed[256];                          // Key status to get around console issues
 	int timescaleUpdate;                                // Timescale display for demo playback
 	int thirdpersonUpdate;
+	cg_window_t         *motdWindow;
+	cg_window_t         *msgWstatsWindow;
+	cg_window_t         *msgWtopshotsWindow;
+	int mv_cnt;                                 // Number of active MV windows
+	int mvClientList;                           // Cached client listing of who is merged
+	cg_window_t         *mvCurrentActive;       // Client ID of current active window (-1 = none)
+	cg_window_t         *mvCurrentMainview;     // Client ID used in the main display (should always be set if mv_cnt > 0)
+	cg_mvinfo_t mvOverlay[MAX_MVCLIENTS];        // Cached info for MV overlay
+	int mvTeamList[TEAM_NUM_TEAMS][MAX_MVCLIENTS];
+	int mvTotalClients;                         // Total # of clients available for MV processing
+	int mvTotalTeam[TEAM_NUM_TEAMS];
+	refdef_t            *refdef_current;        // Handling of some drawing elements for MV
+	int spechelpWindow;
+	int statsRequestTime;
+	int topshotsRequestTime;
+	cg_window_t         *topshotsWindow;
+	cg_window_t         *windowCurrent;         // Current window to update.. a bit of a hack :p
+	cg_windowHandler_t winHandler;
+	vec4_t xhairColor;
+	vec4_t xhairColorAlt;
+	vec2_t ccMenuPos;
+	qboolean ccMenuShowing;
+	int ccMenuType;
+	//mapEntityData_t ccMenuEnt;
+	int ccSelectedLayer;
+	int ccSelectedObjective;
+	int ccSelectedTeam;                     // ( 1 = ALLIES, 0 = AXIS )
+	int ccSelectedWeaponNumber;
+	int ccSelectedClass;
+	int ccSelectedWeapon;
+	int ccSelectedWeapon2;
+	int ccWeaponShots;
+	int ccWeaponHits;
+	vec3_t ccPortalPos;
+	vec3_t ccPortalAngles;
+	int ccPortalEnt;
+	int ccFilter;
+	int ccCurrentCamObjective;
+	int ccRequestedObjective;
+	int ccLastObjectiveRequestTime;
+	int ltChargeTime[2];
+	int soldierChargeTime[2];
+	int engineerChargeTime[2];
+	int medicChargeTime[2];
 	// -OSP
 } cg_t;
 
@@ -1707,6 +1874,12 @@ typedef struct {
 	qboolean fKeyPressed[256];                          // Key status to get around console issues
 	int timescaleUpdate;                                // Timescale display for demo playback
 	int thirdpersonUpdate;
+	int ccCurrentCamObjective;
+	int ccPortalAngles;
+	int ccWeaponShots;
+	int ccWeaponHits;
+	int ccPortalEnt;
+	int ccPortalPos;
 } cgs_t;
 
 //==============================================================================
@@ -2675,34 +2848,5 @@ void CG_windowDraw(void);
 void CG_windowFree(cg_window_t *w);
 void CG_windowInit(void);
 void CG_windowNormalizeOnText(cg_window_t *w);
-
-typedef struct cg_weaponstats_s {
-	int numKills;
-	int numHits;
-	int numShots;
-} cg_weaponstats_t;
-
-typedef struct {
-	char strWS[WS_MAX][MAX_STRING_TOKENS];
-	char strExtra[2][MAX_STRING_TOKENS];
-	char strRank[MAX_STRING_TOKENS];
-	char strSkillz[SK_NUM_SKILLS][MAX_STRING_TOKENS];
-	int cWeapons;
-	int cSkills;
-	qboolean fHasStats;
-	int nClientID;
-	int nRounds;
-	int fadeTime;
-	int show;
-	int requestTime;
-} gameStats_t;
-
-typedef struct {
-	char strWS[WS_MAX * 2][MAX_STRING_TOKENS];
-	int cWeapons;
-	int fadeTime;
-	int show;
-	int requestTime;
-} topshotStats_t;
 
 // -OSP

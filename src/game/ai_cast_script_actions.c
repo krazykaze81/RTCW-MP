@@ -1924,7 +1924,7 @@ qboolean AICast_ScriptAction_ChangeLevel( cast_state_t *cs, char *params ) {
 				continue;
 			}
 
-			if ( ent->aiTeam == AITEAM_ALLIES ) {
+			if ( ent->aiTeam == AITEAM_BLUE ) {
 				continue;
 			}
 

@@ -75,7 +75,7 @@ void CG_createTopShotsWindow(void) {
 
 
 void CG_createMOTDWindow(void) {
-	const char *str = CG_ConfigString(CS_CUSTMOTD + 0);
+	const char *str = 0; // CG_ConfigString(CS_CUSTMOTD + 0);
 
 	if (str != NULL && *str != 0) {
 		int i;
@@ -97,7 +97,7 @@ void CG_createMOTDWindow(void) {
 
 		// Copy all MOTD info into the window
 		cg.windowCurrent = sw;
-		for (i = 0; i < MAX_MOTDLINES; i++) {
+z		/*for (i = 0; i < MAX_MOTDLINES; i++) { // OSP-ET
 			str = CG_ConfigString(CS_CUSTMOTD + i);
 			if (str != NULL && *str != 0) {
 				CG_printWindow((char*)str);
@@ -105,7 +105,7 @@ void CG_createMOTDWindow(void) {
 			else {
 				break;
 			}
-		}
+		}*/
 	}
 }
 
@@ -880,7 +880,7 @@ void CG_cursorUpdate(void) {
 		// Ugh, have to loop through BOTH team lists
 		int vOffset = 0;
 
-		for (i = TEAM_AXIS; i <= TEAM_ALLIES; i++) {
+		for (i = TEAM_RED; i <= TEAM_BLUE; i++) {
 			if (cg.mvTotalTeam[i] == 0) {
 				continue;
 			}

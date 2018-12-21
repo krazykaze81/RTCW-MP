@@ -208,23 +208,23 @@ void CG_ParseWolfinfo( void ) {
 CG_ParseWarmup
 ==================
 */
-static void CG_ParseWarmup( void ) {
-	const char  *info;
-	int warmup;
-
-	info = CG_ConfigString( CS_WARMUP );
-
-	warmup = atoi( info );
-	cg.warmupCount = -1;
-
-	if ( warmup == 0 && cg.warmup ) {
-
-	} else if ( warmup > 0 && cg.warmup <= 0 ) {
-		trap_S_StartLocalSound( cgs.media.countPrepareSound, CHAN_ANNOUNCER );
-	}
-
-	cg.warmup = warmup;
-}
+//static void CG_ParseWarmup( void ) {
+//	const char  *info;
+//	int warmup;
+//
+//	info = CG_ConfigString( CS_WARMUP );
+//
+//	warmup = atoi( info );
+//	cg.warmupCount = -1;
+//
+//	if ( warmup == 0 && cg.warmup ) {
+//
+//	} else if ( warmup > 0 && cg.warmup <= 0 ) {
+//		trap_S_StartLocalSound( cgs.media.countPrepareSound, CHAN_ANNOUNCER );
+//	}
+//
+//	cg.warmup = warmup;
+//}
 
 /*
 =====================
@@ -1567,18 +1567,18 @@ void CG_parseWeaponStatsGS_cmd(void) {
 		}
 	}
 
-	// Derive XP from individual skill XP
-	skillMask = atoi(CG_Argv(iArg++));
-	for (i = SK_BATTLE_SENSE; i < SK_NUM_SKILLS; i++) {
-		if (skillMask & (1 << i)) {
-			ci->skillpoints[i] = atoi(CG_Argv(iArg++));
-			xp += ci->skillpoints[i];
-		}
-	}
+	//// Derive XP from individual skill XP
+	//skillMask = atoi(CG_Argv(iArg++));
+	//for (i = SK_BATTLE_SENSE; i < SK_NUM_SKILLS; i++) {
+	//	if (skillMask & (1 << i)) {
+	//		ci->skillpoints[i] = atoi(CG_Argv(iArg++));
+	//		xp += ci->skillpoints[i];
+	//	}
+	//}
 
-	Q_strncpyz(gs->strRank, va("%-13s %d", ((ci->team == TEAM_AXIS) ? rankNames_Axis : rankNames_Allies)[ci->rank], xp), sizeof(gs->strRank));
+	Q_strncpyz(gs->strRank, va("%-13s %d", ((ci->team == TEAM_RED) ? rankNames_Axis : rankNames_Allies)[ci->rank], xp), sizeof(gs->strRank));
 
-	if (skillMask != 0) {
+	/*if (skillMask != 0) {
 		char *str;
 
 		for (i = SK_BATTLE_SENSE; i < SK_NUM_SKILLS; i++) {
@@ -1601,7 +1601,7 @@ void CG_parseWeaponStatsGS_cmd(void) {
 				Q_strncpyz(gs->strSkillz[gs->cSkills++], va("%-15s %3d %s", skillNames[i], ci->skill[i], str), sizeof(gs->strSkillz[0]));
 			}
 		}
-	}
+	}*/
 }
 
 
@@ -1688,6 +1688,7 @@ void CG_parseWeaponStats_cmd(void(txt_dump)(char *)) {
 		txt_dump("\n\n\n");
 	}
 
+	/*
 	// Derive XP from individual skill XP
 	dwSkillPointMask = atoi(CG_Argv(iArg++));
 	for (i = SK_BATTLE_SENSE; i < SK_NUM_SKILLS; i++) {
@@ -1697,7 +1698,7 @@ void CG_parseWeaponStats_cmd(void(txt_dump)(char *)) {
 		}
 	}
 
-	txt_dump(va("\n^2Rank: ^7%s (%d XP)\n", ((ci->team == TEAM_AXIS) ? rankNames_Axis : rankNames_Allies)[ci->rank], xp));
+	txt_dump(va("\n^2Rank: ^7%s (%d XP)\n", ((ci->team == TEAM_RED) ? rankNames_Axis : rankNames_Allies)[ci->rank], xp));
 
 	if (!fFull) {
 		txt_dump("\n\n\n");
@@ -1739,6 +1740,7 @@ void CG_parseWeaponStats_cmd(void(txt_dump)(char *)) {
 			}
 		}
 	}
+	*/ // ET Code
 }
 
 void CG_parseBestShotsStats_cmd(qboolean doTop, void(txt_dump)(char *)) {

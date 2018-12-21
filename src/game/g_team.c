@@ -1587,3 +1587,386 @@ void SP_team_WOLF_checkpoint( gentity_t *ent ) {
 
 	trap_LinkEntity( ent );
 }
+/*
+===================
+Team_ClassForString
+===================
+*/
+int Team_ClassForString( char *string ) {
+	if ( !Q_stricmp( string, "soldier" ) ) {
+		return PC_SOLDIER;
+	} else if ( !Q_stricmp( string, "medic" ) ) {
+		return PC_MEDIC;
+	} else if ( !Q_stricmp( string, "engineer" ) ) {
+		return PC_ENGINEER;
+	} else if ( !Q_stricmp( string, "lieutenant" ) ) {
+		return PC_LT;
+	}
+	return -1;
+}
+
+// OSP
+char *aTeams[TEAM_NUM_TEAMS] = { "FFA", "^1Axis^7", "^4Allies^7", "Spectators" };
+team_info teamInfo[TEAM_NUM_TEAMS];
+
+
+// Resets a team's settings
+void G_teamReset( int team_num, qboolean fClearSpecLock ) {
+	teamInfo[team_num].team_lock = ( match_latejoin.integer == 0 && g_gamestate.integer == GS_PLAYING );
+	teamInfo[team_num].team_name[0] = 0;
+	teamInfo[team_num].team_score = 0;
+	teamInfo[team_num].timeouts = match_timeoutcount.integer;
+
+	if ( fClearSpecLock ) {
+		teamInfo[team_num].spec_lock = qfalse;
+	}
+}
+
+
+// Swaps active players on teams
+void G_swapTeams( void ) {
+	int i;
+	gclient_t *cl;
+
+	for ( i = TEAM_RED; i <= TEAM_BLUE; i++ ) {
+		G_teamReset( i, qtrue );
+	}
+
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		cl = level.clients + level.sortedClients[i];
+
+		if ( cl->sess.sessionTeam == TEAM_RED ) {
+			cl->sess.sessionTeam = TEAM_BLUE;
+		} else if ( cl->sess.sessionTeam == TEAM_BLUE ) {
+			cl->sess.sessionTeam = TEAM_RED;
+		} else { continue;}
+
+		G_UpdateCharacter( cl );
+		ClientUserinfoChanged( level.sortedClients[i] );
+		ClientBegin( level.sortedClients[i] );
+	}
+
+	AP( "cp \"^1Teams have been swapped!\n\"" );
+}
+
+
+int QDECL G_SortPlayersByXP( const void *a, const void *b ) {
+	gclient_t* cla = &level.clients[ *( (int*)a ) ];
+	gclient_t* clb = &level.clients[ *( (int*)b ) ];
+
+	if ( cla->ps.persistant[ PERS_SCORE ] > clb->ps.persistant[ PERS_SCORE ] ) {
+		return -1;
+	}
+	if ( clb->ps.persistant[ PERS_SCORE ] > cla->ps.persistant[ PERS_SCORE ] ) {
+		return 1;
+	}
+
+	return 0;
+}
+
+
+// Shuffle active players onto teams
+void G_shuffleTeams( void ) {
+	int i, cTeam; //, cMedian = level.numNonSpectatorClients / 2;
+	int aTeamCount[TEAM_NUM_TEAMS];
+	int cnt = 0;
+	int sortClients[MAX_CLIENTS];
+
+	gclient_t *cl;
+
+	G_teamReset( TEAM_RED, qtrue );
+	G_teamReset( TEAM_BLUE, qtrue );
+
+	for ( i = 0; i < TEAM_NUM_TEAMS; i++ ) {
+		aTeamCount[i] = 0;
+	}
+
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		cl = level.clients + level.sortedClients[ i ];
+
+		if ( cl->sess.sessionTeam != TEAM_RED && cl->sess.sessionTeam != TEAM_BLUE ) {
+			continue;
+		}
+
+		sortClients[ cnt++ ] = level.sortedClients[ i ];
+	}
+
+	qsort( sortClients, cnt, sizeof( int ), G_SortPlayersByXP );
+
+	for ( i = 0; i < cnt; i++ ) {
+		cl = level.clients + sortClients[i];
+
+		cTeam = ( i % 2 ) + TEAM_RED;
+
+		if ( cl->sess.sessionTeam != cTeam ) {
+			G_LeaveTank( g_entities + sortClients[i], qfalse );
+			G_RemoveClientFromFireteams( sortClients[i], qtrue, qfalse );
+			if ( g_landminetimeout.integer ) {
+				G_ExplodeMines( g_entities + sortClients[i] );
+			}
+			G_FadeItems( g_entities + sortClients[i], MOD_SATCHEL );
+		}
+
+		cl->sess.sessionTeam = cTeam;
+
+		G_UpdateCharacter( cl );
+		ClientUserinfoChanged( sortClients[i] );
+		ClientBegin( sortClients[i] );
+	}
+
+	AP( "cp \"^1Teams have been shuffled!\n\"" );
+}
+
+
+// Returns player's "real" team.
+int G_teamID( gentity_t *ent ) {
+	if ( ent->client->sess.coach_team ) {
+		return( ent->client->sess.coach_team );
+	}
+	return( ent->client->sess.sessionTeam );
+}
+
+
+// Determine if the "ready" player threshold has been reached.
+qboolean G_checkReady( void ) {
+	int i, ready = 0, notReady = match_minplayers.integer;
+	gclient_t *cl;
+
+
+	if ( 0 == g_doWarmup.integer ) {
+		return( qtrue );
+	}
+
+	// Ensure we have enough real players
+	if ( level.numNonSpectatorClients >= match_minplayers.integer && level.voteInfo.numVotingClients > 0 ) {
+		// Step through all active clients
+		notReady = 0;
+		for ( i = 0; i < level.numConnectedClients; i++ ) {
+			cl = level.clients + level.sortedClients[i];
+
+			if ( cl->pers.connected != CON_CONNECTED || cl->sess.sessionTeam == TEAM_SPECTATOR ) {
+				continue;
+			} else if ( cl->pers.ready || ( g_entities[level.sortedClients[i]].r.svFlags & SVF_BOT ) ) {
+				ready++;
+			} else { notReady++;}
+		}
+	}
+
+	notReady = ( notReady > 0 || ready > 0 ) ? notReady : match_minplayers.integer;
+	if ( g_minGameClients.integer != notReady ) {
+		trap_Cvar_Set( "g_minGameClients", va( "%d", notReady ) );
+	}
+
+	// Do we have enough "ready" players?
+	return( level.ref_allready || ( ( ready + notReady > 0 ) && 100 * ready / ( ready + notReady ) >= match_readypercent.integer ) );
+}
+
+
+// Checks ready states to start/stop the sequence to get the match rolling.
+qboolean G_readyMatchState( void ) {
+	if ( ( g_doWarmup.integer ||
+		   ( g_gametype.integer == GT_WOLF_LMS && g_lms_lockTeams.integer ) ||
+		   level.warmupTime > ( level.time + 10 * 1000 ) ) &&
+		 g_gamestate.integer == GS_WARMUP && G_checkReady() ) {
+		level.ref_allready = qfalse;
+		if ( g_doWarmup.integer > 0 || ( g_gametype.integer == GT_WOLF_LMS && g_lms_lockTeams.integer ) ) {
+			teamInfo[TEAM_RED].team_lock = qtrue;
+			teamInfo[TEAM_BLUE].team_lock = qtrue;
+		}
+
+		return( qtrue );
+
+	} else if ( !G_checkReady() ) {
+		if ( g_gamestate.integer == GS_WARMUP_COUNTDOWN ) {
+			AP( "cp \"^1COUNTDOWN STOPPED!^7  Back to warmup...\n\"" );
+		}
+		level.lastRestartTime = level.time;
+		trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
+//		G_LogPrintf("Warmup:\n");
+	}
+
+	return( qfalse );
+}
+
+
+// Check if we need to reset the game state due to an empty team
+void G_verifyMatchState( int nTeam ) {
+	gamestate_t gs = g_gamestate.integer;
+
+	if ( ( level.lastRestartTime + 1000 ) < level.time && ( nTeam == TEAM_BLUE || nTeam == TEAM_RED ) &&
+		 ( gs == GS_PLAYING || gs == GS_WARMUP_COUNTDOWN || gs == GS_INTERMISSION ) ) {
+		if ( TeamCount( -1, nTeam ) == 0 ) {
+			if ( g_doWarmup.integer > 0 ) {
+				level.lastRestartTime = level.time;
+				if ( g_gametype.integer == GT_WOLF_STOPWATCH ) {
+					trap_Cvar_Set( "g_currentRound", "0" );
+					trap_Cvar_Set( "g_nextTimeLimit", "0" );
+				}
+
+				trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
+
+			} else {
+				teamInfo[nTeam].team_lock = qfalse;
+			}
+
+			G_teamReset( nTeam, qtrue );
+		}
+	}
+
+	// Cleanup of ready count
+	G_checkReady();
+}
+
+
+// Checks to see if a specified team is allowing players to join.
+qboolean G_teamJoinCheck( int team_num, gentity_t *ent ) {
+	int cnt = TeamCount( -1, team_num );
+
+	// Sanity check
+	if ( cnt == 0 ) {
+		G_teamReset( team_num, qtrue );
+		teamInfo[team_num].team_lock = qfalse;
+	}
+
+	// Check for locked teams
+	if ( ( team_num == TEAM_RED || team_num == TEAM_BLUE ) ) {
+		if ( ent->client->sess.sessionTeam == team_num ) {
+			return( qtrue );
+		}
+
+		if ( g_gametype.integer != GT_WOLF_LMS ) {
+			// Check for full teams
+			if ( team_maxplayers.integer > 0 && team_maxplayers.integer <= cnt ) {
+				G_printFull( va( "The %s team is full!", aTeams[team_num] ), ent );
+				return( qfalse );
+
+				// Check for locked teams
+			} else if ( teamInfo[team_num].team_lock && ( !( ent->client->pers.invite & team_num ) ) ) {
+				G_printFull( va( "The %s team is LOCKED!", aTeams[team_num] ), ent );
+				return( qfalse );
+			}
+		} else {
+			if ( team_maxplayers.integer > 0 && team_maxplayers.integer <= cnt ) {
+				G_printFull( va( "The %s team is full!", aTeams[team_num] ), ent );
+				return( qfalse );
+			} else if ( g_gamestate.integer == GS_PLAYING && g_lms_lockTeams.integer && ( !( ent->client->pers.invite & team_num ) ) ) {
+				G_printFull( va( "The %s team is LOCKED!", aTeams[team_num] ), ent );
+				return( qfalse );
+			}
+		}
+	}
+
+	return( qtrue );
+}
+
+
+// Update specs for blackout, as needed
+void G_updateSpecLock( int nTeam, qboolean fLock ) {
+	int i;
+	gentity_t *ent;
+
+	teamInfo[nTeam].spec_lock = fLock;
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		ent = g_entities + level.sortedClients[i];
+
+		if ( ent->client->sess.referee ) {
+			continue;
+		}
+		if ( ent->client->sess.coach_team ) {
+			continue;
+		}
+
+		ent->client->sess.spec_invite &= ~nTeam;
+
+		if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR ) {
+			continue;
+		}
+
+		if ( !fLock ) {
+			continue;
+		}
+
+		if ( ent->client->pers.mvCount > 0 ) {
+			G_smvRemoveInvalidClients( ent, nTeam );
+		} else if ( ent->client->sess.spectatorState == SPECTATOR_FOLLOW ) {
+			StopFollowing( ent );
+			ent->client->sess.spec_team &= ~nTeam;
+		}
+
+		// ClientBegin sets blackout
+		if ( ent->client->pers.mvCount < 1 ) {
+			SetTeam( ent, "s", qtrue, -1, -1, qfalse );
+		}
+	}
+}
+
+
+// Swap team speclocks
+void G_swapTeamLocks( void ) {
+	qboolean fLock = teamInfo[TEAM_RED].spec_lock;
+	teamInfo[TEAM_RED].spec_lock = teamInfo[TEAM_BLUE].spec_lock;
+	teamInfo[TEAM_BLUE].spec_lock = fLock;
+
+	fLock = teamInfo[TEAM_RED].team_lock;
+	teamInfo[TEAM_RED].team_lock = teamInfo[TEAM_BLUE].team_lock;
+	teamInfo[TEAM_BLUE].team_lock = fLock;
+}
+
+
+// Removes everyone's specinvite for a particular team.
+void G_removeSpecInvite( int team ) {
+	int i;
+	gentity_t *cl;
+
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		cl = g_entities + level.sortedClients[i];
+		if ( !cl->inuse || cl->client->sess.referee || cl->client->sess.coach_team == team ) {
+			continue;
+		}
+
+		cl->client->sess.spec_invite &= ~team;  // none = 0, red = 1, blue = 2
+	}
+}
+
+
+// Return blockout status for a player
+int G_blockoutTeam( gentity_t *ent, int nTeam ) {
+	return( !G_allowFollow( ent, nTeam ) );
+}
+
+
+// Figure out if we are allowed/want to follow a given player
+qboolean G_allowFollow( gentity_t *ent, int nTeam ) {
+	if ( g_gametype.integer == GT_WOLF_LMS && g_lms_followTeamOnly.integer ) {
+		if ( ( ent->client->sess.spec_invite & nTeam ) == nTeam ) {
+			return qtrue;
+		}
+		if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR &&
+			 ent->client->sess.sessionTeam != nTeam ) {
+			return qfalse;
+		}
+	}
+
+	if ( level.time - level.startTime > 2500 ) {
+		if ( TeamCount( -1, TEAM_RED ) == 0 ) {
+			teamInfo[TEAM_RED].spec_lock = qfalse;
+		}
+		if ( TeamCount( -1, TEAM_BLUE ) == 0 ) {
+			teamInfo[TEAM_BLUE].spec_lock = qfalse;
+		}
+	}
+
+	return( ( !teamInfo[nTeam].spec_lock || ent->client->sess.sessionTeam != TEAM_SPECTATOR || ( ent->client->sess.spec_invite & nTeam ) == nTeam ) );
+}
+
+
+// Figure out if we are allowed/want to follow a given player
+qboolean G_desiredFollow( gentity_t *ent, int nTeam ) {
+	if ( G_allowFollow( ent, nTeam ) &&
+		 ( ent->client->sess.spec_team == 0 || ent->client->sess.spec_team == nTeam ) ) {
+		return( qtrue );
+	}
+
+	return( qfalse );
+}
+// -OSP

@@ -119,7 +119,7 @@ void G_PrintAccuracyLog(gentity_t *ent) {
 
 	for (i = 0; i < 6 /*level.numOidTriggers*/; i++) {
 		Q_strcat(buffer, 2048, va(" %i", ent->client->pers.playerStats.objectiveStats[i]));
-		Q_strcat(buffer, 2048, va(" %i", ent->client->sess.sessionTeam == TEAM_AXIS ? level.objectiveStatsAxis[i] : level.objectiveStatsAllies[i]));
+		Q_strcat(buffer, 2048, va(" %i", ent->client->sess.sessionTeam == TEAM_RED ? level.objectiveStatsAxis[i] : level.objectiveStatsAllies[i]));
 	}
 
 	trap_SendServerCommand(ent - g_entities, buffer);
@@ -133,21 +133,22 @@ void G_SetPlayerScore(gclient_t *client) {
 	}
 }
 
-void G_SetPlayerSkill(gclient_t *client, skillType_t skill) {
-	int i;
+//void G_SetPlayerSkill(gclient_t *client, skillType_t skill) {
+//	int i;
+//
+//	for (i = NUM_SKILL_LEVELS - 1; i >= 0; i--) {
+//		if (client->sess.skillpoints[skill] >= mpSkillLevels[i]) {
+//			client->sess.skill[skill] = i;
+//			break;
+//		}
+//	}
+//
+//	G_SetPlayerScore(client);
+//}
 
-	for (i = NUM_SKILL_LEVELS - 1; i >= 0; i--) {
-		if (client->sess.skillpoints[skill] >= skillLevels[i]) {
-			client->sess.skill[skill] = i;
-			break;
-		}
-	}
+//extern qboolean AddWeaponToPlayer(gclient_t *client, weapon_t weapon, int ammo, int ammoclip, qboolean setcurrent);
 
-	G_SetPlayerScore(client);
-}
-
-extern qboolean AddWeaponToPlayer(gclient_t *client, weapon_t weapon, int ammo, int ammoclip, qboolean setcurrent);
-
+/*
 // TAT 11/6/2002
 //		Local func to actual do skill upgrade, used by both MP skill system, and SP scripted skill system
 static void G_UpgradeSkill(gentity_t *ent, skillType_t skill) {
@@ -198,6 +199,7 @@ static void G_UpgradeSkill(gentity_t *ent, skillType_t skill) {
 	}
 }
 
+
 void G_LoseSkillPoints(gentity_t *ent, skillType_t skill, float points) {
 	int oldskill;
 	float oldskillpoints;
@@ -211,13 +213,13 @@ void G_LoseSkillPoints(gentity_t *ent, skillType_t skill, float points) {
 		return;
 	}
 
-	if (ent->client->sess.sessionTeam != TEAM_AXIS && ent->client->sess.sessionTeam != TEAM_ALLIES) {
+	if (ent->client->sess.sessionTeam != TEAM_RED && ent->client->sess.sessionTeam != TEAM_BLUE) {
 		return;
 	}
 
-	if (g_gametype.integer == GT_WOLF_LMS) {
-		return; // Gordon: no xp in LMS
-	}
+	//if (g_gametype.integer == GT_WOLF_LMS) {
+	//	return; // Gordon: no xp in LMS
+	//}
 
 	oldskillpoints = ent->client->sess.skillpoints[skill];
 	ent->client->sess.skillpoints[skill] -= points;
@@ -227,17 +229,17 @@ void G_LoseSkillPoints(gentity_t *ent, skillType_t skill, float points) {
 	G_SetPlayerSkill(ent->client, skill);
 	if (oldskill != ent->client->sess.skill[skill]) {
 		ent->client->sess.skill[skill] = oldskill;
-		ent->client->sess.skillpoints[skill] = skillLevels[oldskill];
+		ent->client->sess.skillpoints[skill] = mpSkillLevels[oldskill];
 	}
 
-	G_Printf("%s just lost %f skill points for skill %s\n", ent->client->pers.netname, oldskillpoints - ent->client->sess.skillpoints[skill], skillNames[skill]);
+	G_Printf("%s just lost %f skill points for skill %s\n", ent->client->pers.netname, oldskillpoints - ent->client->sess.skillpoints[skill], mpSkillNames[skill]);
 
 	trap_PbStat(ent - g_entities, "loseskill",
 		va("%d %d %d %f", ent->client->sess.sessionTeam, ent->client->sess.playerType,
 			skill, oldskillpoints - ent->client->sess.skillpoints[skill]));
 
 	level.teamScores[ent->client->ps.persistant[PERS_TEAM]] -= oldskillpoints - ent->client->sess.skillpoints[skill];
-	level.teamXP[skill][ent->client->sess.sessionTeam - TEAM_AXIS] -= oldskillpoints - ent->client->sess.skillpoints[skill];
+	//level.teamXP[skill][ent->client->sess.sessionTeam - TEAM_RED] -= oldskillpoints - ent->client->sess.skillpoints[skill];
 }
 
 void G_AddSkillPoints(gentity_t *ent, skillType_t skill, float points) {
@@ -252,21 +254,21 @@ void G_AddSkillPoints(gentity_t *ent, skillType_t skill, float points) {
 		return;
 	}
 
-	if (ent->client->sess.sessionTeam != TEAM_AXIS && ent->client->sess.sessionTeam != TEAM_ALLIES) {
+	if (ent->client->sess.sessionTeam != TEAM_RED && ent->client->sess.sessionTeam != TEAM_BLUE) {
 		return;
 	}
 
-	if (g_gametype.integer == GT_WOLF_LMS) {
-		return; // Gordon: no xp in LMS
-	}
+	//if (g_gametype.integer == GT_WOLF_LMS) {
+	//	return; // Gordon: no xp in LMS
+	//}
 
-	level.teamXP[skill][ent->client->sess.sessionTeam - TEAM_AXIS] += points;
+	//level.teamXP[skill][ent->client->sess.sessionTeam - TEAM_RED] += points;
 
 	ent->client->sess.skillpoints[skill] += points;
 
 	level.teamScores[ent->client->ps.persistant[PERS_TEAM]] += points;
 
-	//	G_Printf( "%s just got %f skill points for skill %s\n", ent->client->pers.netname, points, skillNames[skill] );
+	//	G_Printf( "%s just got %f skill points for skill %s\n", ent->client->pers.netname, points, mpSkillNames[skill] );
 
 	trap_PbStat(ent - g_entities, "addskill",
 		va("%d %d %d %f", ent->client->sess.sessionTeam, ent->client->sess.playerType,
@@ -300,33 +302,33 @@ void G_LoseKillSkillPoints(gentity_t *tker, meansOfDeath_t mod, hitRegion_t hr, 
 	case MOD_SILENCER:
 	case MOD_FG42:
 		//		case MOD_FG42SCOPE:
-	case MOD_CARBINE:
-	case MOD_KAR98:
-	case MOD_SILENCED_COLT:
-	case MOD_K43:
-		//bani - akimbo weapons lose score now as well
-	case MOD_AKIMBO_COLT:
-	case MOD_AKIMBO_LUGER:
-	case MOD_AKIMBO_SILENCEDCOLT:
-	case MOD_AKIMBO_SILENCEDLUGER:
+	//case MOD_CARBINE:
+	//case MOD_KAR98:
+	//case MOD_SILENCED_COLT:
+	//case MOD_K43:
+	//	//bani - akimbo weapons lose score now as well
+	//case MOD_AKIMBO_COLT:
+	//case MOD_AKIMBO_LUGER:
+	//case MOD_AKIMBO_SILENCEDCOLT:
+	//case MOD_AKIMBO_SILENCEDLUGER:
 	case MOD_GRENADE_LAUNCHER:
 	case MOD_GRENADE_PINEAPPLE:
 		//bani - airstrike marker kills
-	case MOD_SMOKEGRENADE:
-		G_LoseSkillPoints(tker, SK_LIGHT_WEAPONS, 3.f);
-		//			G_DebugAddSkillPoints( attacker, SK_LIGHT_WEAPONS, 2.f, "kill" );
-		break;
+	//case MOD_SMOKEGRENADE:
+	//	G_LoseSkillPoints(tker, SK_LIGHT_WEAPONS, 3.f);
+	//	//			G_DebugAddSkillPoints( attacker, SK_LIGHT_WEAPONS, 2.f, "kill" );
+	//	break;
 
 		// scoped weapons
 	case MOD_GARAND_SCOPE:
 	case MOD_K43_SCOPE:
 	case MOD_FG42SCOPE:
-	case MOD_SATCHEL:
+	//case MOD_SATCHEL:
 		G_LoseSkillPoints(tker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f);
 		//			G_DebugAddSkillPoints( attacker, SK_LIGHT_WEAPONS, 2.f, "legshot kill" );
 		break;
 
-	case MOD_MOBILE_MG42:
+	//case MOD_MOBILE_MG42:
 	case MOD_MACHINEGUN:
 	case MOD_BROWNING:
 	case MOD_MG42:
@@ -378,14 +380,14 @@ void G_AddKillSkillPoints(gentity_t *attacker, meansOfDeath_t mod, hitRegion_t h
 	case MOD_SILENCER:
 	case MOD_FG42:
 		//		case MOD_FG42SCOPE:
-	case MOD_CARBINE:
-	case MOD_KAR98:
-	case MOD_SILENCED_COLT:
-	case MOD_K43:
-	case MOD_AKIMBO_COLT:
-	case MOD_AKIMBO_LUGER:
-	case MOD_AKIMBO_SILENCEDCOLT:
-	case MOD_AKIMBO_SILENCEDLUGER:
+	//case MOD_CARBINE:
+	//case MOD_KAR98:
+	//case MOD_SILENCED_COLT:
+	//case MOD_K43:
+	//case MOD_AKIMBO_COLT:
+	//case MOD_AKIMBO_LUGER:
+	//case MOD_AKIMBO_SILENCEDCOLT:
+	//case MOD_AKIMBO_SILENCEDLUGER:
 		switch (hr) {
 		case HR_HEAD:   G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 5.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 5.f, "headshot kill"); break;
 		case HR_ARMS:   G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "armshot kill"); break;
@@ -459,7 +461,7 @@ void G_AddKillSkillPoints(gentity_t *attacker, meansOfDeath_t mod, hitRegion_t h
 		G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "hand grenade kill");
 		break;
 	case MOD_DYNAMITE:
-	case MOD_LANDMINE:
+	//case MOD_LANDMINE:
 		G_AddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 4.f);
 		G_DebugAddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 4.f, "dynamite or landmine kill");
 		break;
@@ -493,7 +495,7 @@ void G_AddKillSkillPointsForDestruction(gentity_t *attacker, meansOfDeath_t mod,
 	case MOD_GPG40:
 	case MOD_M7:
 	case MOD_DYNAMITE:
-	case MOD_LANDMINE:
+	//case MOD_LANDMINE:
 		G_AddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, constructibleStats->destructxpbonus);
 		G_DebugAddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
 		break;
@@ -569,14 +571,14 @@ void G_DebugAddSkillLevel(gentity_t *ent, skillType_t skill) {
 	}
 
 	trap_SendServerCommand(ent - g_entities, va("sdbg \"^%c(SK: %2i XP: %6.2f) %s: You raised your skill level to %i.\"\n",
-		COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], skillNames[skill], ent->client->sess.skill[skill]));
+		COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], mpSkillNames[skill], ent->client->sess.skill[skill]));
 
 	trap_RealTime(&ct);
 
 	if (g_debugSkills.integer >= 2 && skillDebugLog != -1) {
 		char *s = va("%02d:%02d:%02d : ^%c(SK: %2i XP: %6.2f) %s: %s raised in skill level to %i.\n",
 			ct.tm_hour, ct.tm_min, ct.tm_sec,
-			COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], skillNames[skill], ent->client->pers.netname, ent->client->sess.skill[skill]);
+			COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], mpSkillNames[skill], ent->client->pers.netname, ent->client->sess.skill[skill]);
 		trap_FS_Write(s, strlen(s), skillDebugLog);
 	}
 }
@@ -589,17 +591,18 @@ void G_DebugAddSkillPoints(gentity_t *ent, skillType_t skill, float points, cons
 	}
 
 	trap_SendServerCommand(ent - g_entities, va("sdbg \"^%c(SK: %2i XP: %6.2f) %s: You gained %.2fXP, reason: %s.\"\n",
-		COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], skillNames[skill], points, reason));
+		COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], mpSkillNames[skill], points, reason));
 
 	trap_RealTime(&ct);
 
 	if (g_debugSkills.integer >= 2 && skillDebugLog != -1) {
 		char *s = va("%02d:%02d:%02d : ^%c(SK: %2i XP: %6.2f) %s: %s gained %.2fXP, reason: %s.\n",
 			ct.tm_hour, ct.tm_min, ct.tm_sec,
-			COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], skillNames[skill], ent->client->pers.netname, points, reason);
+			COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], mpSkillNames[skill], ent->client->pers.netname, points, reason);
 		trap_FS_Write(s, strlen(s), skillDebugLog);
 	}
 }
+*/
 
 #define CHECKSTAT1( XX )														\
 	best = NULL;																\
@@ -694,8 +697,8 @@ void G_BuildEndgameStats(void) {
 
 	CHECKSTAT1(sess.kills);
 	CHECKSTAT1(ps.persistant[PERS_SCORE]);
-	CHECKSTAT3(sess.rank, medals, ps.persistant[PERS_SCORE]);
-	CHECKSTAT1(medals);
+	//CHECKSTAT3(sess.rank, medals, ps.persistant[PERS_SCORE]);
+	//CHECKSTAT1(medals);
 	CHECKSTATSKILL(SK_BATTLE_SENSE);
 	CHECKSTATSKILL(SK_EXPLOSIVES_AND_CONSTRUCTION);
 	CHECKSTATSKILL(SK_FIRST_AID);

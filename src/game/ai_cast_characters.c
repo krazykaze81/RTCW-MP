@@ -127,7 +127,7 @@ AICharacterDefaults_t aiDefaults[NUM_CHARACTERS] = {
 		"americanStay",          // stay - you're told to stay put
 		"americanFollow",        // follow - go with ordering player ("i'm with you" rather than "yes sir!")
 		"americanOrdersDeny",    // deny - refuse orders (doing something else)
-		AITEAM_ALLIES,
+		AITEAM_BLUE,
 		"american/default",
 		{WP_THOMPSON,WP_GRENADE_PINEAPPLE},
 		BBOX_SMALL, {32,48},
@@ -962,7 +962,7 @@ AICharacterDefaults_t aiDefaults[NUM_CHARACTERS] = {
 		"partisanStay",
 		"partisanFollow",
 		"partisanOrdersDeny",
-		AITEAM_ALLIES,  //----(SA)	changed affiliation for DK
+		AITEAM_BLUE,  //----(SA)	changed affiliation for DK
 		"partisan/default",
 		{WP_THOMPSON},
 		BBOX_SMALL, {32,48},
@@ -1048,7 +1048,7 @@ AICharacterDefaults_t aiDefaults[NUM_CHARACTERS] = {
 		"chimpStay",
 		"chimpFollow",
 		"chimpOrdersDeny",
-		AITEAM_ALLIES,  //----(SA)	changed affiliation for DK
+		AITEAM_BLUE,  //----(SA)	changed affiliation for DK
 		"chimp/default",
 		{0},
 		BBOX_SMALL, {16,24},
@@ -1510,7 +1510,7 @@ void AIChar_spawn( gentity_t *ent ) {
 	//
 	//cs->getDeathAnim = AIChar_getDeathAnim;
 	cs->sightfunc = AIChar_Sight;
-	if ( ent->aiTeam == AITEAM_ALLIES || ent->aiTeam == AITEAM_NEUTRAL ) { // friendly
+	if ( ent->aiTeam == AITEAM_BLUE || ent->aiTeam == AITEAM_NEUTRAL ) { // friendly
 		cs->activate = AICast_ProcessActivate;
 	} else {
 		cs->activate = NULL;

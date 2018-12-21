@@ -1347,7 +1347,77 @@ void Info_SetValueForKey_Big( char *s, const char *key, const char *value ) {
 	strcat( s, newi );
 }
 
+// strips whitespaces and bad characters
+qboolean Q_isBadDirChar(char c) {
+	char badchars[] = { ';', '&', '(', ')', '|', '<', '>', '*', '?', '[', ']', '~', '+', '@', '!', '\\', '/', ' ', '\'', '\"', '\0' };
+	int i;
 
+	for (i = 0; badchars[i] != '\0'; i++) {
+		if (c == badchars[i]) {
+			return qtrue;
+		}
+	}
 
+	return qfalse;
+}
 
+char *Q_CleanDirName(char *dirname) {
+	char*   d;
+	char*   s;
+
+	s = dirname;
+	d = dirname;
+
+	// clear trailing .'s
+	while (*s == '.') {
+		s++;
+	}
+
+	while (*s != '\0') {
+		if (!Q_isBadDirChar(*s)) {
+			*d++ = *s;
+		}
+		s++;
+	}
+	*d = '\0';
+
+	return dirname;
+}
+
+int Q_isnumeric(int c) {
+	if (c >= '0' && c <= '9') {
+		return (1);
+	}
+	return (0);
+}
+
+int Q_isalphanumeric(int c) {
+	if (Q_isalpha(c) ||
+		Q_isnumeric(c)) {
+		return(1);
+	}
+	return (0);
+}
+
+int Q_isforfilename(int c) {
+	if ((Q_isalphanumeric(c) || c == '_') && c != ' ') { // space not allowed in filename
+		return(1);
+	}
+	return (0);
+}
+
+/*
+COM_FixPath()
+unixifies a pathname
+*/
+
+void COM_FixPath(char *pathname) {
+	while (*pathname)
+	{
+		if (*pathname == '\\') {
+			*pathname = '/';
+		}
+		pathname++;
+	}
+}
 //====================================================================

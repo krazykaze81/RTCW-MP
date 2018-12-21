@@ -379,12 +379,12 @@ void CG_mvTransitionPlayerState(playerState_t* ps) {
 	else if (x == PC_ENGINEER) {
 		mult = cg.engineerChargeTime[ci->team - 1];
 	}
-	else if (x == PC_FIELDOPS) {
+	else if (x == PC_LT) {
 		mult = cg.ltChargeTime[ci->team - 1];
 	}
-	else if (x == PC_COVERTOPS) {
+	/*else if (x == PC_COVERTOPS) {
 		mult = cg.covertopsChargeTime[ci->team - 1];
-	}
+	}*/
 	else { mult = cg.soldierChargeTime[ci->team - 1]; }
 
 	ps->curWeapHeat = (int)((float)ci->weapHeat * 255.0f / 100.0f);
@@ -634,12 +634,12 @@ void CG_mvWindowOverlay(int pID, float b_x, float b_y, float b_w, float b_h, flo
 	else if (x == PC_ENGINEER) {
 		p_class = "^5E"; noSelectBorder = &colorMdBlue;
 	}
-	else if (x == PC_FIELDOPS) {
+	else if (x == PC_LT) {
 		p_class = "^2F"; noSelectBorder = &colorMdGreen;
 	}
-	else if (x == PC_COVERTOPS) {
+	/*else if (x == PC_COVERTOPS) {
 		p_class = "^3C"; noSelectBorder = &colorMdYellow;
-	}
+	}*/
 
 	CG_DrawStringExt(b_x + 1, b_y + b_h - (fh * 2 + 1 + 2), ci->name, colorWhite, qfalse, qtrue, fw, fh, 0);
 	CG_DrawStringExt(b_x + 1, b_y + b_h - (fh + 2), va("%s^7%d", CG_TranslateString(p_class), ci->health), colorWhite, qfalse, qtrue, fw, fh, 0);
@@ -794,7 +794,7 @@ void CG_mvOverlayDisplay(void) {
 
 	y = MVINFO_TOP - (2 * (MVINFO_TEXTSIZE + 1));
 
-	for (j = TEAM_AXIS; j <= TEAM_ALLIES; j++) {
+	for (j = TEAM_RED; j <= TEAM_BLUE; j++) {
 		cg.mvTotalTeam[j] = 0;
 		for (i = 0; i < cg.mvTotalClients; i++) {
 			o = &cg.mvOverlay[i];
@@ -805,7 +805,7 @@ void CG_mvOverlayDisplay(void) {
 			}
 
 			if (cg.mvTotalTeam[j] == 0) {
-				char *flag = (j == TEAM_AXIS) ? "ui/assets/ger_flag.tga" : "ui/assets/usa_flag.tga";
+				char *flag = (j == TEAM_RED) ? "ui/assets/ger_flag.tga" : "ui/assets/usa_flag.tga";
 				y += 2 * (MVINFO_TEXTSIZE + 1);
 				CG_DrawPic(MVINFO_RIGHT - (2 * MVINFO_TEXTSIZE), y, 2 * MVINFO_TEXTSIZE, MVINFO_TEXTSIZE, trap_R_RegisterShaderNoMip(flag));
 			}
