@@ -554,11 +554,6 @@ typedef struct {
 	gentity_t   *camera;
 } mview_t;
 
-typedef struct ipFilter_s {
-	unsigned mask;
-	unsigned compare;
-} ipFilter_t;
-
 #define MAX_COMPLAINTIPS 5
 
 #define SOLDIERKILL_MAXTIME 60000
@@ -1878,44 +1873,44 @@ void G_matchPrintInfo(char *msg);
 ///////////////////////
 // g_multiview.c
 //
-qboolean G_smvCommands( gentity_t *ent, char *cmd );
-void G_smvAdd_cmd( gentity_t *ent );
-void G_smvAddTeam_cmd( gentity_t *ent, int nTeam );
-void G_smvDel_cmd( gentity_t *ent );
-//
-void G_smvAddView( gentity_t *ent, int pID );
-void G_smvAllRemoveSingleClient( int pID );
-unsigned int G_smvGenerateClientList( gentity_t *ent );
-qboolean G_smvLocateEntityInMVList( gentity_t *ent, int pID, qboolean fRemove );
-void G_smvRegenerateClients( gentity_t *ent, int clientList );
-void G_smvRemoveEntityInMVList( gentity_t *ent, mview_t *ref );
-void G_smvRemoveInvalidClients( gentity_t *ent, int nTeam );
-qboolean G_smvRunCamera( gentity_t *ent );
-void G_smvUpdateClientCSList( gentity_t *ent );
+//qboolean G_smvCommands( gentity_t *ent, char *cmd );
+//void G_smvAdd_cmd( gentity_t *ent );
+//void G_smvAddTeam_cmd( gentity_t *ent, int nTeam );
+//void G_smvDel_cmd( gentity_t *ent );
+////
+//void G_smvAddView( gentity_t *ent, int pID );
+//void G_smvAllRemoveSingleClient( int pID );
+//unsigned int G_smvGenerateClientList( gentity_t *ent );
+//qboolean G_smvLocateEntityInMVList( gentity_t *ent, int pID, qboolean fRemove );
+//void G_smvRegenerateClients( gentity_t *ent, int clientList );
+//void G_smvRemoveEntityInMVList( gentity_t *ent, mview_t *ref );
+//void G_smvRemoveInvalidClients( gentity_t *ent, int nTeam );
+//qboolean G_smvRunCamera( gentity_t *ent );
+//void G_smvUpdateClientCSList( gentity_t *ent );
 
 ///////////////////////
 // g_referee.c
 //
-void Cmd_AuthRcon_f( gentity_t *ent );
-void G_refAllReady_cmd( gentity_t *ent );
-void G_ref_cmd( gentity_t *ent, unsigned int dwCommand, qboolean fValue );
-qboolean G_refCommandCheck( gentity_t *ent, char *cmd );
-void G_refHelp_cmd( gentity_t *ent );
-void G_refLockTeams_cmd( gentity_t *ent, qboolean fLock );
-void G_refPause_cmd( gentity_t *ent, qboolean fPause );
-void G_refPlayerPut_cmd( gentity_t *ent, int team_id );
-void G_refRemove_cmd( gentity_t *ent );
-void G_refSpeclockTeams_cmd( gentity_t *ent, qboolean fLock );
-void G_refWarmup_cmd( gentity_t* ent );
-void G_refWarning_cmd( gentity_t* ent );
-void G_refMute_cmd( gentity_t *ent, qboolean mute );
-int  G_refClientnumForName( gentity_t *ent, const char *name );
-void G_refPrintf(gentity_t* ent, const char *fmt, ...);// _attribute((format(printf, 2, 3)));
-void G_PlayerBan( void );
-void G_MakeReferee( void );
-void G_RemoveReferee( void );
-void G_MuteClient( void );
-void G_UnMuteClient( void );
+//void Cmd_AuthRcon_f( gentity_t *ent );
+//void G_refAllReady_cmd( gentity_t *ent );
+//void G_ref_cmd( gentity_t *ent, unsigned int dwCommand, qboolean fValue );
+//qboolean G_refCommandCheck( gentity_t *ent, char *cmd );
+//void G_refHelp_cmd( gentity_t *ent );
+//void G_refLockTeams_cmd( gentity_t *ent, qboolean fLock );
+//void G_refPause_cmd( gentity_t *ent, qboolean fPause );
+//void G_refPlayerPut_cmd( gentity_t *ent, int team_id );
+//void G_refRemove_cmd( gentity_t *ent );
+//void G_refSpeclockTeams_cmd( gentity_t *ent, qboolean fLock );
+//void G_refWarmup_cmd( gentity_t* ent );
+//void G_refWarning_cmd( gentity_t* ent );
+//void G_refMute_cmd( gentity_t *ent, qboolean mute );
+//int  G_refClientnumForName( gentity_t *ent, const char *name );
+//void G_refPrintf(gentity_t* ent, const char *fmt, ...);// _attribute((format(printf, 2, 3)));
+//void G_PlayerBan( void );
+//void G_MakeReferee( void );
+//void G_RemoveReferee( void );
+//void G_MuteClient( void );
+//void G_UnMuteClient( void );
 
 ///////////////////////
 // g_team.c
@@ -2114,3 +2109,4 @@ void G_printMatchInfo(gentity_t *ent, qboolean time);
 #define PAUSE_UNPAUSING 0x02    // Pause is about to expire
 
 // Ref tag..
+#define REFEREE	"^3Ref^7"

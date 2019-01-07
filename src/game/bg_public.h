@@ -1839,12 +1839,6 @@ typedef enum extWeaponStats_s
 	WS_MAX
 } extWeaponStats_t;
 
-//typedef struct {
-//	qboolean fHasHeadShots;
-//	const char *pszCode;
-//	const char *pszName;
-//} weap_ws_t;
-
 extern const weap_ws_t aWeaponInfo[WS_MAX];
 
 // Voting

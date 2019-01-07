@@ -482,13 +482,14 @@ extern vec4_t colorRed;
 extern vec4_t colorGreen;
 extern vec4_t colorBlue;
 extern vec4_t colorYellow;
-extern vec4_t colorOrange;
 extern vec4_t colorMagenta;
 extern vec4_t colorCyan;
 extern vec4_t colorWhite;
 extern vec4_t colorLtGrey;
 extern vec4_t colorMdGrey;
 extern vec4_t colorDkGrey;
+// OSPx - Colors
+extern vec4_t colorOrange;
 extern vec4_t colorMdRed;
 extern vec4_t colorMdGreen;
 extern vec4_t colorDkGreen;
@@ -497,18 +498,9 @@ extern vec4_t colorMdYellow;
 extern vec4_t colorMdOrange;
 extern vec4_t colorMdBlue;
 
-extern vec4_t clrBrown;
-extern vec4_t clrBrownDk;
-extern vec4_t clrBrownLine;
-extern vec4_t clrBrownText;
-extern vec4_t clrBrownTextDk;
-extern vec4_t clrBrownTextDk2;
-extern vec4_t clrBrownTextLt;
-extern vec4_t clrBrownTextLt2;
-extern vec4_t clrBrownLineFull;
-
 #define Q_COLOR_ESCAPE  '^'
-#define Q_IsColorString( p )  ( p && *( p ) == Q_COLOR_ESCAPE && *( ( p ) + 1 ) && *( ( p ) + 1 ) != Q_COLOR_ESCAPE )
+#define Q_IsColorString(p)	((p) && *(p) == Q_COLOR_ESCAPE && *((p)+1) && isalnum(*((p)+1))) // ^[0-9a-zA-Z]
+// -OSPx
 
 #define COLOR_BLACK     '0'
 #define COLOR_RED       '1'
@@ -530,10 +522,10 @@ extern vec4_t clrBrownLineFull;
 #define COLOR_MDCYAN    'B'
 #define COLOR_MDPURPLE  'C'
 #define COLOR_NULL      '*'
-#define ColorIndex( c )   ( ( ( c ) - '0' ) & 7 )
 
 #define COLOR_BITS  31
-//#define ColorIndex( c )   ( ( ( c ) - '0' ) & COLOR_BITS )
+#define ColorIndex( c )   ( ( ( c ) - '0' ) & COLOR_BITS )
+// -OSPx
 
 #define S_COLOR_BLACK   "^0"
 #define S_COLOR_RED     "^1"
@@ -557,6 +549,14 @@ extern vec4_t clrBrownLineFull;
 #define S_COLOR_NULL        "^*"
 
 extern vec4_t g_color_table[32];
+// Hex Color string support
+#define gethex( ch ) ( ( ch ) > '9' ? ( ( ch ) >= 'a' ? ( ( ch ) - 'a' + 10 ) : ( ( ch ) - '7' ) ) : ( ( ch ) - '0' ) )
+#define ishex( ch )  ( ( ch ) && ( ( ( ch ) >= '0' && ( ch ) <= '9' ) || ( ( ch ) >= 'A' && ( ch ) <= 'F' ) || ( ( ch ) >= 'a' && ( ch ) <= 'f' ) ) )
+
+// check if it's format rrggbb r,g,b e {0..9} U {A...F}
+#define Q_IsHexColorString( p ) ( ishex( *( p ) ) && ishex( *( ( p ) + 1 ) ) && ishex( *( ( p ) + 2 ) ) && ishex( *( ( p ) + 3 ) ) && ishex( *( ( p ) + 4 ) ) && ishex( *( ( p ) + 5 ) ) )
+#define Q_HexColorStringHasAlpha( p ) ( ishex( *( ( p ) + 6 ) ) && ishex( *( ( p ) + 7 ) ) )
+// -OSPx
 
 #define MAKERGB( v, r, g, b ) v[0] = r; v[1] = g; v[2] = b
 #define MAKERGBA( v, r, g, b, a ) v[0] = r; v[1] = g; v[2] = b; v[3] = a

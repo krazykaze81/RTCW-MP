@@ -339,6 +339,8 @@ typedef struct {
 	qhandle_t fxBasePic;
 	qhandle_t fxPic[7];
 	qhandle_t crosshairShader[NUM_CROSSHAIRS];
+	// OSPx
+	qhandle_t crosshairAltShader[NUM_CROSSHAIRS];
 
 } cachedAssets_t;
 
@@ -455,7 +457,8 @@ void Menu_New( int handle );
 void Menu_PaintAll();
 menuDef_t *Menus_ActivateByName( const char *p, qboolean modalStack );
 void Menu_Reset();
-qboolean Menus_AnyFullScreenVisible();
+qboolean Menus_AnyFullScreenVisible( void );
+qboolean trap_Key_IsDown(int keynum);
 void  Menus_Activate( menuDef_t *menu );
 
 displayContextDef_t *Display_GetContext();

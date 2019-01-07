@@ -262,6 +262,8 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
     </ClCompile>
+    <ClCompile Include="g_admin.c" />
+    <ClCompile Include="g_admin_cmds.c" />
     <ClCompile Include="g_alarm.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
@@ -436,6 +438,7 @@
     <ClInclude Include="bg_local.h" />
     <ClInclude Include="bg_public.h" />
     <ClInclude Include="botlib.h" />
+    <ClInclude Include="g_admin.h" />
     <ClInclude Include="g_func_decs.h" />
     <ClInclude Include="g_local.h" />
     <ClInclude Include="g_public.h" />

@@ -2035,7 +2035,7 @@ qboolean Item_ListBox_HandleKey( itemDef_t *item, int key, qboolean down, qboole
 			}
 		} else {
 			viewmax = ( item->window.rect.h / listPtr->elementHeight );
-			if ( key == K_UPARROW || key == K_KP_UPARROW ) {
+			if ( key == K_UPARROW || key == K_KP_UPARROW || key == K_MWHEELUP ) {
 				if ( !listPtr->notselectable ) {
 					listPtr->cursorPos--;
 					if ( listPtr->cursorPos < 0 ) {
@@ -2057,7 +2057,7 @@ qboolean Item_ListBox_HandleKey( itemDef_t *item, int key, qboolean down, qboole
 				}
 				return qtrue;
 			}
-			if ( key == K_DOWNARROW || key == K_KP_DOWNARROW ) {
+			if ( key == K_DOWNARROW || key == K_KP_DOWNARROW || key == K_MWHEELDOWN ) {
 				if ( !listPtr->notselectable ) {
 					listPtr->cursorPos++;
 					if ( listPtr->cursorPos < listPtr->startPos ) {
@@ -2082,6 +2082,7 @@ qboolean Item_ListBox_HandleKey( itemDef_t *item, int key, qboolean down, qboole
 		}
 		// mouse hit
 		if ( key == K_MOUSE1 || key == K_MOUSE2 ) {
+			Item_ListBox_MouseEnter(item, DC->cursorx, DC->cursory);
 			if ( item->window.flags & WINDOW_LB_LEFTARROW ) {
 				listPtr->startPos--;
 				if ( listPtr->startPos < 0 ) {
@@ -2619,7 +2620,7 @@ qboolean Item_Slider_HandleKey( itemDef_t *item, int key, qboolean down ) {
 			}
 		}
 	}
-	DC->Print( "slider handle key exit\n" );
+	//DC->Print( "slider handle key exit\n" ); OSPx had this deleted
 	return qfalse;
 }
 
@@ -2967,10 +2968,20 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down ) {
 		}
 		break;
 
-	case K_TAB:
 	case K_KP_DOWNARROW:
 	case K_DOWNARROW:
 		Menu_SetNextCursorItem( menu );
+		break;
+
+	case K_KP_ENTER:
+	case K_ENTER:
+	case K_TAB:
+		if (trap_Key_IsDown(K_SHIFT)) {
+			Menu_SetPrevCursorItem(menu);
+		}
+		else {
+			Menu_SetNextCursorItem(menu);
+		}
 		break;
 
 	case K_MOUSE1:
@@ -3002,6 +3013,18 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down ) {
 			}
 		}
 		break;
+	case K_MOUSE3:
+		if (item) {
+			if (item->type == ITEM_TYPE_EDITFIELD || item->type == ITEM_TYPE_NUMERICFIELD) {
+				item->cursorPos = 0;
+				g_editingField = qtrue;
+				g_editItem = item;
+			}
+			else {
+				Item_Action(item);
+			}
+		}
+		break;
 
 	case K_JOY1:
 	case K_JOY2:
@@ -3023,7 +3046,7 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down ) {
 	case K_AUX14:
 	case K_AUX15:
 	case K_AUX16:
-		break;
+	/*	break;
 	case K_KP_ENTER:
 	case K_ENTER:
 	case K_MOUSE3:
@@ -3036,7 +3059,7 @@ void Menu_HandleKey( menuDef_t *menu, int key, qboolean down ) {
 			} else {
 				Item_Action( item );
 			}
-		}
+		} OSPx had this deleted */
 		break;
 	}
 	inHandler = qfalse;
@@ -3542,6 +3565,23 @@ static bind_t g_bindings[] =
 	{"+dropweapon",  -1,             -1, -1, -1},
 	// -NERVE - SMF
 
+	// OSPx	
+	{ "+vstr", -1, -1, -1, -1 },
+	{ "+zoomView", -1, -1, -1, -1 },
+	{ "+stats", -1, -1, -1, -1 },
+	{ "+wstats", -1, -1, -1, -1 },
+	{ "+topshots", -1, -1, -1, -1 },
+	{ "autorecord", -1, -1, -1, -1 },
+	{ "autoScreenshot", -1, -1, -1, -1 },
+	{ "currentTime", -1, -1, -1, -1 },
+	{ "time", -1, -1, -1, -1 },	
+	{ "getstatus", -1, -1, -1, -1 },
+	{ "players", -1, -1, -1, -1 },	
+	{ "sui", -1, -1, -1, -1 },
+	{ "kill", -1, -1, -1, -1 },
+	{ "ready", -1, -1, -1, -1 },
+	{ "notready", -1, -1, -1, -1 },	
+	// -OSPx
 	{"weapon 1",     -1,             -1, -1, -1},
 	{"weapon 2",     -1,             -1, -1, -1},
 	{"weapon 3",     -1,             -1, -1, -1},
@@ -3785,10 +3825,10 @@ void Item_Slider_Paint( itemDef_t *item ) {
 		x = item->window.rect.x;
 	}
 	DC->setColor( newColor );
-	DC->drawHandlePic( x, y, SLIDER_WIDTH, SLIDER_HEIGHT, DC->Assets.sliderBar );
+	DC->drawHandlePic(x, y + 1, SLIDER_WIDTH, SLIDER_HEIGHT, DC->Assets.sliderBar);
 
 	x = Item_Slider_ThumbPosition( item );
-	DC->drawHandlePic( x - ( SLIDER_THUMB_WIDTH / 2 ), y - 2, SLIDER_THUMB_WIDTH, SLIDER_THUMB_HEIGHT, DC->Assets.sliderThumb );
+	DC->drawHandlePic(x - (SLIDER_THUMB_WIDTH / 2), y, SLIDER_THUMB_WIDTH, SLIDER_THUMB_HEIGHT, DC->Assets.sliderThumb);
 }
 
 void Item_Bind_Paint( itemDef_t *item ) {
@@ -4551,7 +4591,7 @@ void Menu_SetFeederSelection( menuDef_t *menu, int feeder, int index, const char
 	}
 }
 
-qboolean Menus_AnyFullScreenVisible() {
+qboolean Menus_AnyFullScreenVisible( void ) {
 	int i;
 	for ( i = 0; i < menuCount; i++ ) {
 		if ( Menus[i].window.flags & WINDOW_VISIBLE && Menus[i].fullScreen ) {

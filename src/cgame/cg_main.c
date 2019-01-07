@@ -2558,7 +2558,7 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 	CG_ParseWolfinfo();     // NERVE - SMF
 
 	// OSP
-	/*CG_ParseServerVersionInfo(CG_ConfigString(CS_VERSIONINFO));*/
+	CG_ParseServerVersionInfo(CG_ConfigString(CS_VERSIONINFO));
 
 	// load the new map
 	CG_LoadingString( "collision map" );
