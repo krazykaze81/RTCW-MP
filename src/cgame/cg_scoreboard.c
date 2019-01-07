@@ -34,6 +34,52 @@ If you have questions concerning this license or the applicable additional terms
 
 /*
 =================
+OSPx - Country Flags 
+
+Author: mcwf
+=================
+*/
+qboolean cf_draw(float x, float y, float fade, int clientNum) {
+
+	float alpha[4];
+	float flag_step = 32;
+	unsigned int flag_sd = 512;
+	unsigned int client_flag = atoi(Info_ValueForKey(CG_ConfigString(clientNum + CS_PLAYERS), "country"));
+
+	if (client_flag < 255) {
+		float x1 = (float)((client_flag * (unsigned int)flag_step) % flag_sd);
+		float y1 = (float)(floor((client_flag * flag_step) / flag_sd) * flag_step);
+		float x2 = x1 + flag_step;
+		float y2 = y1 + flag_step;
+		alpha[0] = alpha[1] = alpha[2] = 1.0; alpha[3] = fade;
+
+		trap_R_SetColor(alpha);
+		CG_DrawPicST(x, y, flag_step, flag_step, x1 / flag_sd, y1 / flag_sd, x2 / flag_sd, y2 / flag_sd, cgs.media.countryFlags);
+		trap_R_SetColor(NULL);
+		return qtrue;
+	}
+	return qfalse;
+}
+
+/*
+=================
+OSPx - Ready state
+=================
+*/
+int is_ready(int clientNum) {
+	int i, rdy = 0;
+
+	for (i = 0; i < cgs.maxclients; i++) {
+		if (cgs.clientinfo[i].team != TEAM_SPECTATOR && cgs.clientinfo[i].clientNum == clientNum) {
+			rdy = (cgs.clientinfo[clientNum].powerups & (1 << PW_READY)) ? 1 : 0;
+			return rdy;
+		}
+	}
+	return rdy;
+}
+
+/*
+=================
 CG_DrawScoreboard
 =================
 */
@@ -297,11 +343,9 @@ int WM_DrawObjectives( int x, int y, int width, float fade ) {
 
 		}
 		CG_DrawSmallString( x,y,s,fade );
-
-		if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
-			msec = cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer );
-		} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_BLUE )     {
-			msec = cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer );
+		// OSPx - Reinforcement Offset (patched)
+		if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED || cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_BLUE ) {
+			msec = CG_CalculateReinfTime() * 1000;
 		} else { // no team (spectator mode)
 			msec = 0;
 		}
@@ -438,6 +482,24 @@ static void WM_DrawClientScore( int x, int y, score_t *score, float *color, floa
 		}
 	}
 
+	// OSPx - Ready
+	if ((cgs.gamestate == GS_WARMUP || cgs.gamestate == GS_WARMUP_COUNTDOWN) && cgs.readyState) {
+		char *rdy = ((is_ready(ci->clientNum)) ? "^2!" : "^n?");
+
+		if (ci->team != TEAM_SPECTATOR)
+			CG_DrawSmallString(tempx - 11, y, va("%s", rdy), fade);
+	}
+
+	// OSPx - Country Flags
+	if ((score->ping != -1) && (score->ping != 999) && (cg_showFlags.integer)) 
+	{
+		if (cf_draw(tempx - 7, y - 7, fade, ci->clientNum)) 
+		{ 
+			offset += 14;
+			tempx += 18;	
+			maxchars -= 2;
+		}
+	} 
 	// draw name
 	CG_DrawStringExt( tempx, y, ci->name, hcolor, qfalse, qfalse, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, maxchars );
 	tempx += INFO_PLAYER_WIDTH - offset;
@@ -449,7 +511,8 @@ static void WM_DrawClientScore( int x, int y, score_t *score, float *color, floa
 
 		totalwidth = INFO_CLASS_WIDTH + INFO_SCORE_WIDTH + INFO_LATENCY_WIDTH - 8;
 
-		s = CG_TranslateString( "^3SPECTATOR" );
+		// OSPx - Show ping for spectators as well
+		s = va("^3(%i) %s", score->ping, CG_TranslateString("SPECTATOR"));
 		w = CG_DrawStrlen( s ) * SMALLCHAR_WIDTH;
 
 		CG_DrawSmallString( tempx + totalwidth - w, y, s, fade );

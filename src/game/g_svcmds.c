@@ -70,11 +70,11 @@ still, you should rely on PB for banning instead
 ==============================================================================
 */
 
-typedef struct ipFilter_s
-{
-	unsigned mask;
-	unsigned compare;
-} ipFilter_t;
+//typedef struct ipFilter_s
+//{
+//	unsigned mask;
+//	unsigned compare;
+//} ipFilter_t;
 
 typedef struct ipGUID_s
 {
@@ -521,7 +521,7 @@ void    Svcmd_ForceTeam_f( void ) {
 
 	// set the team
 	trap_Argv( 2, str, sizeof( str ) );
-	SetTeam( &g_entities[cl - level.clients], str );
+	SetTeam( &g_entities[cl - level.clients], str, qtrue );
 }
 
 /*
@@ -531,49 +531,52 @@ Svcmd_StartMatch_f
 NERVE - SMF - starts match if in tournament mode
 ============
 */
-void Svcmd_StartMatch_f() {
-	if ( !g_noTeamSwitching.integer ) {
-		trap_SendServerCommand( -1, va( "print \"g_noTeamSwitching not activated.\n\"" ) );
+void Svcmd_StartMatch_f( void ) {
+/*	if ( !g_noTeamSwitching.integer ) {
+		trap_SendServerCommand( -1, va("print \"g_noTeamSwitching not activated.\n\""));
 		return;
 	}
+*/
 
+	G_refAllReady_cmd( NULL );
+
+/*
 	if ( level.numPlayingClients <= 1 ) {
-		trap_SendServerCommand( -1, va( "print \"Not enough playing clients to start match.\n\"" ) );
+		trap_SendServerCommand( -1, va("print \"Not enough playing clients to start match.\n\""));
 		return;
 	}
 
 	if ( g_gamestate.integer == GS_PLAYING ) {
-		trap_SendServerCommand( -1, va( "print \"Match is already in progress.\n\"" ) );
+		trap_SendServerCommand( -1, va("print \"Match is already in progress.\n\""));
 		return;
 	}
 
-	if ( g_gamestate.integer == GS_WAITING_FOR_PLAYERS ) {
-		trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
+	if ( g_gamestate.integer == GS_WARMUP ) {
+		trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_PLAYING ) );
 	}
+*/
 }
-
 /*
-============
+==================
 Svcmd_ResetMatch_f
 
-NERVE - SMF - this has three behaviors
-- if not in tournament mode, do a map_restart
-- if in tournament mode, go back to waitingForPlayers mode
-- if in stopwatch mode, reset back to first round
-============
+OSP - multiuse now for both map restarts and total match resets
+==================
 */
-void Svcmd_ResetMatch_f() {
-	if ( g_gametype.integer == GT_WOLF_STOPWATCH ) {
-		trap_Cvar_Set( "g_currentRound", "0" );
-		trap_Cvar_Set( "g_nextTimeLimit", "0" );
+void Svcmd_ResetMatch_f( qboolean fDoReset, qboolean fDoRestart ) {
+	int i;
+
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		g_entities[level.sortedClients[i]].client->pers.ready = 0;
 	}
 
-	if ( !g_noTeamSwitching.integer || ( g_minGameClients.integer > 1 && level.numPlayingClients >= g_minGameClients.integer ) ) {
-		trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
-		return;
-	} else {
-		trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WAITING_FOR_PLAYERS ) );
-		return;
+	if ( fDoReset ) {
+		G_resetRoundState();
+		G_resetModeState();
+	}
+
+	if ( fDoRestart ) {
+		trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", ( ( g_gamestate.integer != GS_PLAYING ) ? GS_RESET : GS_WARMUP ) ) );
 	}
 }
 
@@ -584,22 +587,269 @@ Svcmd_SwapTeams_f
 NERVE - SMF - swaps all clients to opposite team
 ============
 */
-void Svcmd_SwapTeams_f() {
-//  if ( g_gamestate.integer != GS_PLAYING ) {
-	if ( ( g_gamestate.integer == GS_INITIALIZE ) || // JPW NERVE -- so teams can swap between checkpoint rounds
-		 ( g_gamestate.integer == GS_WAITING_FOR_PLAYERS ) ||
+void Svcmd_SwapTeams_f( void ) {
+	G_resetRoundState();
+
+	if ( ( g_gamestate.integer == GS_INITIALIZE ) ||
+		 ( g_gamestate.integer == GS_WARMUP ) ||
 		 ( g_gamestate.integer == GS_RESET ) ) {
-		trap_SendServerCommand( -1, va( "print \"Match must be in progress to swap teams.\n\"" ) );
+		G_swapTeams();
 		return;
 	}
 
-	if ( g_gametype.integer == GT_WOLF_STOPWATCH ) {
-		trap_Cvar_Set( "g_currentRound", "0" );
-		trap_Cvar_Set( "g_nextTimeLimit", "0" );
-	}
+	G_resetModeState();
 
 	trap_Cvar_Set( "g_swapteams", "1" );
-	trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
+	Svcmd_ResetMatch_f( qfalse, qtrue );
+}
+
+
+/*
+====================
+Svcmd_ShuffleTeams_f
+
+OSP - randomly places players on teams
+====================
+*/
+void Svcmd_ShuffleTeams_f( void ) {
+	G_resetRoundState();
+	G_shuffleTeams();
+
+	if ( ( g_gamestate.integer == GS_INITIALIZE ) ||
+		 ( g_gamestate.integer == GS_WARMUP ) ||
+		 ( g_gamestate.integer == GS_RESET ) ) {
+		return;
+	}
+
+	G_resetModeState();
+	Svcmd_ResetMatch_f( qfalse, qtrue );
+}
+
+//void Svcmd_Campaign_f( void ) {
+//	char str[MAX_TOKEN_CHARS];
+//	int i;
+//	g_campaignInfo_t *campaign = NULL;
+//
+//	// find the campaign
+//	trap_Argv( 1, str, sizeof( str ) );
+//
+//	for ( i = 0; i < level.campaignCount; i++ ) {
+//		campaign = &g_campaigns[i];
+//
+//		if ( !Q_stricmp( campaign->shortname, str ) ) {
+//			break;
+//		}
+//	}
+//
+//	if ( i == level.campaignCount || !( campaign->typeBits & ( 1 << GT_WOLF ) ) ) {
+//		G_Printf( "Can't find campaign '%s'\n", str );
+//		return;
+//	}
+//
+//	trap_Cvar_Set( "g_oldCampaign", g_currentCampaign.string );
+//	trap_Cvar_Set( "g_currentCampaign", campaign->shortname );
+//	trap_Cvar_Set( "g_currentCampaignMap", "0" );
+//
+//	level.newCampaign = qtrue;
+//
+//	// we got a campaign, start it
+//	trap_Cvar_Set( "g_gametype", va( "%i", GT_WOLF_CAMPAIGN ) );
+//#if 0
+//	if ( g_developer.integer ) {
+//		trap_SendConsoleCommand( EXEC_APPEND, va( "devmap %s\n", campaign->mapnames[0] ) );
+//	} else
+//#endif
+//	trap_SendConsoleCommand( EXEC_APPEND, va( "map %s\n", campaign->mapnames[0] ) );
+//}
+/*
+==================
+Svcmd_Kick_f
+
+Kick a user off of the server
+==================
+*/
+
+// change into qfalse if you want to use the qagame banning system
+// which makes it possible to unban IP addresses
+#define USE_ENGINE_BANLIST qtrue
+
+static void Svcmd_Kick_f( void ) {
+	gclient_t   *cl;
+	int i;
+	int timeout = -1;
+	char sTimeout[MAX_TOKEN_CHARS];
+	char name[MAX_TOKEN_CHARS];
+
+	// make sure server is running
+	if ( !G_Is_SV_Running() ) {
+		G_Printf( "Server is not running.\n" );
+		return;
+	}
+
+	if ( trap_Argc() < 2 || trap_Argc() > 3 ) {
+		G_Printf( "Usage: kick <player name> [timeout]\n" );
+		return;
+	}
+
+	if ( trap_Argc() == 3 ) {
+		trap_Argv( 2, sTimeout, sizeof( sTimeout ) );
+		timeout = atoi( sTimeout );
+	} else {
+		timeout = 300;
+	}
+
+	trap_Argv( 1, name, sizeof( name ) );
+	cl = G_GetPlayerByName( name ); //ClientForString( name );
+
+	if ( !cl ) {
+		if ( !Q_stricmp( name, "all" ) ) {
+			for ( i = 0, cl = level.clients; i < level.numConnectedClients; i++, cl++ ) {
+
+				// dont kick localclients ...
+				if ( cl->pers.localClient ) {
+					continue;
+				}
+
+				if ( timeout != -1 ) {
+					char *ip;
+					char userinfo[MAX_INFO_STRING];
+
+					trap_GetUserinfo( cl->ps.clientNum, userinfo, sizeof( userinfo ) );
+					ip = Info_ValueForKey( userinfo, "ip" );
+
+					// use engine banning system, mods may choose to use their own banlist
+					if ( USE_ENGINE_BANLIST ) {
+
+						// kick but dont ban bots, they arent that lame
+						if ( ( g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT ) ) {
+							timeout = 0;
+						}
+
+						trap_DropClient( cl->ps.clientNum, "player kicked", timeout );
+					} else {
+						trap_DropClient( cl->ps.clientNum, "player kicked", 0 );
+
+						// kick but dont ban bots, they arent that lame
+						if ( !( g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT ) ) {
+							AddIPBan( ip );
+						}
+					}
+
+				} else {
+					trap_DropClient( cl->ps.clientNum, "player kicked", 0 );
+				}
+			}
+		} else if ( !Q_stricmp( name, "allbots" ) ) {
+			for ( i = 0, cl = level.clients; i < level.numConnectedClients; i++, cl++ ) {
+				if ( !( g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT ) ) {
+					continue;
+				}
+				// kick but dont ban bots, they arent that lame
+				trap_DropClient( cl->ps.clientNum, "player kicked", 0 );
+			}
+		}
+		return;
+	} else {
+		// dont kick localclients ...
+		if ( cl->pers.localClient ) {
+			G_Printf( "Cannot kick host player\n" );
+			return;
+		}
+
+		if ( timeout != -1 ) {
+			char *ip;
+			char userinfo[MAX_INFO_STRING];
+
+			trap_GetUserinfo( cl->ps.clientNum, userinfo, sizeof( userinfo ) );
+			ip = Info_ValueForKey( userinfo, "ip" );
+
+			// use engine banning system, mods may choose to use their own banlist
+			if ( USE_ENGINE_BANLIST ) {
+
+				// kick but dont ban bots, they arent that lame
+				if ( ( g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT ) ) {
+					timeout = 0;
+				}
+				trap_DropClient( cl->ps.clientNum, "player kicked", timeout );
+			} else {
+				trap_DropClient( cl->ps.clientNum, "player kicked", 0 );
+
+				// kick but dont ban bots, they arent that lame
+				if ( !( g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT ) ) {
+					AddIPBan( ip );
+				}
+			}
+
+		} else {
+			trap_DropClient( cl->ps.clientNum, "player kicked", 0 );
+		}
+	}
+}
+
+/*
+==================
+Svcmd_KickNum_f
+
+Kick a user off of the server
+==================
+*/
+static void Svcmd_KickNum_f( void ) {
+	gclient_t   *cl;
+	int timeout = -1;
+	char    *ip;
+	char userinfo[MAX_INFO_STRING];
+	char sTimeout[MAX_TOKEN_CHARS];
+	char name[MAX_TOKEN_CHARS];
+	int clientNum;
+
+	// make sure server is running
+	if ( !G_Is_SV_Running() ) {
+		G_Printf( "Server is not running.\n" );
+		return;
+	}
+
+	if ( trap_Argc() < 2 || trap_Argc() > 3 ) {
+		G_Printf( "Usage: kick <client number> [timeout]\n" );
+		return;
+	}
+
+	if ( trap_Argc() == 3 ) {
+		trap_Argv( 2, sTimeout, sizeof( sTimeout ) );
+		timeout = atoi( sTimeout );
+	} else {
+		timeout = 300;
+	}
+
+	trap_Argv( 1, name, sizeof( name ) );
+	clientNum = atoi( name );
+
+	cl = G_GetPlayerByNum( clientNum );
+	if ( !cl ) {
+		return;
+	}
+	if ( cl->pers.localClient ) {
+		G_Printf( "Cannot kick host player\n" );
+		return;
+	}
+
+	trap_GetUserinfo( cl->ps.clientNum, userinfo, sizeof( userinfo ) );
+	ip = Info_ValueForKey( userinfo, "ip" );
+	// use engine banning system, mods may choose to use their own banlist
+	if ( USE_ENGINE_BANLIST ) {
+
+		// kick but dont ban bots, they arent that lame
+		if ( ( g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT ) ) {
+			timeout = 0;
+		}
+		trap_DropClient( cl->ps.clientNum, "player kicked", timeout );
+	} else {
+		trap_DropClient( cl->ps.clientNum, "player kicked", 0 );
+
+		// kick but dont ban bots, they arent that lame
+		if ( !( g_entities[cl->ps.clientNum].r.svFlags & SVF_BOT ) ) {
+			AddIPBan( ip );
+		}
+	}
 }
 
 
@@ -665,7 +915,7 @@ qboolean    ConsoleCommand( void ) {
 	}
 
 	if ( Q_stricmp( cmd, "reset_match" ) == 0 ) {
-		Svcmd_ResetMatch_f();
+		Svcmd_ResetMatch_f( qtrue, qtrue );
 		return qtrue;
 	}
 
@@ -673,12 +923,56 @@ qboolean    ConsoleCommand( void ) {
 		Svcmd_SwapTeams_f();
 		return qtrue;
 	}
+	if ( Q_stricmp( cmd, "shuffle_teams" ) == 0 ) {
+		Svcmd_ShuffleTeams_f();
+		return qtrue;
+	}
 	// -NERVE - SMF
 
+	if ( Q_stricmp( cmd, "makeReferee" ) == 0 ) {
+		G_MakeReferee();
+		return qtrue;
+	}
+
+	if ( Q_stricmp( cmd, "removeReferee" ) == 0 ) {
+		G_RemoveReferee();
+		return qtrue;
+	}
+
+	/*if (Q_stricmp (cmd, "mute") == 0) {
+		G_MuteClient();
+		return qtrue;
+	}
+
+	if (Q_stricmp (cmd, "unmute") == 0) {
+		G_UnMuteClient();
+		return qtrue;
+	}*/
+
+	if ( Q_stricmp( cmd, "ban" ) == 0 ) {
+		G_PlayerBan();
+		return qtrue;
+	}
+	// fretn - moved from engine
+	if ( !Q_stricmp( cmd, "kick" ) ) {
+		Svcmd_Kick_f();
+		return qtrue;
+	}
+	if ( !Q_stricmp( cmd, "clientkick" ) ) {
+		Svcmd_KickNum_f();
+		return qtrue;
+	}
 	if ( g_dedicated.integer ) {
 		if ( Q_stricmp( cmd, "say" ) == 0 ) {
 			trap_SendServerCommand( -1, va( "print \"server:[lof] %s\"", ConcatArgs( 1 ) ) );
 			return qtrue;
+		}
+		// OSP - console also gets ref commands
+		if ( !level.fLocalHost && Q_stricmp( cmd, "ref" ) == 0 ) {
+			if ( !G_refCommandCheck( NULL, cmd ) ) {
+				G_refHelp_cmd( NULL );
+			}
+			return( qtrue );
 		}
 		// everything else will also be printed as a say command
 		trap_SendServerCommand( -1, va( "print \"server:[lof] %s\"", ConcatArgs( 0 ) ) );

@@ -1,714 +1,681 @@
 ﻿/*
 ===========================================================================
-Wolfenstein: Enemy Territory GPL Source Code
+
+Return to Castle Wolfenstein multiplayer GPL Source Code
 Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
-This file is part of the Wolfenstein: Enemy Territory GPL Source Code (Wolf ET Source Code).
-Wolf ET Source Code is free software: you can redistribute it and/or modify
+
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
+
+RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-Wolf ET Source Code is distributed in the hope that it will be useful,
+
+RTCW MP Source Code is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
+
 You should have received a copy of the GNU General Public License
-along with Wolf ET Source Code.  If not, see <http://www.gnu.org/licenses/>.
-In addition, the Wolf: ET Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the Wolf ET Source Code.  If not, please request a copy in writing from id Software at the address below.
+along with RTCW MP Source Code.  If not, see <http://www.gnu.org/licenses/>.
+
+In addition, the RTCW MP Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the RTCW MP Source Code.  If not, please request a copy in writing from id Software at the address below.
+
 If you have questions concerning this license or the applicable additional terms, you may contact in writing id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
+
+===========================================================================
+OSPx - g_stats.c
+
+Mostly a ET code dump with few modifications..
+
+Created: 3 May / 2014
 ===========================================================================
 */
-
 #include "g_local.h"
 
-void G_LogDeath(gentity_t* ent, weapon_t weap) {
-	weap = BG_DuplicateWeapon(weap);
 
-	if (!ent->client) {
-		return;
-	}
+int iWeap = WS_MAX;
 
-	ent->client->pers.playerStats.weaponStats[weap].killedby++;
+static const weap_ws_convert_t aWeapMOD[MOD_NUM_MODS] = {
+	{ MOD_UNKNOWN,              WS_MAX },
+	{ MOD_MACHINEGUN,           WS_MG42 },
+	{ MOD_GRENADE,              WS_GRENADE },
+	{ MOD_ROCKET,               WS_PANZERFAUST },
 
-	trap_PbStat(ent - g_entities, "death",
-		va("%d %d %d", ent->client->sess.sessionTeam, ent->client->sess.playerType, weap));
+	{ MOD_KNIFE2,               WS_KNIFE },
+	{ MOD_KNIFE,                WS_KNIFE },
+	{ MOD_KNIFE_STEALTH,        WS_KNIFE },
+	{ MOD_LUGER,                WS_LUGER },
+	{ MOD_COLT,                 WS_COLT },
+	{ MOD_MP40,                 WS_MP40 },
+	{ MOD_THOMPSON,             WS_THOMPSON },
+	{ MOD_STEN,                 WS_STEN },
+//	{ MOD_GARAND,               WS_RIFLE },
+	{ MOD_SNIPERRIFLE,          WS_RIFLE },
+	{ MOD_FG42,                 WS_FG42 },
+	{ MOD_FG42SCOPE,            WS_FG42 },
+	{ MOD_PANZERFAUST,          WS_PANZERFAUST },
+	{ MOD_GRENADE_LAUNCHER,     WS_GRENADE },
+	{ MOD_FLAMETHROWER,         WS_FLAMETHROWER },
+	{ MOD_VENOM,				WS_VENOM },
+	{ MOD_GRENADE_PINEAPPLE,    WS_GRENADE },
+
+	{ MOD_DYNAMITE,             WS_DYNAMITE },
+	{ MOD_AIRSTRIKE,            WS_AIRSTRIKE },
+	{ MOD_SYRINGE,              WS_SYRINGE },
+	{ MOD_ARTY,                 WS_ARTILLERY }
+};
+
+// Get right stats index based on weapon mod
+unsigned int G_weapStatIndex_MOD( int iWeaponMOD ) {
+	unsigned int i;
+
+	for ( i = 0; i < MOD_NUM_MODS; i++ ) if ( iWeaponMOD == aWeapMOD[i].iWeapon ) {
+			return( aWeapMOD[i].iWS );
+		}
+	return( WS_MAX );
 }
 
-void G_LogKill(gentity_t* ent, weapon_t weap) {
-	weap = BG_DuplicateWeapon(weap);
+// +wstats
+char *G_createStats( gentity_t *refEnt ) {
+	unsigned int i, dwWeaponMask = 0, dwSkillPointMask = 0;
+	char strWeapInfo[MAX_STRING_CHARS] = {0};
+	char strSkillInfo[MAX_STRING_CHARS] = {0};
 
-	if (!ent->client) {
+	if ( !refEnt ) {
+		return( NULL );
+	}	
+
+	// Add weapon stats as necessary
+	for ( i = WS_KNIFE; i < WS_MAX; i++ ) {
+		if ( refEnt->client->sess.aWeaponStats[i].atts || refEnt->client->sess.aWeaponStats[i].hits ||
+			 refEnt->client->sess.aWeaponStats[i].deaths ) {
+			dwWeaponMask |= ( 1 << i );
+			Q_strcat( strWeapInfo, sizeof( strWeapInfo ), 
+						va( " %d %d %d %d %d",
+							refEnt->client->sess.aWeaponStats[i].hits, refEnt->client->sess.aWeaponStats[i].atts,
+							refEnt->client->sess.aWeaponStats[i].kills, refEnt->client->sess.aWeaponStats[i].deaths,
+							refEnt->client->sess.aWeaponStats[i].headshots ) );
+		}
+	}
+
+	// Additional info
+	Q_strcat( strWeapInfo, sizeof( strWeapInfo ), 
+				va( " %d %d %d %d",
+					refEnt->client->sess.damage_given,
+					refEnt->client->sess.damage_received,
+					refEnt->client->sess.team_damage,
+					refEnt->client->sess.gibs) );	
+
+	return( va( "%d %d %d%s %d%s", 
+				(int)(refEnt - g_entities),
+				refEnt->client->sess.rounds,
+				dwWeaponMask,
+				strWeapInfo,
+				dwSkillPointMask,
+				strSkillInfo) );		
+}
+
+// OSPx - Typical "1.0" info based stats (+stats)
+char *G_createClientStats( gentity_t *refEnt ) {	
+	char strClientInfo[MAX_STRING_CHARS] = {0};
+
+	if ( !refEnt ) {
+		return( NULL );
+	}	
+
+	// Info
+	Q_strcat( strClientInfo, sizeof( strClientInfo ), 
+		va( "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+			refEnt->client->sess.kills,
+			refEnt->client->sess.headshots,
+			refEnt->client->sess.deaths,
+			refEnt->client->sess.team_kills,
+			refEnt->client->sess.suicides,
+			refEnt->client->sess.acc_shots,
+			refEnt->client->sess.acc_hits,
+			refEnt->client->sess.damage_given,
+			refEnt->client->sess.damage_received,
+			refEnt->client->sess.team_damage,
+			refEnt->client->sess.gibs,
+			refEnt->client->sess.med_given,
+			refEnt->client->sess.ammo_given,
+			refEnt->client->sess.revives,
+			refEnt->client->sess.killPeak
+			));	
+
+	return( va( "%d %s", (int)(refEnt - g_entities), strClientInfo) );		
+}
+
+// Sends a player's stats to the requesting client.
+void G_statsPrint( gentity_t *ent, int nType ) {
+	int pid;
+	char *cmd = ( nType == 0 ) ? "ws" : ( "wws" /* ( nType == 1 ) ? "wws" : "gstats" */ );   // Yes, not the cleanest
+	char arg[MAX_TOKEN_CHARS];
+
+	if ( !ent || ( ent->r.svFlags & SVF_BOT ) ) {
 		return;
 	}
 
-	if (ent->client->sess.playerType == PC_SOLDIER) {
-		int i, j;
-		qboolean pass = qtrue;
+	// If requesting stats for self, its easy.
+	if ( trap_Argc() < 2 ) {
+		if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR ) {
+			CP( va( "%s %s\n", cmd, G_createStats( ent ) ) );
+			// Specs default to players they are chasing
+		} else if ( ent->client->sess.spectatorState == SPECTATOR_FOLLOW ) {
+			CP( va( "%s %s\n", cmd, G_createStats( g_entities + ent->client->sess.spectatorClient ) ) );
+		} else {
+			CP( "print \"Info: ^7Type ^3\\wstats <player_id>^7 to see stats on an active player.\n\"" );
+			return;
+		}
+	} else {
+		// Find the player to poll stats.
+		trap_Argv( 1, arg, sizeof( arg ) );
+		if ( ( pid = ClientNumberFromString( ent, arg ) ) == -1 ) {
+			return;
+		}
+		CP( va( "%s %s\n", cmd, G_createStats( g_entities + pid ) ) );
+	}
+}
 
-		ent->client->soliderKillTimes[ent->client->soldierKillMarker++] = level.timeCurrent;
+// Sends a player's stats to the requesting client.
+void G_clientStatsPrint( gentity_t *ent, int nType, qboolean toWindow ) {
+	int pid;
+	char *cmd = (toWindow) ? "cgs" : "cgsp"; 
+	char arg[MAX_TOKEN_CHARS];
 
-		if (ent->client->soldierKillMarker >= NUM_SOLDIERKILL_TIMES) {
-			ent->client->soldierKillMarker = 0;
+	if ( !ent || ( ent->r.svFlags & SVF_BOT ) ) {
+		return;
+	}
+
+	// If requesting stats for self, its easy.
+	if ( trap_Argc() < 2 ) {
+		if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR ) {
+			CP( va( "%s %s\n", cmd, G_createClientStats( ent ) ) );
+			// Specs default to players they are chasing
+		} else if ( ent->client->sess.spectatorState == SPECTATOR_FOLLOW ) {
+			CP( va( "%s %s\n", cmd, G_createClientStats( g_entities + ent->client->sess.spectatorClient ) ) );
+		} else {
+			CP( "print \"Info: ^7Type ^3\\stats <player_id>^7 to see stats on an active player.\n\"" );
+			return;
+		}
+	} else {
+		// Find the player to poll stats.
+		trap_Argv( 1, arg, sizeof( arg ) );
+		if ( ( pid = ClientNumberFromString( ent, arg ) ) == -1 ) {
+			return;
+		}
+		CP( va( "%s %s\n", cmd, G_createClientStats( g_entities + pid ) ) );
+	}
+}
+
+// Records accuracy, damage, and kill/death stats.
+void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod ) {
+	int dmg, ref;
+
+	// Keep track of only active player-to-player interactions in a real game
+	if ( !targ || !targ->client ||
+		 g_gamestate.integer != GS_PLAYING ||
+		 mod == MOD_ADMKILL ||
+		 mod == MOD_SWITCHTEAM ||
+		 ( g_gametype.integer >= GT_WOLF && ( targ->client->ps.pm_flags & PMF_LIMBO ) ) ||
+		 ( g_gametype.integer < GT_WOLF && ( targ->s.eFlags == EF_DEAD || targ->client->ps.pm_type == PM_DEAD ) ) ) {
+		return;
+	}
+
+	// Special hack for intentional gibbage
+	if ( targ->health <= 0 && targ->client->ps.pm_type == PM_DEAD ) {
+		if ( mod < MOD_CROSS && attacker && attacker->client ) {
+			int x = attacker->client->sess.aWeaponStats[G_weapStatIndex_MOD( mod )].atts--;
+			if ( x < 1 ) {
+				attacker->client->sess.aWeaponStats[G_weapStatIndex_MOD( mod )].atts = 1;
+			}
+		}
+		return;
+	}
+
+	// Suicides only affect the player specifically
+	if ( targ == attacker || !attacker || !attacker->client || mod == MOD_SUICIDE || mod == MOD_SELFKILL ) {	
+		if ( !attacker || !attacker->client )
+		return;
+	}
+
+	// Telefrags only add 100 points.. not 100k!!
+	if ( mod == MOD_TELEFRAG ) {
+		dmg = 100;
+	} else { dmg = dmg_ref;}
+
+	// Player team stats
+	if ( g_gametype.integer >= GT_WOLF &&
+		 targ->client->sess.sessionTeam == attacker->client->sess.sessionTeam ) {
+		attacker->client->sess.team_damage += dmg;
+		// Don't count self kill as team kill..because it ain't!
+		if ( targ->health <= 0 && !(mod == MOD_SUICIDE || mod == MOD_SELFKILL)) {
+			attacker->client->sess.team_kills++;
+			targ->client->sess.deaths++;	// Record death when TK occurs
+		}
+		return;
+	}
+
+	// General player stats
+	if ( mod != MOD_SYRINGE ) {
+		attacker->client->sess.damage_given += dmg;
+		targ->client->sess.damage_received += dmg;
+		if ( targ->health <= 0 ) {
+			attacker->client->sess.kills++;
+			targ->client->sess.deaths++;
+
+			// OSPx - Life(s) Kill peak
+			if (attacker->client->pers.life_kills > attacker->client->sess.killPeak)
+				attacker->client->sess.killPeak++;
+		}
+	}
+
+	// Player weapon stats
+	ref = G_weapStatIndex_MOD( mod );
+	if ( dmg > 0 ) {
+		attacker->client->sess.aWeaponStats[ref].hits++;
+	}
+	if ( targ->health <= 0 ) {
+		attacker->client->sess.aWeaponStats[ref].kills++;
+		targ->client->sess.aWeaponStats[ref].deaths++;
+	}
+}
+
+// Records weapon headshots
+void G_addStatsHeadShot( gentity_t *attacker, int mod ) {
+	if ( g_gamestate.integer != GS_PLAYING ) {
+		return;
+	}
+
+	if ( !attacker || !attacker->client ) {
+		return;
+	}
+	attacker->client->sess.aWeaponStats[G_weapStatIndex_MOD( mod )].headshots++;
+	// Store headshot in session as well for overall count
+	attacker->client->sess.headshots++;
+}
+
+// Resets player's current stats
+void G_deleteStats( int nClient ) {
+	gclient_t *cl = &level.clients[nClient];
+
+	cl->sess.damage_given = 0;
+	cl->sess.damage_received = 0;
+	cl->sess.deaths = 0;
+	cl->sess.rounds = 0;
+	cl->sess.kills = 0;
+	cl->sess.suicides = 0;
+	cl->sess.team_damage = 0;
+	cl->sess.team_kills = 0;
+	cl->sess.headshots = 0;
+	cl->sess.med_given = 0;
+	cl->sess.ammo_given = 0;
+	cl->sess.gibs = 0;
+	cl->sess.revives = 0;
+	cl->sess.acc_hits = 0;
+	cl->sess.acc_shots = 0;
+	cl->sess.killPeak = 0;
+
+	memset( &cl->sess.aWeaponStats, 0, sizeof( cl->sess.aWeaponStats ) );
+	trap_Cvar_Set( va( "wstats%i", nClient ), va( "%d", nClient ) );
+}
+
+// Parses weapon stat info for given ent
+//	---> The given string must be space delimited and contain only integers
+void G_parseStats( char *pszStatsInfo ) {
+	gclient_t *cl;
+	const char *tmp = pszStatsInfo;
+	unsigned int i, dwWeaponMask, dwClientID = atoi( pszStatsInfo );
+
+	if ( dwClientID < 0 || dwClientID > MAX_CLIENTS ) {
+		return;
+	}
+
+	cl = &level.clients[dwClientID];
+
+#define GETVAL( x ) if ( ( tmp = strchr( tmp, ' ' ) ) == NULL ) {return;} x = atoi( ++tmp );
+
+	GETVAL( cl->sess.rounds );
+	GETVAL( dwWeaponMask );
+	for ( i = WS_KNIFE; i < WS_MAX; i++ ) {
+		if ( dwWeaponMask & ( 1 << i ) ) {
+			GETVAL( cl->sess.aWeaponStats[i].hits );
+			GETVAL( cl->sess.aWeaponStats[i].atts );
+			GETVAL( cl->sess.aWeaponStats[i].kills );
+			GETVAL( cl->sess.aWeaponStats[i].deaths );
+			GETVAL( cl->sess.aWeaponStats[i].headshots );
+		}
+	}
+
+	GETVAL( cl->sess.damage_given );
+	GETVAL( cl->sess.damage_received );
+	GETVAL( cl->sess.team_damage );
+	GETVAL( cl->sess.deaths );
+	GETVAL( cl->sess.kills );
+	GETVAL( cl->sess.suicides );
+	GETVAL( cl->sess.team_kills );
+	GETVAL( cl->sess.headshots );
+	GETVAL( cl->sess.med_given );
+	GETVAL( cl->sess.ammo_given );
+	GETVAL( cl->sess.gibs );
+	GETVAL( cl->sess.revives );
+	GETVAL( cl->sess.acc_shots );
+	GETVAL( cl->sess.acc_hits );
+	GETVAL( cl->sess.killPeak );
+}
+
+// These map to WS_* weapon indexes
+// OSPx: In other words...min shots before it qualifies for top-bottom check..
+const int cQualifyingShots[WS_MAX] = {
+	20,     // Knife
+	14,     // Luger
+	14,     // Colt
+	32,     // MP40
+	30,     // Thompson
+	32,     // STEN
+	30,     // FG42 (rapid sniper mode)
+	3,      // PF
+	100,    // Flamer
+	5,      // Grenade
+	5,      // Mortar (Was I on drugs or am I missing something?)
+	5,      // Dynamite
+	3,      // Airstrike
+	3,      // Artillery
+	5,      // Syringe
+	3,      // Smoke (Completelly useless..or maybe for "AS cannister kill" when blocking it?)
+	50,     // MG42
+	10,     // Rifle (sniper/mauser aka scopped-unscopped)
+	100		// Venom
+};
+
+// ************** TOPSHOTS/BOTTOMSHOTS
+//
+// Gives back overall or specific weapon rankings
+int QDECL SortStats( const void *a, const void *b ) {
+	gclient_t   *ca, *cb;
+	float accA, accB;
+
+	ca = &level.clients[*(int *)a];
+	cb = &level.clients[*(int *)b];
+
+	// then connecting clients
+	if ( ca->pers.connected == CON_CONNECTING ) {
+		return( 1 );
+	}
+	if ( cb->pers.connected == CON_CONNECTING ) {
+		return( -1 );
+	}
+
+	if ( ca->sess.sessionTeam == TEAM_SPECTATOR ) {
+		return( 1 );
+	}
+	if ( cb->sess.sessionTeam == TEAM_SPECTATOR ) {
+		return( -1 );
+	}
+
+	if ( ( ca->sess.aWeaponStats[iWeap].atts ) < cQualifyingShots[iWeap] ) {
+		return( 1 );
+	}
+	if ( ( cb->sess.aWeaponStats[iWeap].atts ) < cQualifyingShots[iWeap] ) {
+		return( -1 );
+	}
+
+	accA = (float)( ca->sess.aWeaponStats[iWeap].hits * 100.0 ) / (float)( ca->sess.aWeaponStats[iWeap].atts );
+	accB = (float)( cb->sess.aWeaponStats[iWeap].hits * 100.0 ) / (float)( cb->sess.aWeaponStats[iWeap].atts );
+
+	// then sort by accuracy
+	if ( accA > accB ) {
+		return( -1 );
+	}
+	return( 1 );
+}
+
+// Shows the most accurate players for each weapon to the requesting client
+void G_weaponStatsLeaders_cmd( gentity_t* ent, qboolean doTop, qboolean doWindow ) {
+	int i, iWeap, shots, wBestAcc, cClients, cPlaces;
+	int aClients[MAX_CLIENTS];
+	float acc;
+	char z[MAX_STRING_CHARS];
+	const gclient_t* cl;
+
+	z[0] = 0;
+	for ( iWeap = WS_KNIFE; iWeap < WS_MAX; iWeap++ ) {
+		wBestAcc = ( doTop ) ? 0 : 99999;
+		cClients = 0;
+		cPlaces = 0;
+
+		// suckfest - needs two passes, in case there are ties
+		for ( i = 0; i < level.numConnectedClients; i++ ) {
+			cl = &level.clients[level.sortedClients[i]];
+
+			if ( cl->sess.sessionTeam == TEAM_SPECTATOR ) {
+				continue;
+			}
+
+			shots = cl->sess.aWeaponStats[iWeap].atts;
+			if ( shots >= cQualifyingShots[iWeap] ) {
+				acc = (float)( ( cl->sess.aWeaponStats[iWeap].hits ) * 100.0 ) / (float)shots;
+				aClients[cClients++] = level.sortedClients[i];
+				if ( ( ( doTop ) ? acc : (float)wBestAcc ) > ( ( doTop ) ? wBestAcc : acc ) ) {
+					wBestAcc = (int)acc;
+					cPlaces++;
+				}
+			}
 		}
 
-		for (i = 0, j = ent->client->soldierKillMarker; i < NUM_SOLDIERKILL_TIMES; i++) {
+		if ( !doTop && cPlaces < 2 ) {
+			continue;
+		}
 
-			if (!ent->client->soliderKillTimes[j] || (ent->client->soliderKillTimes[j] < level.timeCurrent - SOLDIERKILL_MAXTIME)) {
-				pass = qfalse;
+		for ( i = 0; i < cClients; i++ ) {
+			cl = &level.clients[ aClients[i] ];
+			acc = (float)( cl->sess.aWeaponStats[iWeap].hits * 100.0 ) / (float)( cl->sess.aWeaponStats[iWeap].atts );
+
+			if ( ( ( doTop ) ? acc : (float)wBestAcc + 0.999 ) >= ( ( doTop ) ? wBestAcc : acc ) ) {
+				Q_strcat( z, sizeof( z ), va( " %d %d %d %d %d %d", iWeap + 1, aClients[i],
+											  cl->sess.aWeaponStats[iWeap].hits,
+											  cl->sess.aWeaponStats[iWeap].atts,
+											  cl->sess.aWeaponStats[iWeap].kills,
+											  cl->sess.aWeaponStats[iWeap].deaths ) );
+			}
+		}
+	}
+	CP( va( "%sbstats%s %s 0", ( ( doWindow ) ? "w" : "" ), ( ( doTop ) ? "" : "b" ), z ) );	
+}
+
+// ************** STATSALL
+//
+// Shows all players' stats to the requesting client.
+void G_statsall_cmd( gentity_t *ent, unsigned int dwCommand, qboolean fDump ) {
+	int i;
+	gentity_t *player;
+
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		player = &g_entities[level.sortedClients[i]];
+		if ( player->client->sess.sessionTeam == TEAM_SPECTATOR ) {
+			continue;
+		}
+		CP( va( "ws %s\n", G_createStats( player ) ) );
+	}
+}
+
+
+// Shows best/worst accuracy for all weapons, or sorted
+// accuracies for a single weapon.
+void G_weaponRankings_cmd( gentity_t *ent, unsigned int dwCommand, qboolean state ) {
+	gclient_t *cl;
+	int c = 0, i, shots, wBestAcc;
+	char z[MAX_STRING_CHARS];
+
+	if ( trap_Argc() < 2 ) {
+		G_weaponStatsLeaders_cmd( ent, state, qfalse );
+		return;
+	}
+
+	wBestAcc = ( state ) ? 0 : 99999;
+
+	// Find the weapon
+	trap_Argv( 1, z, sizeof( z ) );
+	if ( ( iWeap = atoi( z ) ) == 0 || iWeap < WS_KNIFE || iWeap >= WS_MAX ) {
+		for (iWeap = WS_VENOM; iWeap >= WS_KNIFE; iWeap--) {
+			if ( !Q_stricmp( z, aWeaponInfo[iWeap].pszCode ) ) {
 				break;
 			}
-
-			if (++j == NUM_SOLDIERKILL_TIMES) {
-				j = 0;
-			}
 		}
 	}
 
-	ent->client->pers.playerStats.weaponStats[weap].kills++;
+	if ( iWeap < WS_KNIFE ) {		
+		CP( va( "print \"\n^3Info: %s\n\n\"",   
+			(state ? 
+				"^7 Shows BEST player for each weapon. Add ^3<weapon_ID>^7 to show all stats for a weapon " : 
+				"^7 Shows WORST player for each weapon. Add ^3<weapon_ID>^7 to show all stats for a weapon" ) 
+		));
 
-	trap_PbStat(ent - g_entities, "kill",
-		va("%d %d %d", ent->client->sess.sessionTeam, ent->client->sess.playerType, weap));
-}
-
-void G_LogTeamKill(gentity_t* ent, weapon_t weap) {
-	weap = BG_DuplicateWeapon(weap);
-
-	if (!ent->client) {
+		Q_strncpyz( z, "^3Available weapon codes:^7\n", sizeof( z ) );
+		for ( i = WS_KNIFE; i < WS_MAX; i++ ) {
+			Q_strcat( z, sizeof( z ), va( "  %s - %s\n", aWeaponInfo[i].pszCode, aWeaponInfo[i].pszName ) );
+		}
+		CP( va( "print \"%s\"", z ) );
 		return;
 	}
 
-	ent->client->pers.playerStats.weaponStats[weap].teamkills++;
+	memcpy( &level.sortedStats, &level.sortedClients, sizeof( level.sortedStats ) );
+	qsort( level.sortedStats, level.numConnectedClients, sizeof( level.sortedStats[0] ), SortStats );
 
-	trap_PbStat(ent - g_entities, "tk",
-		va("%d %d %d", ent->client->sess.sessionTeam, ent->client->sess.playerType, weap));
-}
+	z[0] = 0;
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		cl = &level.clients[level.sortedStats[i]];
 
-void G_LogRegionHit(gentity_t* ent, hitRegion_t hr) {
-	if (!ent->client) {
-		return;
-	}
-	ent->client->pers.playerStats.hitRegions[hr]++;
-
-	trap_PbStat(ent - g_entities, "hr",
-		va("%d %d %d", ent->client->sess.sessionTeam, ent->client->sess.playerType, hr));
-}
-
-void G_PrintAccuracyLog(gentity_t *ent) {
-	int i;
-	char buffer[2048];
-
-	Q_strncpyz(buffer, "WeaponStats", 2048);
-
-	for (i = 0; i < WP_NUM_WEAPONS; i++) {
-		if (!BG_ValidStatWeapon(i)) {
+		if ( cl->sess.sessionTeam == TEAM_SPECTATOR ) {
 			continue;
 		}
 
-		Q_strcat(buffer, 2048, va(" %i %i %i",
-			ent->client->pers.playerStats.weaponStats[i].kills,
-			ent->client->pers.playerStats.weaponStats[i].killedby,
-			ent->client->pers.playerStats.weaponStats[i].teamkills));
+		shots = cl->sess.aWeaponStats[iWeap].atts;
+		if ( shots >= cQualifyingShots[iWeap] ) {
+			float acc = (float)( cl->sess.aWeaponStats[iWeap].hits * 100.0 ) / (float)shots;
+
+			c++;
+			wBestAcc = ( ( ( state ) ? acc : wBestAcc ) > ( ( state ) ? wBestAcc : acc ) ) ? (int)acc : wBestAcc;
+			Q_strcat( z, sizeof( z ), va( " %d %d %d %d %d", level.sortedStats[i],
+										  cl->sess.aWeaponStats[iWeap].hits,
+										  shots,
+										  cl->sess.aWeaponStats[iWeap].kills,
+										  cl->sess.aWeaponStats[iWeap].deaths ) );
+		}
 	}
-
-	Q_strcat(buffer, 2048, va(" %i", ent->client->pers.playerStats.suicides));
-
-	for (i = 0; i < HR_NUM_HITREGIONS; i++) {
-		Q_strcat(buffer, 2048, va(" %i", ent->client->pers.playerStats.hitRegions[i]));
-	}
-
-	Q_strcat(buffer, 2048, va(" %i", 6 /*level.numOidTriggers*/));
-
-	for (i = 0; i < 6 /*level.numOidTriggers*/; i++) {
-		Q_strcat(buffer, 2048, va(" %i", ent->client->pers.playerStats.objectiveStats[i]));
-		Q_strcat(buffer, 2048, va(" %i", ent->client->sess.sessionTeam == TEAM_RED ? level.objectiveStatsAxis[i] : level.objectiveStatsAllies[i]));
-	}
-
-	trap_SendServerCommand(ent - g_entities, buffer);
+	CP( va( "astats%s %d %d %d%s", ( ( state ) ? "" : "b" ), c, iWeap, wBestAcc, z ) );
 }
 
-void G_SetPlayerScore(gclient_t *client) {
-	int i;
+// Prints current player match info.
+void G_printMatchInfo(gentity_t *ent, qboolean time) {
+	int i, j, cnt, eff;
+	float tot_acc = 0.00f;
+	int tot_kills, tot_deaths, tot_gp, tot_hs, tot_sui, tot_tk, tot_dg, tot_dr, tot_td, tot_hits, tot_shots;
+	gclient_t *cl;
+	char *ref;
+	char n1[MAX_NETNAME];
+	
+	CP(va("sc \"\nMod: %s \n^7Server: %s %s\n\n\"",
+		GAMEVERSION, sv_hostname.string, ( time ? va("\n^7Time: ^3%s", getTime()) : "" ) ));
 
-	for (client->ps.persistant[PERS_SCORE] = 0, i = 0; i < SK_NUM_SKILLS; i++) {
-		client->ps.persistant[PERS_SCORE] += client->sess.skillpoints[i];
-	}
-}
-
-//void G_SetPlayerSkill(gclient_t *client, skillType_t skill) {
-//	int i;
-//
-//	for (i = NUM_SKILL_LEVELS - 1; i >= 0; i--) {
-//		if (client->sess.skillpoints[skill] >= mpSkillLevels[i]) {
-//			client->sess.skill[skill] = i;
-//			break;
-//		}
-//	}
-//
-//	G_SetPlayerScore(client);
-//}
-
-//extern qboolean AddWeaponToPlayer(gclient_t *client, weapon_t weapon, int ammo, int ammoclip, qboolean setcurrent);
-
-/*
-// TAT 11/6/2002
-//		Local func to actual do skill upgrade, used by both MP skill system, and SP scripted skill system
-static void G_UpgradeSkill(gentity_t *ent, skillType_t skill) {
-	int i, cnt = 0;
-
-	// See if this is the first time we've reached this skill level
-	for (i = 0; i < SK_NUM_SKILLS; i++) {
-		if (i == skill) {
+	cnt = 0;
+	for (i = TEAM_RED; i <= TEAM_BLUE; i++) {
+		if (!TeamCount(-1, i)) {
 			continue;
 		}
 
-		if (ent->client->sess.skill[skill] <= ent->client->sess.skill[i]) {
-			break;
-		}
-	}
+		tot_kills = 0;
+		tot_deaths = 0;
+		tot_hs = 0;
+		tot_sui = 0;
+		tot_tk = 0;
+		tot_dg = 0;
+		tot_dr = 0;
+		tot_td = 0;
+		tot_gp = 0;
+		tot_hits = 0;
+		tot_shots = 0;
+		tot_acc = 0;
 
-	G_DebugAddSkillLevel(ent, skill);
+		CP(va("sc \"%s ^7Team\n"
+			"^7----------------------------------------------------------------------"
+			"\nPlayer          Kll Dth Sui TK ^2Eff Accrcy   HS    ^5DG    DR   TD  ^3Score\n"
+			"^7----------------------------------------------------------------------\n\"", (i == TEAM_RED) ? "^1Axis" : "^4Allied"));
 
-	if (i == SK_NUM_SKILLS) {
-		// increase rank
-		ent->client->sess.rank++;
-	}
+		for (j = 0; j < level.numPlayingClients; j++) {
+			cl = level.clients + level.sortedClients[j];
 
-	if (ent->client->sess.rank >= 4) {
-		// Gordon: count the number of maxed out skills
-		for (i = 0; i < SK_NUM_SKILLS; i++) {
-			if (ent->client->sess.skill[i] >= 4) {
-				cnt++;
+			if (cl->pers.connected != CON_CONNECTED || cl->sess.sessionTeam != i) {
+				continue;
 			}
+									
+			SanitizeString(cl->pers.netname, n1, qtrue);
+			Q_CleanStr(n1);						
+
+			ref = "^7";
+			tot_kills += cl->sess.kills;
+			tot_deaths += cl->sess.deaths;
+			tot_sui += cl->sess.suicides;
+			tot_tk += cl->sess.team_kills;
+			tot_hs += cl->sess.headshots;
+			tot_dg += cl->sess.damage_given;
+			tot_dr += cl->sess.damage_received;
+			tot_td += cl->sess.team_damage;
+			tot_gp += cl->ps.persistant[PERS_SCORE];
+			tot_hits += cl->sess.acc_hits;
+			tot_shots += cl->sess.acc_shots;
+
+			eff = (cl->sess.deaths + cl->sess.kills == 0) ? 0 : 100 * cl->sess.kills / (cl->sess.deaths + cl->sess.kills);
+			if (eff < 0) {
+				eff = 0;
+			}
+
+			if (ent->client == cl ||
+				(ent->client->sess.sessionTeam == TEAM_SPECTATOR &&
+				ent->client->sess.spectatorState == SPECTATOR_FOLLOW &&
+				ent->client->sess.spectatorClient == level.sortedClients[j])) {
+				ref = "^7";
+			}
+
+			cnt++;
+			CP(va("sc \"%s%-15s%4d%4d%4d%3d%s^2%4d %6.2f%5d^5%6d%6d%5d^3%7d\n\"",
+				ref,
+				n1,
+				cl->sess.kills,
+				cl->sess.deaths,
+				cl->sess.suicides,
+				cl->sess.team_kills,
+				ref,
+				eff,
+				((cl->sess.acc_shots == 0) ? 0.00 : ((float)cl->sess.acc_hits / (float)cl->sess.acc_shots) * 100.00f),
+				cl->sess.headshots,
+				cl->sess.damage_given,
+				cl->sess.damage_received,
+				cl->sess.team_damage,
+				cl->ps.persistant[PERS_SCORE]));
 		}
 
-		ent->client->sess.rank = cnt + 3;
-		if (ent->client->sess.rank > 10) {
-			ent->client->sess.rank = 10;
+		eff = (tot_kills + tot_deaths == 0) ? 0 : 100 * tot_kills / (tot_kills + tot_deaths);
+		if (eff < 0) {
+			eff = 0;
 		}
+		tot_acc = ((tot_shots == 0) ? 0.00 : ((float)tot_hits / (float)tot_shots) * 100.00f);
+
+		CP(va("sc \"^7----------------------------------------------------------------------\n"
+			"%-19s%4d%4d%4d%3d^2%4d %6.2f%5d^5%6d%6d%5d^3%7d\n\n\"",
+			"^3Totals^7",
+			tot_kills,
+			tot_deaths,
+			tot_sui,
+			tot_tk,
+			eff,
+			tot_acc,
+			tot_hs,
+			tot_dg,
+			tot_dr,
+			tot_td,
+			tot_gp));
 	}
-
-	ClientUserinfoChanged(ent - g_entities);
-
-	// Give em rightaway
-	if (skill == SK_BATTLE_SENSE && ent->client->sess.skill[skill] == 1) {
-		if (AddWeaponToPlayer(ent->client, WP_BINOCULARS, 1, 0, qfalse)) {
-			ent->client->ps.stats[STAT_KEYS] |= (1 << INV_BINOCS);
-		}
-	}
-	else if (skill == SK_FIRST_AID && ent->client->sess.playerType == PC_MEDIC && ent->client->sess.skill[skill] == 4) {
-		AddWeaponToPlayer(ent->client, WP_MEDIC_ADRENALINE, ent->client->ps.ammo[BG_FindAmmoForWeapon(WP_MEDIC_ADRENALINE)], ent->client->ps.ammoclip[BG_FindClipForWeapon(WP_MEDIC_ADRENALINE)], qfalse);
-	}
-}
-
-
-void G_LoseSkillPoints(gentity_t *ent, skillType_t skill, float points) {
-	int oldskill;
-	float oldskillpoints;
-
-	if (!ent->client) {
-		return;
-	}
-
-	// no skill loss during warmup
-	if (g_gamestate.integer != GS_PLAYING) {
-		return;
-	}
-
-	if (ent->client->sess.sessionTeam != TEAM_RED && ent->client->sess.sessionTeam != TEAM_BLUE) {
-		return;
-	}
-
-	//if (g_gametype.integer == GT_WOLF_LMS) {
-	//	return; // Gordon: no xp in LMS
-	//}
-
-	oldskillpoints = ent->client->sess.skillpoints[skill];
-	ent->client->sess.skillpoints[skill] -= points;
-
-	// see if player increased in skill
-	oldskill = ent->client->sess.skill[skill];
-	G_SetPlayerSkill(ent->client, skill);
-	if (oldskill != ent->client->sess.skill[skill]) {
-		ent->client->sess.skill[skill] = oldskill;
-		ent->client->sess.skillpoints[skill] = mpSkillLevels[oldskill];
-	}
-
-	G_Printf("%s just lost %f skill points for skill %s\n", ent->client->pers.netname, oldskillpoints - ent->client->sess.skillpoints[skill], mpSkillNames[skill]);
-
-	trap_PbStat(ent - g_entities, "loseskill",
-		va("%d %d %d %f", ent->client->sess.sessionTeam, ent->client->sess.playerType,
-			skill, oldskillpoints - ent->client->sess.skillpoints[skill]));
-
-	level.teamScores[ent->client->ps.persistant[PERS_TEAM]] -= oldskillpoints - ent->client->sess.skillpoints[skill];
-	//level.teamXP[skill][ent->client->sess.sessionTeam - TEAM_RED] -= oldskillpoints - ent->client->sess.skillpoints[skill];
-}
-
-void G_AddSkillPoints(gentity_t *ent, skillType_t skill, float points) {
-	int oldskill;
-
-	if (!ent->client) {
-		return;
-	}
-
-	// no skill gaining during warmup
-	if (g_gamestate.integer != GS_PLAYING) {
-		return;
-	}
-
-	if (ent->client->sess.sessionTeam != TEAM_RED && ent->client->sess.sessionTeam != TEAM_BLUE) {
-		return;
-	}
-
-	//if (g_gametype.integer == GT_WOLF_LMS) {
-	//	return; // Gordon: no xp in LMS
-	//}
-
-	//level.teamXP[skill][ent->client->sess.sessionTeam - TEAM_RED] += points;
-
-	ent->client->sess.skillpoints[skill] += points;
-
-	level.teamScores[ent->client->ps.persistant[PERS_TEAM]] += points;
-
-	//	G_Printf( "%s just got %f skill points for skill %s\n", ent->client->pers.netname, points, mpSkillNames[skill] );
-
-	trap_PbStat(ent - g_entities, "addskill",
-		va("%d %d %d %f", ent->client->sess.sessionTeam, ent->client->sess.playerType,
-			skill, points));
-
-	// see if player increased in skill
-	oldskill = ent->client->sess.skill[skill];
-	G_SetPlayerSkill(ent->client, skill);
-	if (oldskill != ent->client->sess.skill[skill]) {
-		// TAT - call the new func that encapsulates the skill giving behavior
-		G_UpgradeSkill(ent, skill);
-	}
-}
-
-void G_LoseKillSkillPoints(gentity_t *tker, meansOfDeath_t mod, hitRegion_t hr, qboolean splash) {
-	// for evil tkers :E
-
-	if (!tker->client) {
-		return;
-	}
-
-	switch (mod) {
-		// light weapons
-	case MOD_KNIFE:
-	case MOD_LUGER:
-	case MOD_COLT:
-	case MOD_MP40:
-	case MOD_THOMPSON:
-	case MOD_STEN:
-	case MOD_GARAND:
-	case MOD_SILENCER:
-	case MOD_FG42:
-		//		case MOD_FG42SCOPE:
-	//case MOD_CARBINE:
-	//case MOD_KAR98:
-	//case MOD_SILENCED_COLT:
-	//case MOD_K43:
-	//	//bani - akimbo weapons lose score now as well
-	//case MOD_AKIMBO_COLT:
-	//case MOD_AKIMBO_LUGER:
-	//case MOD_AKIMBO_SILENCEDCOLT:
-	//case MOD_AKIMBO_SILENCEDLUGER:
-	case MOD_GRENADE_LAUNCHER:
-	case MOD_GRENADE_PINEAPPLE:
-		//bani - airstrike marker kills
-	//case MOD_SMOKEGRENADE:
-	//	G_LoseSkillPoints(tker, SK_LIGHT_WEAPONS, 3.f);
-	//	//			G_DebugAddSkillPoints( attacker, SK_LIGHT_WEAPONS, 2.f, "kill" );
-	//	break;
-
-		// scoped weapons
-	case MOD_GARAND_SCOPE:
-	case MOD_K43_SCOPE:
-	case MOD_FG42SCOPE:
-	//case MOD_SATCHEL:
-		G_LoseSkillPoints(tker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f);
-		//			G_DebugAddSkillPoints( attacker, SK_LIGHT_WEAPONS, 2.f, "legshot kill" );
-		break;
-
-	//case MOD_MOBILE_MG42:
-	case MOD_MACHINEGUN:
-	case MOD_BROWNING:
-	case MOD_MG42:
-	case MOD_PANZERFAUST:
-	case MOD_FLAMETHROWER:
-	case MOD_MORTAR:
-		G_LoseSkillPoints(tker, SK_HEAVY_WEAPONS, 3.f);
-		//			G_DebugAddSkillPoints( attacker, SK_HEAVY_WEAPONS, 3.f, "emplaced mg42 kill" );
-		break;
-
-	case MOD_DYNAMITE:
-	case MOD_LANDMINE:
-	case MOD_GPG40:
-	case MOD_M7:
-		G_LoseSkillPoints(tker, SK_EXPLOSIVES_AND_CONSTRUCTION, 3.f);
-		//			G_DebugAddSkillPoints( attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 4.f, "dynamite or landmine kill" );
-		break;
-
-	case MOD_ARTY:
-	case MOD_AIRSTRIKE:
-		G_LoseSkillPoints(tker, SK_SIGNALS, 3.f);
-		//			G_DebugAddSkillPoints( attacker, SK_SIGNALS, 4.f, "artillery kill" );
-		break;
-
-		// no skills for anything else
-	default:
-		break;
-	}
-}
-
-void G_AddKillSkillPoints(gentity_t *attacker, meansOfDeath_t mod, hitRegion_t hr, qboolean splash) {
-
-	if (!attacker->client) {
-		return;
-	}
-
-	switch (mod) {
-		// light weapons
-	case MOD_KNIFE:
-		G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "knife kill");
-		break;
-
-	case MOD_LUGER:
-	case MOD_COLT:
-	case MOD_MP40:
-	case MOD_THOMPSON:
-	case MOD_STEN:
-	case MOD_GARAND:
-	case MOD_SILENCER:
-	case MOD_FG42:
-		//		case MOD_FG42SCOPE:
-	//case MOD_CARBINE:
-	//case MOD_KAR98:
-	//case MOD_SILENCED_COLT:
-	//case MOD_K43:
-	//case MOD_AKIMBO_COLT:
-	//case MOD_AKIMBO_LUGER:
-	//case MOD_AKIMBO_SILENCEDCOLT:
-	//case MOD_AKIMBO_SILENCEDLUGER:
-		switch (hr) {
-		case HR_HEAD:   G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 5.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 5.f, "headshot kill"); break;
-		case HR_ARMS:   G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "armshot kill"); break;
-		case HR_BODY:   G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "bodyshot kill"); break;
-		case HR_LEGS:   G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "legshot kill");  break;
-		default:        G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "kill"); break;           // for weapons that don't have localized damage
-		}
-		break;
-
-		// heavy weapons
-	case MOD_MOBILE_MG42:
-		G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "mobile mg42 kill");
-		break;
-
-		// scoped weapons
-	case MOD_GARAND_SCOPE:
-	case MOD_K43_SCOPE:
-	case MOD_FG42SCOPE:
-		switch (hr) {
-		case HR_HEAD:   G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 5.f); G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 5.f, "headshot kill"); break;
-		case HR_ARMS:   G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 2.f, "armshot kill"); break;
-		case HR_BODY:   G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f, "bodyshot kill"); break;
-		case HR_LEGS:   G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 2.f, "legshot kill"); break;
-		default:        G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f); G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 3.f, "kill"); break;         // for weapons that don't have localized damage
-		}
-		break;
-
-		// misc weapons (individual handling)
-	case MOD_SATCHEL:
-		G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 5.f);
-		G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, 5.f, "satchel charge kill");
-		break;
-
-	case MOD_MACHINEGUN:
-	case MOD_BROWNING:
-	case MOD_MG42:
-		G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "emplaced machinegun kill");
-		break;
-
-	case MOD_PANZERFAUST:
-		if (splash) {
-			G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-			G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "panzerfaust splash damage kill");
-		}
-		else {
-			G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-			G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "panzerfaust direct hit kill");
-		}
-		break;
-	case MOD_FLAMETHROWER:
-		G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "flamethrower kill");
-		break;
-	case MOD_MORTAR:
-		if (splash) {
-			G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-			G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "mortar splash damage kill");
-		}
-		else {
-			G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f);
-			G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, 3.f, "mortar direct hit kill");
-		}
-		break;
-	case MOD_GRENADE_LAUNCHER:
-	case MOD_GRENADE_PINEAPPLE:
-		//bani - airstrike marker kills
-	case MOD_SMOKEGRENADE:
-		G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, 3.f, "hand grenade kill");
-		break;
-	case MOD_DYNAMITE:
-	//case MOD_LANDMINE:
-		G_AddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 4.f);
-		G_DebugAddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 4.f, "dynamite or landmine kill");
-		break;
-	case MOD_ARTY:
-		G_AddSkillPoints(attacker, SK_SIGNALS, 4.f);
-		G_DebugAddSkillPoints(attacker, SK_SIGNALS, 4.f, "artillery kill");
-		break;
-	case MOD_AIRSTRIKE:
-		G_AddSkillPoints(attacker, SK_SIGNALS, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_SIGNALS, 3.f, "airstrike kill");
-		break;
-	case MOD_GPG40:
-	case MOD_M7:
-		G_AddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 3.f);
-		G_DebugAddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, 3.f, "rifle grenade kill");
-		break;
-
-		// no skills for anything else
-	default:
-		break;
-	}
-}
-
-void G_AddKillSkillPointsForDestruction(gentity_t *attacker, meansOfDeath_t mod, g_constructible_stats_t *constructibleStats) {
-	switch (mod) {
-	case MOD_GRENADE_LAUNCHER:
-	case MOD_GRENADE_PINEAPPLE:
-		G_AddSkillPoints(attacker, SK_LIGHT_WEAPONS, constructibleStats->destructxpbonus);
-		G_DebugAddSkillPoints(attacker, SK_LIGHT_WEAPONS, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
-		break;
-	case MOD_GPG40:
-	case MOD_M7:
-	case MOD_DYNAMITE:
-	//case MOD_LANDMINE:
-		G_AddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, constructibleStats->destructxpbonus);
-		G_DebugAddSkillPoints(attacker, SK_EXPLOSIVES_AND_CONSTRUCTION, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
-		break;
-	case MOD_PANZERFAUST:
-	case MOD_MORTAR:
-		G_AddSkillPoints(attacker, SK_HEAVY_WEAPONS, constructibleStats->destructxpbonus);
-		G_DebugAddSkillPoints(attacker, SK_HEAVY_WEAPONS, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
-		break;
-	case MOD_ARTY:
-	case MOD_AIRSTRIKE:
-		G_AddSkillPoints(attacker, SK_SIGNALS, constructibleStats->destructxpbonus);
-		G_DebugAddSkillPoints(attacker, SK_SIGNALS, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
-		break;
-	case MOD_SATCHEL:
-		G_AddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, constructibleStats->destructxpbonus);
-		G_DebugAddSkillPoints(attacker, SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS, constructibleStats->destructxpbonus, "destroying a constructible/explosive");
-		break;
-	default:
-		break;
-	}
-}
-
-/////// SKILL DEBUGGING ///////
-static fileHandle_t skillDebugLog = -1;
-
-void G_DebugOpenSkillLog(void) {
-	vmCvar_t mapname;
-	qtime_t ct;
-	char        *s;
-
-	if (g_debugSkills.integer < 2) {
-		return;
-	}
-
-	trap_Cvar_Register(&mapname, "mapname", "", CVAR_SERVERINFO | CVAR_ROM);
-
-	trap_RealTime(&ct);
-
-	if (trap_FS_FOpenFile(va("skills-%d-%02d-%02d-%02d%02d%02d-%s.log",
-		1900 + ct.tm_year, ct.tm_mon + 1, ct.tm_mday,
-		ct.tm_hour, ct.tm_min, ct.tm_sec,
-		mapname.string), &skillDebugLog, FS_APPEND_SYNC) < 0) {
-		return;
-	}
-
-	s = va("%02d:%02d:%02d : Logfile opened.\n", ct.tm_hour, ct.tm_min, ct.tm_sec);
-
-	trap_FS_Write(s, strlen(s), skillDebugLog);
-}
-
-void G_DebugCloseSkillLog(void) {
-	qtime_t ct;
-	char        *s;
-
-	if (skillDebugLog == -1) {
-		return;
-	}
-
-	trap_RealTime(&ct);
-
-	s = va("%02d:%02d:%02d : Logfile closed.\n", ct.tm_hour, ct.tm_min, ct.tm_sec);
-
-	trap_FS_Write(s, strlen(s), skillDebugLog);
-
-	trap_FS_FCloseFile(skillDebugLog);
-}
-
-void G_DebugAddSkillLevel(gentity_t *ent, skillType_t skill) {
-	qtime_t ct;
-
-	if (!g_debugSkills.integer) {
-		return;
-	}
-
-	trap_SendServerCommand(ent - g_entities, va("sdbg \"^%c(SK: %2i XP: %6.2f) %s: You raised your skill level to %i.\"\n",
-		COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], mpSkillNames[skill], ent->client->sess.skill[skill]));
-
-	trap_RealTime(&ct);
-
-	if (g_debugSkills.integer >= 2 && skillDebugLog != -1) {
-		char *s = va("%02d:%02d:%02d : ^%c(SK: %2i XP: %6.2f) %s: %s raised in skill level to %i.\n",
-			ct.tm_hour, ct.tm_min, ct.tm_sec,
-			COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], mpSkillNames[skill], ent->client->pers.netname, ent->client->sess.skill[skill]);
-		trap_FS_Write(s, strlen(s), skillDebugLog);
-	}
-}
-
-void G_DebugAddSkillPoints(gentity_t *ent, skillType_t skill, float points, const char *reason) {
-	qtime_t ct;
-
-	if (!g_debugSkills.integer) {
-		return;
-	}
-
-	trap_SendServerCommand(ent - g_entities, va("sdbg \"^%c(SK: %2i XP: %6.2f) %s: You gained %.2fXP, reason: %s.\"\n",
-		COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], mpSkillNames[skill], points, reason));
-
-	trap_RealTime(&ct);
-
-	if (g_debugSkills.integer >= 2 && skillDebugLog != -1) {
-		char *s = va("%02d:%02d:%02d : ^%c(SK: %2i XP: %6.2f) %s: %s gained %.2fXP, reason: %s.\n",
-			ct.tm_hour, ct.tm_min, ct.tm_sec,
-			COLOR_RED + skill, ent->client->sess.skill[skill], ent->client->sess.skillpoints[skill], mpSkillNames[skill], ent->client->pers.netname, points, reason);
-		trap_FS_Write(s, strlen(s), skillDebugLog);
-	}
-}
-*/
-
-#define CHECKSTAT1( XX )														\
-	best = NULL;																\
-	for ( i = 0; i < level.numConnectedClients; i++ ) {							 \
-		gclient_t* cl = &level.clients[ level.sortedClients[ i ] ];				\
-		if ( cl->sess.sessionTeam == TEAM_SPECTATOR ) {							 \
-			continue;															\
-		}																		\
-		if ( !best || cl->XX > best->XX ) {									 \
-			best = cl;															\
-		}																		\
-	}																			\
-	if ( best ) { best->hasaward = qtrue; }										 \
-	Q_strcat( buffer, 1024, va( ";%s; %i ", best ? best->pers.netname : "", best ? best->sess.sessionTeam : -1 ) )
-
-#define CHECKSTATMIN( XX, YY )													\
-	best = NULL;																\
-	for ( i = 0; i < level.numConnectedClients; i++ ) {							 \
-		gclient_t* cl = &level.clients[ level.sortedClients[ i ] ];				\
-		if ( cl->sess.sessionTeam == TEAM_SPECTATOR ) {							 \
-			continue;															\
-		}																		\
-		if ( !best || cl->XX > best->XX ) {									 \
-			best = cl;															\
-		}																		\
-	}																			\
-	if ( best ) { best->hasaward = qtrue; }										 \
-	Q_strcat( buffer, 1024, va( ";%s; %i ", best && best->XX >= YY ? best->pers.netname : "", best && best->XX >= YY ? best->sess.sessionTeam : -1 ) )
-
-#define CHECKSTATSKILL( XX )															\
-	best = NULL;																\
-	for ( i = 0; i < level.numConnectedClients; i++ ) {							 \
-		gclient_t* cl = &level.clients[ level.sortedClients[ i ] ];				\
-		if ( cl->sess.sessionTeam == TEAM_SPECTATOR ) {							 \
-			continue;															\
-		}																		\
-		if ( !best || ( cl->sess.skillpoints[XX] - cl->sess.startskillpoints[XX] ) > ( best->sess.skillpoints[XX] - best->sess.startskillpoints[XX] ) ) {									 \
-			best = cl;															\
-		}																		\
-	}																			\
-	if ( best ) { best->hasaward = qtrue; }										 \
-	Q_strcat( buffer, 1024, va( ";%s; %i ", best && best->sess.skillpoints[XX] >= 20 ? best->pers.netname : "", best && best->sess.skillpoints[XX] >= 20 ? best->sess.sessionTeam : -1 ) )
-
-#define CHECKSTAT3( XX, YY, ZZ )												\
-	best = NULL;																\
-	for ( i = 0; i < level.numConnectedClients; i++ ) {							 \
-		gclient_t* cl = &level.clients[ level.sortedClients[ i ] ];				\
-		if ( cl->sess.sessionTeam == TEAM_SPECTATOR ) {							 \
-			continue;															\
-		}																		\
-		if ( !best || cl->XX > best->XX ) {									 \
-			best = cl;															\
-		} else if ( cl->XX == best->XX && cl->YY > best->YY ) {			  \
-			best = cl;															\
-		} else if ( cl->XX == best->XX && cl->YY == best->YY && cl->ZZ > best->ZZ ) {		  \
-			best = cl;															\
-		}																		\
-	}																			\
-	if ( best ) { best->hasaward = qtrue; }										 \
-	Q_strcat( buffer, 1024, va( ";%s; %i ", best ? best->pers.netname : "", best ? best->sess.sessionTeam : -1 ) )
-
-#define CHECKSTATTIME( XX, YY )													\
-	best = NULL;																\
-	for ( i = 0; i < level.numConnectedClients; i++ ) {							 \
-		gclient_t* cl = &level.clients[ level.sortedClients[ i ] ];				\
-		if ( cl->sess.sessionTeam == TEAM_SPECTATOR ) {							 \
-			continue;															\
-		}																		\
-		if ( !best || ( cl->XX / (float)( level.time - cl->YY ) ) > ( best->XX / (float)( level.time - best->YY ) ) ) {	\
-			best = cl;															\
-		}																		\
-	}																			\
-	if ( best ) {																 \
-		if ( ( best->sess.startxptotal - best->ps.persistant[PERS_SCORE] ) >= 100 || best->medals || best->hasaward ) {	\
-			best = NULL;														\
-		}																		\
-	}																			\
-	Q_strcat( buffer, 1024, va( ";%s; %i ", best ? best->pers.netname : "", best ? best->sess.sessionTeam : -1 ) )
-
-void G_BuildEndgameStats(void) {
-	char buffer[1024];
-	int i;
-	gclient_t* best;
-
-	G_CalcClientAccuracies();
-
-	for (i = 0; i < level.numConnectedClients; i++) {
-		level.clients[i].hasaward = qfalse;
-	}
-
-	*buffer = '\0';
-
-	CHECKSTAT1(sess.kills);
-	CHECKSTAT1(ps.persistant[PERS_SCORE]);
-	//CHECKSTAT3(sess.rank, medals, ps.persistant[PERS_SCORE]);
-	//CHECKSTAT1(medals);
-	CHECKSTATSKILL(SK_BATTLE_SENSE);
-	CHECKSTATSKILL(SK_EXPLOSIVES_AND_CONSTRUCTION);
-	CHECKSTATSKILL(SK_FIRST_AID);
-	CHECKSTATSKILL(SK_SIGNALS);
-	CHECKSTATSKILL(SK_LIGHT_WEAPONS);
-	CHECKSTATSKILL(SK_HEAVY_WEAPONS);
-	CHECKSTATSKILL(SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS);
-	CHECKSTAT1(acc);
-	CHECKSTATMIN(sess.team_kills, 5);
-	CHECKSTATTIME(ps.persistant[PERS_SCORE], pers.enterTime);
-
-	trap_SetConfigstring(CS_ENDGAME_STATS, buffer);
+	CP(va("sc \"%s\n\" 0", ((!cnt) ? "^3\nNo scores to report." : "")));
 }

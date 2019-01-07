@@ -2677,6 +2677,11 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
 		flash.hModel = 0;
 	}
 
+	// OSPx - Disable muzzleFlash if they have it off..	
+	// NOTE: Patched for zoomed FOV
+	if (!cg_muzzleFlash.integer || cg.zoomedFOV) {
+		flash.hModel = 0;
+	}
 	// weaps with barrel smoke
 	if ( ps || cg.renderingThirdPerson || !isPlayer ) {
 		if ( weaponNum == WP_STEN || weaponNum == WP_VENOM ) {
@@ -3132,7 +3137,7 @@ static qboolean CG_WeaponHasAmmo( int i ) {
 CG_WeaponSelectable
 ===============
 */
-static qboolean CG_WeaponSelectable( int i ) {
+qboolean CG_WeaponSelectable( int i ) {
 
 	// allow the player to unselect all weapons
 //	if(i == WP_NONE)
@@ -3849,10 +3854,15 @@ CG_LastWeaponUsed_f
 void CG_LastWeaponUsed_f( void ) {
 	int lastweap;
 
+	// OSPx - Pause
+	if (cg.snap->ps.pm_type == PM_FREEZE) {
+		return;
+	}
+
 	if ( cg.time - cg.weaponSelectTime < cg_weaponCycleDelay.integer ) {
 		return; // force pause so holding it down won't go too fast
-
 	}
+
 	cg.weaponSelectTime = cg.time;  // flash the current weapon icon
 
 	// don't switchback if reloading (it nullifies the reload)
@@ -3881,10 +3891,15 @@ CG_NextWeaponInBank_f
 */
 void CG_NextWeaponInBank_f( void ) {
 
+	// OSPx - Pause
+	if (cg.snap->ps.pm_type == PM_FREEZE) {
+		return;
+	}
+
 	if ( cg.time - cg.weaponSelectTime < cg_weaponCycleDelay.integer ) {
 		return; // force pause so holding it down won't go too fast
-
 	}
+
 	// this cvar is an option that lets the player use his weapon switching keys (probably the mousewheel)
 	// for zooming (binocs/snooper/sniper/etc.)
 	if ( cg.zoomval ) {
@@ -3909,10 +3924,15 @@ CG_PrevWeaponInBank_f
 */
 void CG_PrevWeaponInBank_f( void ) {
 
+	// OSPx - Pause
+	if (cg.snap->ps.pm_type == PM_FREEZE) {
+		return;
+	}
+
 	if ( cg.time - cg.weaponSelectTime < cg_weaponCycleDelay.integer ) {
 		return; // force pause so holding it down won't go too fast
-
 	}
+
 	// this cvar is an option that lets the player use his weapon switching keys (probably the mousewheel)
 	// for zooming (binocs/snooper/sniper/etc.)
 	if ( cg.zoomval ) {
@@ -3939,6 +3959,10 @@ CG_NextWeapon_f
 void CG_NextWeapon_f( void ) {
 
 	if ( !cg.snap ) {
+		return;
+	}
+	// OSPx - Pause
+	if (cg.snap->ps.pm_type == PM_FREEZE) {
 		return;
 	}
 	if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) {
@@ -3988,6 +4012,10 @@ void CG_PrevWeapon_f( void ) {
 	if ( !cg.snap ) {
 		return;
 	}
+	// OSPx - Pause
+	if (cg.snap->ps.pm_type == PM_FREEZE) {
+		return;
+	}
 	if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) {
 		return;
 	}
@@ -4031,6 +4059,11 @@ void CG_WeaponBank_f( void ) {
 	int curbank = 0, curcycle = 0, bank = 0, cycle = 0;
 
 	if ( !cg.snap ) {
+		return;
+	}
+
+	// OSPx - Pause
+	if (cg.snap->ps.pm_type == PM_FREEZE) {
 		return;
 	}
 
@@ -4104,6 +4137,11 @@ void CG_Weapon_f( void ) {
 	qboolean banked = qfalse;
 
 	if ( !cg.snap ) {
+		return;
+	}
+
+	// OSPx - Pause
+	if (cg.snap->ps.pm_type == PM_FREEZE) {
 		return;
 	}
 
@@ -4217,7 +4255,8 @@ void CG_OutOfAmmoChange( void ) {
 // jpw
 
 	// never switch weapon if auto-reload is disabled
-	if ( !cg.pmext.bAutoReload && IS_AUTORELOAD_WEAPON( cg.weaponSelect ) ) {
+	if (!cg.pmext.bAutoReload && IS_AUTORELOAD_WEAPON(cg.weaponSelect)
+		&& !cg_noAmmoAutoSwitch.integer) { // OSPx - Account for cg_noAmmoAutoSwitch variable..
 		return;
 	}
 

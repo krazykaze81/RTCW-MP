@@ -44,7 +44,7 @@ If you have questions concerning this license or the applicable additional terms
 
 
 #define POWERUP_BLINKS      5
-#define STATS_FADE_TIME     200.0f
+#define STATS_FADE_TIME     200.0f // OSPx - stats
 #define POWERUP_BLINK_TIME  1000
 #define FADE_TIME           200
 #define PULSE_TIME          200
@@ -104,12 +104,14 @@ If you have questions concerning this license or the applicable additional terms
 #define TJFL_NOPOLYMERGE    ( 1 << 5 )
 // done.
 
+// NERVE - SMF - limbo mode 3d view position
+#define LIMBO_3D_X  10
+#define LIMBO_3D_Y  158
+#define LIMBO_3D_W  420
+#define LIMBO_3D_H  312
+// -NERVE - SMF
+
 // OSP
-// OSP
-// Autoaction values
-#define AA_DEMORECORD   0x01
-#define AA_SCREENSHOT   0x02
-#define AA_STATSDUMP    0x04
 
 // Cursor
 #define CURSOR_OFFSETX  13
@@ -137,7 +139,7 @@ If you have questions concerning this license or the applicable additional terms
 #define WID_NONE            0x00    // General window
 #define WID_STATS           0x01    // Stats (reusable due to scroll effect)
 #define WID_TOPSHOTS        0x02    // Top/Bottom-shots
-#define WID_MOTD            0x04    // MOTD
+#define WID_CLIENTSTATS		0x03	// L0 - 1.0 stats
 //#define WID_DEMOHELP		0x08	// Demo key control info
 //#define WID_SPECHELP		0x10	// MV spectator key control info
 
@@ -203,6 +205,12 @@ typedef struct {
 	cg_window_t window[MAX_WINDOW_COUNT];           // Static allocation of all windows
 } cg_windowHandler_t;
 
+typedef enum {
+	SHOW_OFF,
+	SHOW_SHUTDOWN,
+	SHOW_ON
+} showView_t;
+
 typedef struct {
 	int pID;                    // Player ID
 	int classID;                // Player's current class
@@ -212,13 +220,6 @@ typedef struct {
 	cg_window_t *w;         // Window handle (may be NULL)
 } cg_mvinfo_t;
 // -OSP
-
-// NERVE - SMF - limbo mode 3d view position
-#define LIMBO_3D_X  10
-#define LIMBO_3D_Y  158
-#define LIMBO_3D_W  420
-#define LIMBO_3D_H  312
-// -NERVE - SMF
 
 
 // MV overlay
@@ -272,7 +273,6 @@ typedef struct {
 	char strWS[WS_MAX][MAX_STRING_TOKENS];
 	char strExtra[2][MAX_STRING_TOKENS];
 	char strRank[MAX_STRING_TOKENS];
-	char strSkillz[SK_NUM_SKILLS][MAX_STRING_TOKENS];
 	int cWeapons;
 	int cSkills;
 	qboolean fHasStats;
@@ -284,13 +284,26 @@ typedef struct {
 } gameStats_t;
 
 typedef struct {
+	char strStats[MAX_STRING_TOKENS];
+	int cWeapons;
+	int cSkills;
+	qboolean fHasStats;
+	int nClientID;
+	int nRounds;
+	int fadeTime;
+	int show;
+	int requestTime;
+} clientGameStats_t;
+
+
+typedef struct {
 	char strWS[WS_MAX * 2][MAX_STRING_TOKENS];
 	int cWeapons;
 	int fadeTime;
 	int show;
 	int requestTime;
 } topshotStats_t;
-// -OSP
+// -OSPx
 
 //=================================================
 
@@ -907,11 +920,19 @@ typedef struct {
 #define MAX_SPAWN_VARS          64
 #define MAX_SPAWN_VARS_CHARS    2048
 
-typedef enum {
-	SHOW_OFF,
-	SHOW_SHUTDOWN,
-	SHOW_ON
-} showView_t;
+// OSPx - Draw HUDnames
+typedef struct specName_s
+{
+	float		x;
+	float		y;
+	float		scale;
+	const char *text;
+	vec3_t		origin;
+	int         lastVisibleTime;
+	int         lastInvisibleTime;
+	qboolean    visible;
+	float		alpha;
+}specName_t;
 
 typedef struct {
 	int clientFrame;                // incremented each frame
@@ -996,6 +1017,11 @@ typedef struct {
 	float zoomSensitivity;
 	float zoomval;
 
+	// OSPx - zoomFOV
+	qboolean zoomedFOV;
+	int zoomedTime;
+	float zoomedVal;
+	float zoomedSens;
 
 	// information screen text during loading
 	char infoScreenText[MAX_STRING_CHARS];
@@ -1176,7 +1202,6 @@ typedef struct {
 	float cameraShakeScale;
 	float cameraShakeLength;
 
-	qboolean latchAutoActions; // OSP
 	qboolean latchVictorySound;
 	// -NERVE - SMF
 
@@ -1193,30 +1218,80 @@ typedef struct {
 	char thirtySecondSound_g[MAX_QPATH];
 	char thirtySecondSound_a[MAX_QPATH];
 
-	pmoveExt_t pmext;
+// OSPx 
+	// Crosshairs
+	vec4_t xhairColor;
+	vec4_t xhairColorAlt;
 
-	// OSP
-	qboolean showStats;
+	// Reinforcements 
+	vec4_t reinforcementColor;
+
+	// Draw names on hud
+	qboolean	renderingFreeCam;
+	specName_t	specOnScreenNames[MAX_CLIENTS];
+
+	// Announcer
+	int		centerPrintAnnouncerTime;
+	char	*centerPrintAnnouncer;
+	float	centerPrintAnnouncerScale;
+	int		centerPrintAnnouncerDuration;
+	vec3_t	centerPrintAnnouncerColor;
+	int		centerPrintAnnouncerMode;
+
+	// Auto Actions
+	qboolean	latchAutoActions;
+
+	// Stats
 	cg_string_t aStringPool[MAX_STRINGS];
-	int demohelpWindow;
+	cg_window_t *msgWstatsWindow;
+	cg_window_t *msgWtopshotsWindow;
+	int statsRequestTime;
 	cg_window_t *statsWindow;
-	int aviDemoRate;                                    // Demo playback recording
-	int aReinfOffset[TEAM_NUM_TEAMS];                   // Team reinforcement offsets
-	int cursorUpdate;                                   // Timeout for mouse pointer view
-	fileHandle_t dumpStatsFile;                         // File to dump stats
-	char*               dumpStatsFileName;              // Name of file to dump stats
-	int dumpStatsTime;                                  // Next stats command that comes back will be written to a logfile
-	int game_versioninfo;                               // game base version
-	gameStats_t gamestats;
-	topshotStats_t topshots;
+	int topshotsRequestTime;
+	cg_window_t *topshotsWindow;
+	cg_window_t *windowCurrent;
+	cg_windowHandler_t winHandler;	
+	cg_window_t *clientStatsWindow;
+	cg_window_t *msgClientStatsWindow;
+
+	// Pop In prints
+	int popinPrintTime;
+	int popinPrintCharWidth;
+	int popinPrintY;
+	char popinPrint[1024];
+	int popinPrintLines;
+	qboolean popinBlink;
+// -OSPx
+
+
+	pmoveExt_t pmext;
+	
+	// OSP stuff
+	/*
 	qboolean fResize;                                   // MV window "resize" status
 	qboolean fSelect;                                   // MV window "select" status
 	qboolean fKeyPressed[256];                          // Key status to get around console issues
 	int timescaleUpdate;                                // Timescale display for demo playback
-	int thirdpersonUpdate;
-	cg_window_t         *motdWindow;
-	cg_window_t         *msgWstatsWindow;
-	cg_window_t         *msgWtopshotsWindow;
+	int aviDemoRate;                                    // Demo playback recording
+	vec2_t ccMenuPos;
+	qboolean ccMenuShowing;
+	int ccMenuType;
+	int ccSelectedLayer;
+	int ccSelectedObjective;
+	int ccSelectedTeam;                     // ( 1 = ALLIES, 0 = AXIS )
+	int ccSelectedWeaponNumber;
+	int ccSelectedClass;
+	int ccSelectedWeapon;
+	int ccSelectedWeapon2;
+	int ccWeaponShots;
+	vec3_t ccPortalPos;
+	vec3_t ccPortalAngles;
+	int ccPortalEnt;
+	int ccFilter;
+	int ccCurrentCamObjective;
+	int ccRequestedObjective;
+	int ccLastObjectiveRequestTime;
+	int demohelpWindow;
 	int mv_cnt;                                 // Number of active MV windows
 	int mvClientList;                           // Cached client listing of who is merged
 	cg_window_t         *mvCurrentActive;       // Client ID of current active window (-1 = none)
@@ -1227,6 +1302,23 @@ typedef struct {
 	int mvTotalTeam[TEAM_NUM_TEAMS];
 	refdef_t            *refdef_current;        // Handling of some drawing elements for MV
 	int spechelpWindow;
+	int thirdpersonUpdate;
+	qboolean showStats;
+	cg_string_t aStringPool[MAX_STRINGS];
+	int aReinfOffset[TEAM_NUM_TEAMS];                   // Team reinforcement offsets
+	int cursorUpdate;                                   // Timeout for mouse pointer view
+	fileHandle_t dumpStatsFile;                         // File to dump stats
+	char* dumpStatsFileName;              				// Name of file to dump stats
+	int dumpStatsTime;                                  // Next stats command that comes back will be written to a logfile
+	int game_versioninfo;                               // game base version
+	gameStats_t gamestats;
+	topshotStats_t topshots;
+	*/
+/*
+	cg_window_t         *motdWindow;
+	cg_window_t         *msgWstatsWindow;
+	cg_window_t         *msgWtopshotsWindow;
+
 	int statsRequestTime;
 	int topshotsRequestTime;
 	cg_window_t         *topshotsWindow;
@@ -1234,30 +1326,16 @@ typedef struct {
 	cg_windowHandler_t winHandler;
 	vec4_t xhairColor;
 	vec4_t xhairColorAlt;
-	vec2_t ccMenuPos;
-	qboolean ccMenuShowing;
-	int ccMenuType;
+
 	//mapEntityData_t ccMenuEnt;
-	int ccSelectedLayer;
-	int ccSelectedObjective;
-	int ccSelectedTeam;                     // ( 1 = ALLIES, 0 = AXIS )
-	int ccSelectedWeaponNumber;
-	int ccSelectedClass;
-	int ccSelectedWeapon;
-	int ccSelectedWeapon2;
-	int ccWeaponShots;
+
 	int ccWeaponHits;
-	vec3_t ccPortalPos;
-	vec3_t ccPortalAngles;
-	int ccPortalEnt;
-	int ccFilter;
-	int ccCurrentCamObjective;
-	int ccRequestedObjective;
-	int ccLastObjectiveRequestTime;
+
 	int ltChargeTime[2];
 	int soldierChargeTime[2];
 	int engineerChargeTime[2];
 	int medicChargeTime[2];
+*/
 	// -OSP
 } cg_t;
 
@@ -1751,7 +1829,24 @@ typedef struct {
 	qhandle_t selectCursor;
 	qhandle_t sizeCursor;
 
+// OSPx
+	// Country Flags
+	qhandle_t countryFlags;
+
+	// Hitsounds
+	sfxHandle_t	headShot;
+	sfxHandle_t	bodyShot;
+	sfxHandle_t	teamShot;
+// -OSPx
 } cgMedia_t;
+
+// OSPx - Pause states
+typedef enum {
+	PAUSE_NONE,
+	PAUSE_ON,
+	PAUSE_RESUMING
+} cPauseSts_t;
+// -OSPx
 
 
 // The client game static (cgs) structure hold everything
@@ -1861,14 +1956,35 @@ typedef struct {
 
 	// OSP
 	int aviDemoRate;                                    // Demo playback recording
-	int aReinfOffset[TEAM_NUM_TEAMS];                   // Team reinforcement offsets
 	int cursorUpdate;                                   // Timeout for mouse pointer view
-	fileHandle_t dumpStatsFile;                         // File to dump stats
-	char*               dumpStatsFileName;              // Name of file to dump stats
-	int dumpStatsTime;                                  // Next stats command that comes back will be written to a logfile
-	int game_versioninfo;                               // game base version
+	//fileHandle_t dumpStatsFile;                         // File to dump stats
+	//char*               dumpStatsFileName;              // Name of file to dump stats
+	//int dumpStatsTime;                                  // Next stats command that comes back will be written to a logfile
+
+	
+// OSPx
+	// Reinforcements
+	int aReinfOffset[TEAM_NUM_TEAMS];
+
+	// Ready
+	int readyState;
+
+	// Pause
+	cPauseSts_t match_paused;
+	int match_resumes;
+	int match_expired;
+	int match_stepTimer;
+
+	// Stats
 	gameStats_t gamestats;
+	clientGameStats_t clientGameStats;
 	topshotStats_t topshots;
+	fileHandle_t dumpStatsFile;
+	char* dumpStatsFileName;
+	int dumpStatsTime;	
+// -OSPx
+
+	int game_versioninfo;                               // game base version
 	qboolean fResize;                                   // MV window "resize" status
 	qboolean fSelect;                                   // MV window "select" status
 	qboolean fKeyPressed[256];                          // Key status to get around console issues
@@ -2062,13 +2178,53 @@ extern vmCvar_t cg_popupLimboMenu;
 extern vmCvar_t cg_descriptiveText;
 // -NERVE - SMF
 
+
+// TTimo
+extern vmCvar_t cg_autoReload;
+extern vmCvar_t cg_antilag;
+
 // OSP
 extern vmCvar_t authLevel;
+//extern vmCvar_t			cg_announcer;
+// OSPx
+extern vmCvar_t cg_crosshairPulse;
+extern vmCvar_t cg_bloodDamageBlend;
+extern vmCvar_t cg_bloodFlash;
+extern vmCvar_t cg_crosshairAlpha;
+extern vmCvar_t cg_crosshairAlphaAlt;
+extern vmCvar_t cg_crosshairColor;
+extern vmCvar_t cg_crosshairColorAlt;
+extern vmCvar_t cg_coloredCrosshairNames;
+extern vmCvar_t cg_drawWeaponIconFlash;
+extern vmCvar_t cg_printObjectiveInfo;
+extern vmCvar_t cg_muzzleFlash;
+extern vmCvar_t cg_complaintPopUp;
+extern vmCvar_t cg_drawReinforcementTime;
+extern vmCvar_t cg_reinforcementTimeColor;
+extern vmCvar_t cg_noChat;
+extern vmCvar_t cg_noVoice;
+extern vmCvar_t cg_noAmmoAutoSwitch;
+extern vmCvar_t cg_zoomedFOV;
+extern vmCvar_t cg_zoomedSens;
+extern vmCvar_t	vp_drawnames;
+extern vmCvar_t	cg_drawNames;
+extern vmCvar_t	cg_showFlags;
+extern vmCvar_t cg_announcer;
+extern vmCvar_t cg_autoAction;
+extern vmCvar_t cg_useScreenshotJPEG;
+extern vmCvar_t cg_instantTapout;
+extern vmCvar_t cg_forceTapout;
+extern vmCvar_t cg_hitsounds;
+extern vmCvar_t cg_uinfo;
+
 extern vmCvar_t cf_wstats;
 extern vmCvar_t cf_wtopshots;
-//extern vmCvar_t			cg_announcer;
-extern vmCvar_t cg_autoAction;
-extern vmCvar_t cg_autoReload;
+
+extern vmCvar_t int_cl_maxpackets;
+extern vmCvar_t int_cl_timenudge;
+extern vmCvar_t int_ui_blackout;
+extern vmCvar_t gender;
+// -OSPx
 extern vmCvar_t cg_bloodDamageBlend;
 extern vmCvar_t cg_bloodFlash;
 extern vmCvar_t cg_complaintPopUp;
@@ -2103,9 +2259,7 @@ extern vmCvar_t int_sensitivity;
 extern vmCvar_t int_ui_blackout;
 // -OSP
 
-// TTimo
-extern vmCvar_t cg_autoReload;
-extern vmCvar_t cg_antilag;
+
 
 //
 // cg_main.c
@@ -2133,7 +2287,10 @@ qboolean CG_GetTag( int clientNum, char *tagname, orientation_t * or );
 qboolean CG_GetWeaponTag( int clientNum, char *tagname, orientation_t * or );
 
 qboolean CG_CheckCenterView();
+// OSPx
+char *CG_generateFilename( void );
 void CG_printConsoleString(char *str);
+// -OSPx
 //
 // cg_view.c
 //
@@ -2147,6 +2304,9 @@ void CG_ZoomDown_f( void );
 void CG_ZoomIn_f( void );
 void CG_ZoomOut_f( void );
 void CG_ZoomUp_f( void );
+// OSPx - FOV zoom effect
+void CG_zoomViewSet_f(void);
+void CG_zoomViewRevert_f(void);
 
 void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demoPlayback );
 
@@ -2206,6 +2366,8 @@ void CG_SaveTransTable();
 void CG_ReloadTranslation();
 // -NERVE - SMF
 
+// OSPx - Country Flags
+void CG_DrawPicST(float x, float y, float width, float height, float s0, float t0, float s1, float t1, qhandle_t hShader);
 //
 // cg_draw.c, cg_newDraw.c
 //
@@ -2251,8 +2413,30 @@ qboolean CG_OtherTeamHasFlag();
 qhandle_t CG_StatusHandle( int task );
 void CG_Fade( int r, int g, int b, int a, float time );
 
+// OSPx 
 
+// - Reinforcement offset
+int CG_CalculateReinfTime(void);
+float CG_CalculateReinfTime_Float(void);
+// - Text
+int CG_Text_Width_Ext(const char *text, float scale, int limit, fontInfo_t* font);
+int CG_Text_Height_Ext(const char *text, float scale, int limit, fontInfo_t* font);
+void CG_Text_Paint_Ext(float x, float y, float scalex, float scaley, vec4_t color, const char *text, float adjust, int limit, int style, fontInfo_t* font);
+// PopIn
+void CG_PopinPrint(const char *str, int y, int charWidth, qboolean blink);
+// - Hud names
+void CG_Text_Paint_ext2(float x, float y, float scale, vec4_t color, const char *text, float adjust, int limit, int style);
+int CG_Text_Width_ext2(const char *text, float scale, int limit);
+int CG_Text_Height_ext2(const char *text, float scale, int limit);
+// - Announcer
+void CG_AddAnnouncer(char *text, sfxHandle_t sound, float scale, int duration, float r, float g, float b, int mode);
+void CG_DrawAnnouncer(void);
+#define ANNOUNCER_NORMAL 1
+#define ANNOUNCER_SINE 2
+#define ANNOUNCER_INVERSE_SINE 3
+#define ANNOUNCER_TAN 4
 
+// -OSPx
 
 //
 // cg_player.c
@@ -2320,6 +2504,7 @@ void CG_NextWeapon_f( void );
 void CG_PrevWeapon_f( void );
 void CG_Weapon_f( void );
 void CG_WeaponBank_f( void );
+qboolean CG_WeaponSelectable(int i);
 
 void CG_FinishWeaponChange( int lastweap, int newweap );
 
@@ -2536,7 +2721,13 @@ void CG_DrawTourneyScoreboard( void );
 //
 qboolean CG_ConsoleCommand( void );
 void CG_InitConsoleCommands( void );
-void CG_dumpStats_f(void); // OSP
+// OSPx
+void CG_autoRecord_f( void );
+void CG_autoScreenShot_f( void );
+void CG_dumpStats_f( void );
+void CG_wStatsUp_f(void);
+void CG_StatsUp_f(void);
+extern const char *aMonths[12];
 
 //
 // cg_servercmds.c
@@ -2550,6 +2741,9 @@ void CG_SendMoveSpeed( animation_t *animList, int numAnims, char *modelName );
 void CG_LoadVoiceChats();               // NERVE - SMF
 void CG_PlayBufferedVoiceChats();       // NERVE - SMF
 void CG_AddToNotify( const char *str );
+const char* CG_LocalizeServerCommand(const char *buf);
+// OSPx
+void CG_ParseReinforcementTimes(const char *pszReinfSeedString);
 
 //
 // cg_playerstate.c
@@ -2574,6 +2768,7 @@ void        trap_Error( const char *fmt );
 // milliseconds should only be used for performance tuning, never
 // for anything game related.  Get time from the CG_DrawActiveFrame parameter
 int         trap_Milliseconds( void );
+int         trap_RealTime(qtime_t *qtime); // OSPx - So it's more acessible
 
 // console variable interaction
 void        trap_Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, int flags );
@@ -2835,6 +3030,7 @@ qboolean CG_addString(cg_window_t *w, char *buf);
 //void CG_createDemoHelpWindow(void);
 //void CG_createSpecHelpWindow(void);
 void CG_createStatsWindow(void);
+void CG_createClientStatsWindow(void);
 void CG_createTopShotsWindow(void);
 void CG_createWstatsMsgWindow(void);
 void CG_createWtopshotsMsgWindow(void);
@@ -2849,4 +3045,17 @@ void CG_windowFree(cg_window_t *w);
 void CG_windowInit(void);
 void CG_windowNormalizeOnText(cg_window_t *w);
 
+// OSP's Autoaction values
+#define AA_DEMORECORD   0x01
+#define AA_SCREENSHOT   0x02
+#define AA_STATSDUMP    0x04
+
+// Ready
+#define CREADY_NONE		0x00
+#define CREADY_AWAITING	0x01
+#define CREADY_PENDING	0x02
+
+// Macros
+#define Pri( x ) CG_Printf( "[cgnotify]%s", CG_LocalizeServerCommand( x ) )
+#define CPri( x ) CG_CenterPrint( CG_LocalizeServerCommand( x ), SCREEN_HEIGHT - ( SCREEN_HEIGHT * 0.2 ), SMALLCHAR_WIDTH );
 // -OSP

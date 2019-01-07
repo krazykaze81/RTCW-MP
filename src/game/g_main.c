@@ -37,6 +37,7 @@ typedef struct {
 	int cvarFlags;
 	int modificationCount;          // for tracking changes
 	qboolean trackChange;           // track this variable, and announce if changed
+	qboolean fConfigReset;          // OSP: set this var to the default on a config reset
 	qboolean teamShader;      // track and if changed, update shader state
 } cvarTable_t;
 
@@ -162,6 +163,53 @@ vmCvar_t url;
 
 vmCvar_t g_dbgRevive;
 
+// OSPx
+// - Admins
+vmCvar_t a1_pass;
+vmCvar_t a2_pass;
+vmCvar_t a3_pass;
+vmCvar_t a4_pass;
+vmCvar_t a5_pass;
+vmCvar_t a1_tag;
+vmCvar_t a2_tag;
+vmCvar_t a3_tag;
+vmCvar_t a4_tag;
+vmCvar_t a5_tag;
+vmCvar_t a1_cmds;
+vmCvar_t a2_cmds;
+vmCvar_t a3_cmds;
+vmCvar_t a4_cmds;
+vmCvar_t a5_cmds;
+vmCvar_t a5_allowAll;
+vmCvar_t g_extendedLog;
+
+// - General
+vmCvar_t g_spectatorInactivity;
+vmCvar_t g_showFlags;
+vmCvar_t g_allowSoftKill;
+vmCvar_t server_autoconfig;
+vmCvar_t g_fixedphysics;
+vmCvar_t g_hitsounds;
+
+vmCvar_t vote_limit;
+vmCvar_t vote_percent;
+
+// Game
+vmCvar_t team_maxplayers;
+vmCvar_t team_nocontrols;
+
+vmCvar_t match_warmupfire;
+vmCvar_t match_mutespecs;
+vmCvar_t match_latejoin;
+vmCvar_t match_minplayers;
+vmCvar_t match_readypercent;
+vmCvar_t match_timeoutlength;
+vmCvar_t match_timeoutcount;
+
+// - System
+vmCvar_t z_serverflags;
+vmCvar_t sv_hostname;
+// -OSPx
 cvarTable_t gameCvarTable[] = {
 	// don't override the cheat state set by the system
 	{ &g_cheats, "sv_cheats", "", 0, qfalse },
@@ -294,7 +342,51 @@ cvarTable_t gameCvarTable[] = {
 
 	{&g_antilag, "g_antilag", "0", CVAR_SERVERINFO | CVAR_ARCHIVE, 0, qfalse},
 
-	{&g_dbgRevive, "g_dbgRevive", "0", 0, 0, qfalse}
+	{&g_dbgRevive, "g_dbgRevive", "0", 0, 0, qfalse},
+
+// OSPx
+	{ &a1_pass, "a1_pass", "none", CVAR_ARCHIVE, 0, qfalse },
+	{ &a2_pass, "a2_pass", "none", CVAR_ARCHIVE, 0, qfalse },
+	{ &a3_pass, "a3_pass", "none", CVAR_ARCHIVE, 0, qfalse },
+	{ &a4_pass, "a4_pass", "none", CVAR_ARCHIVE, 0, qfalse },
+	{ &a5_pass, "a5_pass", "none", CVAR_ARCHIVE, 0, qfalse },
+	{ &a1_tag, "a1_tag", "^1Admin", CVAR_ARCHIVE, 0, qfalse },
+	{ &a2_tag, "a2_tag", "^jAdmin", CVAR_ARCHIVE, 0, qfalse },
+	{ &a3_tag, "a3_tag", "^2Adm!n", CVAR_ARCHIVE, 0, qfalse },
+	{ &a4_tag, "a4_tag", "^3Adm!n", CVAR_ARCHIVE, 0, qfalse },
+	{ &a5_tag, "a5_tag", "^dAdm!n", CVAR_ARCHIVE, 0, qfalse },
+	{ &a1_cmds, "a1_cmds", "", CVAR_ARCHIVE, 0, qfalse },
+	{ &a2_cmds, "a2_cmds", "", CVAR_ARCHIVE, 0, qfalse },
+	{ &a3_cmds, "a3_cmds", "", CVAR_ARCHIVE, 0, qfalse },
+	{ &a4_cmds, "a4_cmds", "", CVAR_ARCHIVE, 0, qfalse },
+	{ &a5_cmds, "a5_cmds", "", CVAR_ARCHIVE, 0, qfalse },
+	{ &a5_allowAll, "a5_allowAll", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_extendedLog, "g_extendedLog", "1", CVAR_ARCHIVE, 0, qfalse },
+
+	{ &g_spectatorInactivity, "g_spectatorInactivity", "0", 0, 0, qfalse, qfalse },
+	{ &g_showFlags, "g_showFlags", "1", 0, qfalse, qfalse },
+	{ &g_allowSoftKill, "g_allowSoftKill", "0", CVAR_ARCHIVE, 0, qfalse, qfalse },
+	{ &server_autoconfig, "server_autoconfig", "0", 0, 0, qfalse, qfalse },
+	{ &g_fixedphysics, "g_fixedphysics", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, qfalse, qfalse },
+	{ &g_hitsounds, "g_hitsounds", "0", 0 },
+
+	{ &vote_limit, "vote_limit", "3", CVAR_ARCHIVE, qfalse, qfalse },
+	{ &vote_percent, "vote_percent", "50", CVAR_ARCHIVE, qfalse, qfalse },
+
+	{ &team_maxplayers, "team_maxplayers", "0", 0, 0, qfalse, qfalse },
+	{ &team_nocontrols, "team_nocontrols", "1", CVAR_ARCHIVE, 0, qfalse },
+
+	{ &match_warmupfire, "match_warmupfire", "1", 0, 0, qfalse },
+	{ &match_mutespecs, "match_mutespecs", "0", 0, 0, qfalse, qtrue },
+	{ &match_latejoin, "match_latejoin", "1", 0, 0, qfalse, qfalse },
+	{ &match_minplayers, "match_minplayers", "4", 0, 0, qfalse, qfalse },
+	{ &match_readypercent, "match_readypercent", "100", 0, 0, qfalse, qtrue },
+	{ &match_timeoutlength, "match_timeoutlength", "180", 0, 0, qfalse, qtrue },
+	{ &match_timeoutcount, "match_timeoutcount", "3", 0, 0, qfalse, qtrue },
+
+	{ &z_serverflags, "z_serverflags", "0", 0, 0, qfalse, qfalse },
+	{ &sv_hostname, "sv_hostname", "", CVAR_SERVERINFO, 0, qfalse }
+// -OSPx
 };
 
 // bk001129 - made static to avoid aliasing
@@ -1025,6 +1117,26 @@ void G_RegisterCvars( void ) {
 	// done
 
 	level.warmupModificationCount = g_warmup.modificationCount;
+// OSPx
+	// Ready percents
+	if (match_readypercent.integer < 1) {
+		trap_Cvar_Set("match_readypercent", "1");
+	}
+	else if (match_readypercent.integer > 100) {
+		trap_Cvar_Set("match_readypercent", "1");
+	}
+
+	// Sanity check (clamps)
+	if (pmove_msec.integer < 8) {
+		trap_Cvar_Set("pmove_msec", "8");
+	}
+	else if (pmove_msec.integer > 33) {
+		trap_Cvar_Set("pmove_msec", "33");
+	}
+	if (match_timeoutcount.integer > 999) {
+		trap_Cvar_Set("match_timeoutcount", "999");
+	}
+// -OSPx
 }
 
 /*
@@ -1052,6 +1164,22 @@ void G_UpdateCvars( void ) {
 				if ( cv->teamShader ) {
 					remapped = qtrue;
 				}
+				// OSPx
+				if (cv->vmCvar == &match_readypercent) {
+					if (match_readypercent.integer < 1) {
+						trap_Cvar_Set(cv->cvarName, "1");
+					}
+					else if (match_readypercent.integer > 100) {
+						trap_Cvar_Set(cv->cvarName, "100");
+					}				
+				} else if (cv->vmCvar == &pmove_msec) {
+					if (pmove_msec.integer < 8) {
+						trap_Cvar_Set(cv->cvarName, "8");
+					}
+					else if (pmove_msec.integer > 33) {
+						trap_Cvar_Set(cv->cvarName, "33");
+					}
+				} // -OSPx
 			}
 		}
 	}
@@ -1061,7 +1189,26 @@ void G_UpdateCvars( void ) {
 	}
 }
 
+/*
+=================
+OSPx - G_wipeCvars
 
+Reset particular server variables back to defaults if a config is voted in.
+=================
+*/
+void G_wipeCvars(void) {
+	int i;
+	cvarTable_t *pCvars;
+
+	for (i = 0, pCvars = gameCvarTable; i < gameCvarTableSize; i++, pCvars++) {
+		if (pCvars->vmCvar && pCvars->fConfigReset) {
+			G_Printf("set %s %s\n", pCvars->cvarName, pCvars->defaultString);
+			trap_Cvar_Set(pCvars->cvarName, pCvars->defaultString);
+		}
+	}
+
+	G_UpdateCvars();
+}
 
 /*
 ==============
@@ -1135,7 +1282,14 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	// NERVE - SMF - intialize gamestate
 	if ( g_gamestate.integer == GS_INITIALIZE ) {
 		if ( g_noTeamSwitching.integer ) {
-			trap_Cvar_Set( "gamestate", va( "%i", GS_WAITING_FOR_PLAYERS ) );
+			// OSPx - Ready
+			if (g_doWarmup.integer) {
+				trap_Cvar_Set("gamestate", va("%i", GS_WARMUP));
+				trap_SetConfigstring(CS_READY, va("%i", READY_PENDING));
+			}
+			else { 
+				trap_Cvar_Set("gamestate", va("%i", GS_WAITING_FOR_PLAYERS));
+			}
 		} else {
 			trap_Cvar_Set( "gamestate", va( "%i", GS_WARMUP ) );
 		}
@@ -1241,6 +1395,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		G_Printf( "-----------------------------------\n" );
 	}
 
+	// OSPx - Country Flags
+	GeoIP_open();
 	if ( trap_Cvar_VariableIntegerValue( "bot_enable" ) ) {
 		BotAISetup( restart );
 		BotAILoadMap( restart );
@@ -1248,6 +1404,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 
 	G_RemapTeamShaders();
+	// OSPx - Reinforcements offset
+	G_loadMatchGame();
+
+	// OSPx - Make sure pause is 0..
+	trap_SetConfigstring(CS_PAUSED, "0");
 }
 
 
@@ -1281,6 +1442,8 @@ void G_ShutdownGame( int restart ) {
 		// done.
 	}
 	// done.
+	// OSPx - Country Flags
+	GeoIP_close();
 
 	// write all the client session data so we can get it back
 	G_WriteSessionData();
@@ -1380,7 +1543,7 @@ void AddTournamentPlayer( void ) {
 	level.warmupTime = -1;
 
 	// set them to free-for-all team
-	SetTeam( &g_entities[ nextInLine - level.clients ], "f" );
+	SetTeam( &g_entities[ nextInLine - level.clients ], "f", qfalse );
 }
 
 /*
@@ -1404,7 +1567,7 @@ void RemoveTournamentLoser( void ) {
 	}
 
 	// make them a spectator
-	SetTeam( &g_entities[ clientNum ], "s" );
+	SetTeam( &g_entities[ clientNum ], "s", qfalse );
 }
 
 
@@ -1961,7 +2124,7 @@ void LogExit( const char *string ) {
 				trap_Cvar_Set( "g_nextTimeLimit", va( "%f", g_timelimit.value ) );
 			} else {
 				// use remaining time as next timer
-				trap_Cvar_Set( "g_nextTimeLimit", va( "%f", ( level.time - level.startTime ) / 60000.f ) );
+				trap_Cvar_Set("g_nextTimeLimit", va( "%f", (level.timeCurrent - level.startTime ) / 60000.f));
 			}
 		} else {
 			// reset timer
@@ -1985,6 +2148,7 @@ wait 10 seconds before going on.
 =================
 */
 void CheckIntermissionExit( void ) {
+	static int fActions = 0;
 	int ready, notReady;
 	int i;
 	gclient_t   *cl;
@@ -1992,6 +2156,16 @@ void CheckIntermissionExit( void ) {
 
 	if ( g_gametype.integer == GT_SINGLE_PLAYER ) {
 		return;
+	}
+
+	// OSPx - end-of-level auto-actions
+	if (!(fActions & EOM_WEAPONSTATS) && (level.time - level.intermissiontime) > 300) {
+		G_matchInfoDump(EOM_WEAPONSTATS);
+		fActions |= EOM_WEAPONSTATS;
+	}
+	if (!(fActions & EOM_MATCHINFO) && (level.time - level.intermissiontime) > 2000) {
+		G_matchInfoDump(EOM_MATCHINFO);
+		fActions |= EOM_MATCHINFO;
 	}
 
 	// DHM - Nerve :: Flat 10 second timer until exit
@@ -2139,7 +2313,7 @@ void CheckExitRules( void ) {
 	}
 
 	if ( g_timelimit.value && !level.warmupTime ) {
-		if ( level.time - level.startTime >= g_timelimit.value * 60000 ) {
+		if ( level.timeCurrent - level.startTime >= g_timelimit.value * 60000 ) {
 
 			// check for sudden death
 			if ( g_gametype.integer != GT_CTF && ScoreIsTied() ) {
@@ -2341,7 +2515,14 @@ void CheckGameState() {
 	if ( g_noTeamSwitching.integer && !trap_Cvar_VariableIntegerValue( "sv_serverRestarting" ) ) {
 		if ( current_gs != GS_WAITING_FOR_PLAYERS && level.numPlayingClients <= 1 && level.lastRestartTime + 1000 < level.time ) {
 			level.lastRestartTime = level.time;
-			trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WAITING_FOR_PLAYERS ) );
+			// OSPx - Ready
+			if (g_doWarmup.integer) {
+				trap_SetConfigstring(CS_READY, va("%i", READY_PENDING));
+				trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WARMUP));
+			}
+			else {
+				trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WAITING_FOR_PLAYERS));
+			}
 		}
 	}
 
@@ -2359,17 +2540,47 @@ void CheckGameState() {
 	}
 
 	// check warmup latch
-	if ( current_gs == GS_WARMUP ) {
-		int delay = g_warmup.integer + 1;
+	if (current_gs == GS_WARMUP) {
+// OSPx - Ready
+		if (g_doWarmup.integer) {
 
-		if ( delay < 6 ) {
-			trap_Cvar_Set( "g_warmup", "5" );
-			delay = 7;
+			if (G_playersReady()) {
+				level.warmupTime = level.time + 7000;
+				trap_SetConfigstring(CS_READY, va("%i", READY_NONE));
+				trap_SetConfigstring(CS_WARMUP, va("%i", level.warmupTime));
+				trap_Cvar_Set("gamestate", va("%i", GS_WARMUP_COUNTDOWN));
+			
+				if (!level.readyPrint) {
+					AP(va("cp \"%s\n\"2", (g_noTeamSwitching.integer ? "Ready threshold reached!" : "All players are now ^nready^7!")));
+					level.readyPrint = qtrue;
+				}
+			}
+			else {
+				trap_SetConfigstring(CS_READY, va("%i", (g_noTeamSwitching.integer ? READY_PENDING : READY_AWAITING)));
+			}
 		}
+		else { // Tourny is off..act casual
+			int delay = g_warmup.integer + 1;
+			trap_SetConfigstring(CS_READY, va("%i", READY_NONE));
 
-		level.warmupTime = level.time + ( delay * 1000 );
-		trap_SetConfigstring( CS_WARMUP, va( "%i", level.warmupTime ) );
-		trap_Cvar_Set( "gamestate", va( "%i", GS_WARMUP_COUNTDOWN ) );
+			if (delay < 6) {
+				trap_Cvar_Set("g_warmup", "5");
+				delay = 7;
+			}
+
+			level.warmupTime = level.time + (delay * 1000);
+			trap_SetConfigstring(CS_WARMUP, va("%i", level.warmupTime));
+			trap_Cvar_Set("gamestate", va("%i", GS_WARMUP_COUNTDOWN));
+		}
+// -OSPx
+	}
+
+	// OSPx - Reset countdown if ready goes off (eg. player enters, leaves..)
+	if (current_gs == GS_WARMUP_COUNTDOWN) {
+		if (g_doWarmup.integer) {
+			if (!G_playersReady())
+				G_readyReset(qfalse);
+		}
 	}
 }
 
@@ -2397,12 +2608,10 @@ void CheckWolfMP() {
 		return;
 	}
 
-	// if the warmup time has counted down, restart
-	if ( level.time > level.warmupTime ) {
-		level.warmupTime += 10000;
-		trap_Cvar_Set( "g_restarted", "1" );
-		trap_SendConsoleCommand( EXEC_APPEND, "map_restart 0\n" );
-		level.restarted = qtrue;
+	// OSPx - Countdown
+	if (level.time > level.warmupTime - 7100 && !level.cnStarted) {
+		level.cnStarted = qtrue;
+		CountDown( qtrue );
 		return;
 	}
 }
@@ -2423,12 +2632,25 @@ void CheckVote( void ) {
 	}
 	if ( level.time - level.voteTime >= VOTE_TIME ) {
 		trap_SendServerCommand( -1, "print \"Vote failed.\n\"" );
+		G_LogPrintf("Vote Failed: %s\n", level.voteString);
 	} else {
-		if ( level.voteYes > level.numVotingClients / 2 ) {
+// OSPx - Vote percent..
+		int vCnt = (!Q_stricmp(level.voteString, "start_match") ? 75 : vote_percent.integer);
+		int total = level.numVotingClients;
+
+		if (vCnt > 99)
+			vCnt = 99;
+		else if (vCnt < 1)
+			vCnt = 1;
+				
+		// Vote will always pass with single client..rest is perc depended..
+		if ( (total == 1) || ( 100 * level.voteYes / total >= vCnt) ) {
+// -OSPx
 			// execute the command, then remove the vote
 			trap_SendServerCommand( -1, "print \"Vote passed.\n\"" );
 			level.voteExecuteTime = level.time + 3000;
 			level.prevVoteExecuteTime = level.time + 4000;
+			G_LogPrintf("Vote Passed: %s\n", level.voteString);
 
 // JPW NERVE
 #ifndef PRE_RELEASE_DEMO
@@ -2528,6 +2750,11 @@ Runs thinking code for this frame if necessary
 void G_RunThink( gentity_t *ent ) {
 	float thinktime;
 
+	// OSPx - Pause
+	if (level.match_pause != PAUSE_NONE && (ent - g_entities) >= g_maxclients.integer &&
+		ent->nextthink > level.time && strstr(ent->classname, "DPRINTF_") == NULL) {
+		ent->nextthink += level.time - level.previousTime;
+	}
 	// RF, run scripting
 	if ( ent->s.number >= MAX_CLIENTS ) {
 //----(SA)	this causes trouble in various maps
@@ -2558,6 +2785,51 @@ void G_RunThink( gentity_t *ent ) {
 
 /*
 ================
+OSPx - sortedActivePlayers
+
+Sort players per teams so we can re-use this call where need it..
+================
+*/
+void sortedActivePlayers(void) {
+	int i;
+	level.axisPlayers = 0;
+	level.alliedPlayers = 0;
+
+	for (i = 0; i < level.maxclients; i++){
+		if (level.clients[i].pers.connected != CON_CONNECTED)
+			continue;
+		if (level.clients[i].sess.sessionTeam == TEAM_RED)
+			level.axisPlayers++;
+		if (level.clients[i].sess.sessionTeam == TEAM_BLUE)
+			level.alliedPlayers++;
+	}
+}
+
+/*
+================
+OSPx - check for team stuff..
+================
+*/
+void handleEmptyTeams(void) {
+	if (g_gamestate.integer == GS_PLAYING) {
+		if (!level.axisPlayers) {			
+			G_teamReset(TEAM_RED, qtrue);
+
+			// Reset match if paused with an empty team
+			if (level.match_pause > PAUSE_UNPAUSING)
+				trap_SendConsoleCommand(EXEC_APPEND, va("reset_match"));
+		}
+		else if (!level.alliedPlayers) {			
+			G_teamReset(TEAM_BLUE, qtrue);
+
+			// Reset match if paused with an empty team
+			if (level.match_pause > PAUSE_UNPAUSING)
+				trap_SendConsoleCommand(EXEC_APPEND, va("reset_match"));
+		}
+	}
+}
+/*
+================
 G_RunFrame
 
 Advances the non-player objects in the world
@@ -2574,7 +2846,20 @@ void G_RunFrame( int levelTime ) {
 		return;
 	}
 
-	level.frameTime = trap_Milliseconds();
+	// OSPx - Handling of pause offsets
+	if (level.match_pause == PAUSE_NONE) {
+		level.timeCurrent = levelTime - level.timeDelta;
+	}
+	else {
+		level.timeDelta = levelTime - level.timeCurrent;
+		if ((level.time % 500) == 0) {
+			// Respawn and time issuses
+			trap_SetConfigstring(CS_LEVEL_START_TIME, va("%i", level.startTime + level.timeDelta));
+		}
+	}
+
+	// Antilag
+	level.frameStartTime = trap_Milliseconds();
 
 	level.framenum++;
 	level.previousTime = level.time;
@@ -2679,7 +2964,20 @@ void G_RunFrame( int levelTime ) {
 			 || ent->s.eType == ET_FIRE_COLUMN_SMOKE
 			 || ent->s.eType == ET_EXPLO_PART
 			 || ent->s.eType == ET_RAMJET ) {
-			G_RunMissile( ent );
+			// OSPx - pausing
+			if (level.match_pause == PAUSE_NONE) {
+				G_RunMissile(ent);
+			}
+			else {
+				// During a pause, gotta keep track of stuff in the air
+				ent->s.pos.trTime += level.time - level.previousTime;
+				// Keep pulsing right for dynmamite
+				if (ent->methodOfDeath == MOD_DYNAMITE) {
+					ent->s.effect1Time += level.time - level.previousTime;
+				}
+				G_RunThink(ent);
+			}
+			// -OSPx
 			continue;
 		}
 
@@ -2751,6 +3049,11 @@ void G_RunFrame( int levelTime ) {
 	// for tracking changes
 	CheckCvars();
 
+	// OSPx - Countdown for warmup/pause
+	if ((level.time > level.cnPush) &&
+		(g_gamestate.integer == GS_WARMUP_COUNTDOWN)) {
+		CountDown( qtrue );
+	}
 	if ( g_listEntity.integer ) {
 		for ( i = 0; i < MAX_GENTITIES; i++ ) {
 			G_Printf( "%4i: %s\n", i, g_entities[i].classname );
@@ -2765,4 +3068,10 @@ void G_RunFrame( int levelTime ) {
 
 	// Ridah, check if we are reloading, and times have expired
 	CheckReloadStatus();
+// OSPx
+	// Track active players (per team)
+	sortedActivePlayers();
+
+	// Track any team stuff..
+	handleEmptyTeams();
 }

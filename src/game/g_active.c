@@ -206,22 +206,27 @@ void P_WorldEffects( gentity_t *ent ) {
 	// check for burning from flamethrower
 	//
 	// JPW NERVE MP way
-	if ( ent->s.onFireEnd && ent->client ) {
-		if ( level.time - ent->client->lastBurnTime >= MIN_BURN_INTERVAL ) {
-
-			// JPW NERVE server-side incremental damage routine / player damage/health is int (not float)
-			// so I can't allocate 1.5 points per server tick, and 1 is too weak and 2 is too strong.
-			// solution: allocate damage far less often (MIN_BURN_INTERVAL often) and do more damage.
-			// That way minimum resolution (1 point) damage changes become less critical.
-
+	// OSPx - Flamer bug fix
+	if (ent->s.onFireEnd && ent->client) {
+		//Martin 6/28/08 REDONE
+		if ((level.time - ent->client->lastBurnTime >= 1000) && (ent->health > 0)) {
 			ent->client->lastBurnTime = level.time;
-			if ( ( ent->s.onFireEnd > level.time ) && ( ent->health > 0 ) ) {
+			if ((ent->s.onFireEnd > level.time) && (ent->health > 0)) {
 				gentity_t *attacker;
 				attacker = g_entities + ent->flameBurnEnt;
-				G_Damage( ent, attacker->parent, attacker->parent, NULL, NULL, 5, DAMAGE_NO_KNOCKBACK, MOD_FLAMETHROWER ); // JPW NERVE was 7
+				G_Damage(ent, attacker->parent, attacker->parent, NULL, NULL, 5, DAMAGE_NO_KNOCKBACK, MOD_FLAMETHROWER); // JPW NERVE was 7
+			}
+			// G_burnMeGood isnt called if they are dead so do the work here.
+		}
+		else if ((level.time - ent->client->lastBurnTime >= 10) && (ent->health <= 0)) {
+			ent->client->lastBurnTime = level.time;
+			if ((ent->s.onFireEnd > level.time) && (ent->health <= 0)) {
+				gentity_t *attacker;
+				attacker = g_entities + ent->flameBurnEnt;
+				G_Damage(ent, attacker->parent, attacker->parent, NULL, NULL, 5, DAMAGE_NO_KNOCKBACK, MOD_FLAMETHROWER);
 			}
 		}
-	}
+	}	// -OSPx
 	// jpw
 }
 
@@ -379,6 +384,16 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd ) {
 
 
 		}
+		// OSP - dead players are frozen too, in a timeout
+		// OSPx - Pause
+		if (level.match_pause != PAUSE_NONE) {
+			client->ps.pm_type = PM_FREEZE;
+			ucmd->buttons = 0;
+			ucmd->forwardmove = 0;
+			ucmd->rightmove = 0;
+			ucmd->upmove = 0;
+			ucmd->wbuttons = 0;
+		}
 		// set up for pmove
 		memset( &pm, 0, sizeof( pm ) );
 		pm.ps = &client->ps;
@@ -422,7 +437,8 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd ) {
 		( client->sess.sessionTeam == TEAM_SPECTATOR ) && // don't let dead team players do free fly
 		( client->sess.spectatorState == SPECTATOR_FOLLOW ) &&
 		( client->buttons & BUTTON_ACTIVATE ) &&
-		!( client->oldbuttons & BUTTON_ACTIVATE ) ) {
+		!( client->oldbuttons & BUTTON_ACTIVATE ) &&
+		G_allowFollow(ent, TEAM_RED) && G_allowFollow(ent, TEAM_BLUE) ) { // OSPx - Speclock
 		// code moved to StopFollowing
 		StopFollowing( ent );
 	}
@@ -438,26 +454,46 @@ Returns qfalse if the client is dropped
 =================
 */
 qboolean ClientInactivityTimer( gclient_t *client ) {
-	if ( !g_inactivity.integer ) {
+	// OSPx - Inactivity Timer
+	if ((g_inactivity.integer == 0 && client->sess.sessionTeam != TEAM_SPECTATOR) || 
+		(g_spectatorInactivity.integer == 0 && client->sess.sessionTeam == TEAM_SPECTATOR)) {
+
 		// give everyone some time, so if the operator sets g_inactivity during
 		// gameplay, everyone isn't kicked
 		client->inactivityTime = level.time + 60 * 1000;
 		client->inactivityWarning = qfalse;
-	} else if ( client->pers.cmd.forwardmove ||
-				client->pers.cmd.rightmove ||
-				client->pers.cmd.upmove ||
-				( client->pers.cmd.wbuttons & WBUTTON_ATTACK2 ) ||
-				( client->pers.cmd.buttons & BUTTON_ATTACK ) ) {
-		client->inactivityTime = level.time + g_inactivity.integer * 1000;
+	}
+	else if (client->pers.cmd.forwardmove ||
+		client->pers.cmd.rightmove ||
+		client->pers.cmd.upmove ||
+		(client->pers.cmd.wbuttons & WBUTTON_ATTACK2) ||
+		(client->pers.cmd.buttons & BUTTON_ATTACK) ||
+		(client->pers.cmd.wbuttons & WBUTTON_LEANLEFT) ||
+		(client->pers.cmd.wbuttons & WBUTTON_LEANRIGHT)
+		|| client->ps.pm_type == PM_DEAD) {
+
 		client->inactivityWarning = qfalse;
-	} else if ( !client->pers.localClient ) {
-		if ( level.time > client->inactivityTime ) {
-			trap_DropClient( client - level.clients, "Dropped due to inactivity" );
-			return qfalse;
+		client->inactivityTime = level.time + 1000 *
+			((client->sess.sessionTeam != TEAM_SPECTATOR) ?
+			g_inactivity.integer :
+			g_spectatorInactivity.integer);
+
+	}
+	else if (!client->pers.localClient) {
+		if (level.time > client->inactivityTime && client->inactivityWarning) {
+			client->inactivityWarning = qfalse;
+			client->inactivityTime = level.time + 60 * 1000;
+			trap_DropClient(client - level.clients, "Dropped due to inactivity");
+			return(qfalse);
 		}
-		if ( level.time > client->inactivityTime - 10000 && !client->inactivityWarning ) {
+
+		if (!client->inactivityWarning && level.time > client->inactivityTime - 10000) {
+			CPx(client - level.clients, "cp \"^310 seconds until inactivity drop!\n\"");
+			CPx(client - level.clients, "print \"^310 seconds until inactivity drop!\n\"");
+			G_Printf("10s inactivity warning issued to: %s\n", client->pers.netname);
+
 			client->inactivityWarning = qtrue;
-			trap_SendServerCommand( client - level.clients, "cp \"Ten seconds until inactivity drop!\n\"" );
+			client->inactivityTime = level.time + 10000;    // Just for safety
 		}
 	}
 	return qtrue;
@@ -757,6 +793,87 @@ void WolfFindMedic( gentity_t *self ) {
 	}
 }
 
+/*
+==============
+OSPx - LTinfoMsg
+
+Shows ammo stocks of clients..
+==============
+*/
+char *weaponStr(int weapon)
+{
+	switch (weapon) {
+	case WP_MP40:				return "MP40";
+	case WP_THOMPSON:			return "Thompson";
+	case WP_STEN:				return "Sten";
+	case WP_MAUSER:				return "Mauser";
+	case WP_SNIPERRIFLE:		return "Sniper Rifle";
+	case WP_FLAMETHROWER:		return "Flamethrower";
+	case WP_PANZERFAUST:		return "Panzerfaust";
+	case WP_VENOM:				return "Venom";
+	case WP_GRENADE_LAUNCHER:	return "Grenade";
+	case WP_GRENADE_PINEAPPLE:	return "Grenade";
+	case WP_KNIFE:				return "Knife";
+	case WP_KNIFE2:				return "Knife";
+	case WP_LUGER:				return "Luger";
+	case WP_COLT:				return "Colt";
+	case WP_MEDIC_SYRINGE:		return "Syringe";
+	default:
+		return "";
+	}
+}
+// Draw str
+void LTinfoMSG(gentity_t *ent) {
+	unsigned int current = 0;
+	unsigned int stock = 0;
+	unsigned int nades = 0;
+	weapon_t weapon;
+
+	gentity_t *target;
+	trace_t tr;
+	vec3_t start, end, forward;
+
+	if (ent->client->ps.stats[STAT_HEALTH] <= 0)
+		return;
+
+	if (g_gamestate.integer != GS_PLAYING)
+		return;
+
+	AngleVectors(ent->client->ps.viewangles, forward, NULL, NULL);
+
+	VectorCopy(ent->s.pos.trBase, start);	//set 'start' to the player's position (plus the viewheight)
+	start[2] += ent->client->ps.viewheight;
+	VectorMA(start, 512, forward, end);	//put 'end' 512 units forward of 'start'
+
+	//see if we hit anything between 'start' and 'end'
+	trap_Trace(&tr, start, NULL, NULL, end, ent->s.number, (CONTENTS_SOLID | CONTENTS_BODY | CONTENTS_CORPSE | CONTENTS_TRIGGER));
+
+	if (tr.surfaceFlags & SURF_NOIMPACT)	return;
+	if (tr.entityNum == ENTITYNUM_WORLD)	return;
+	if (tr.entityNum >= MAX_CLIENTS)		return;
+
+	target = &g_entities[tr.entityNum];
+	if ((!target->inuse) || (!target->client))		return;
+	if (target->client->ps.stats[STAT_HEALTH] <= 0)	return;
+	if (!OnSameTeam(target, ent))					return;
+
+	ent->client->infoTime = level.time;
+	weapon = target->client->ps.weapon;
+	current += target->client->ps.ammoclip[BG_FindClipForWeapon(weapon)];
+	stock += target->client->ps.ammo[BG_FindAmmoForWeapon(weapon)];
+	nades += target->client->ps.ammoclip[BG_FindClipForWeapon(WP_GRENADE_PINEAPPLE)];
+	nades += target->client->ps.ammoclip[BG_FindClipForWeapon(WP_GRENADE_LAUNCHER)];
+
+	if (Q_stricmp(weaponStr(weapon), ""))
+	{
+		if (weapon == WP_GRENADE_PINEAPPLE || weapon == WP_GRENADE_LAUNCHER)
+			CP(va("cp \"%s: %i\n\"1", weaponStr(weapon), current));
+		else if (weapon == WP_KNIFE || weapon == WP_KNIFE2)
+			CP(va("cp \"%s - Grenades: %i\n\"1", weaponStr(weapon), current, nades));
+		else
+			CP(va("cp \"%s: %i/%i - Grenades: %i\n\"1", weaponStr(weapon), current, stock, nades));
+	}
+}
 void limbo( gentity_t *ent, qboolean makeCorpse ); // JPW NERVE
 void reinforce( gentity_t *ent ); // JPW NERVE
 
@@ -773,6 +890,7 @@ If "g_synchronousClients 1" is set, this will be called exactly
 once for each server frame, which makes for smooth demo recording.
 ==============
 */
+int teamRespawnTime(int team, qboolean warmup); // OSPx
 void ClientThink_real( gentity_t *ent ) {
 	gclient_t   *client;
 	pmove_t pm;
@@ -807,6 +925,12 @@ void ClientThink_real( gentity_t *ent ) {
 		G_SetOrigin( client->cameraPortal, client->ps.origin );
 		trap_LinkEntity( client->cameraPortal );
 		VectorCopy( client->cameraOrigin, client->cameraPortal->s.origin2 );
+	}
+
+	// OSPx - LT info bar..
+	if ((client->ps.stats[STAT_PLAYER_CLASS] == PC_LT) &&
+		(level.time >= client->infoTime + 1000)) {
+		LTinfoMSG(ent);
 	}
 
 	// mark the time, so the connection sprite can be removed
@@ -871,6 +995,12 @@ void ClientThink_real( gentity_t *ent ) {
 		return;
 	}
 
+	// check for inactivity timer, but never drop the local client of a non-dedicated server
+	// OSP - moved here to allow for spec inactivity checks as well
+	if ( !ClientInactivityTimer( client ) ) {
+		return;
+	}
+	
 	// spectators don't do much
 	// DHM - Nerve :: In limbo use SpectatorThink
 	if ( client->sess.sessionTeam == TEAM_SPECTATOR || client->ps.pm_flags & PMF_LIMBO ) {
@@ -909,7 +1039,8 @@ void ClientThink_real( gentity_t *ent ) {
 	// TTimo explicit braces to avoid ambiguous 'else'
 	if ( g_gametype.integer != GT_SINGLE_PLAYER ) {
 		if ( ucmd->wbuttons & WBUTTON_DROP ) {
-			if ( !client->dropWeaponTime ) {
+										// OSPx - Ignore all this if we're under pause..
+			if (!client->dropWeaponTime && level.match_pause == PAUSE_NONE) {
 				client->dropWeaponTime = 1; // just latch it for now
 				if ( ( client->ps.stats[STAT_PLAYER_CLASS] == PC_SOLDIER ) || ( client->ps.stats[STAT_PLAYER_CLASS] == PC_LT ) ) {
 					for ( i = 0; i < MAX_WEAPS_IN_BANK_MP; i++ ) {
@@ -972,17 +1103,27 @@ void ClientThink_real( gentity_t *ent ) {
 	if ( !ClientInactivityTimer( client ) ) {
 		return;
 	}
-
-	if ( reloading || client->cameraPortal ) {
+										   // OSPx - Pause
+	if (reloading || client->cameraPortal || level.match_pause != PAUSE_NONE) {
 		ucmd->buttons = 0;
 		ucmd->forwardmove = 0;
 		ucmd->rightmove = 0;
 		ucmd->upmove = 0;
 		ucmd->wbuttons = 0;
 		ucmd->wolfkick = 0;
-		if ( client->cameraPortal ) {
+
+		// OSP - Pause
+		if (level.match_pause != PAUSE_NONE)
+		{
+			client->ps.pm_type = PM_FREEZE;
+		} // -OSPx
+		if (client->cameraPortal) {
+			VectorClear(client->ps.velocity);
 			client->ps.pm_type = PM_FREEZE;
 		}
+	// OSPx - So we don't miss any..
+	} else if (level.match_pause != PAUSE_NONE) {
+		client->ps.pm_type = PM_FREEZE;
 	} else if ( client->noclip ) {
 		client->ps.pm_type = PM_NOCLIP;
 	} else if ( client->ps.stats[STAT_HEALTH] <= 0 ) {
@@ -1042,7 +1183,11 @@ void ClientThink_real( gentity_t *ent ) {
 	pm.noWeapClips = ( g_dmflags.integer & DF_NO_WEAPRELOAD ) > 0;
 	if ( ent->aiCharacter && AICast_NoReload( ent->s.number ) ) {
 		pm.noWeapClips = qtrue; // ensure AI characters don't use clips if they're not supposed to.
+	}
 
+	// OSPx - Fixed physics
+	if (g_fixedphysics.integer) {
+		pm.fixedphysicsfps = 125;
 	}
 	// Ridah
 //	if (ent->r.svFlags & SVF_NOFOOTSTEPS)
@@ -1149,8 +1294,11 @@ void ClientThink_real( gentity_t *ent ) {
 	ent->waterlevel = pm.waterlevel;
 	ent->watertype = pm.watertype;
 
-	// execute client events
-	ClientEvents( ent, oldEventSequence );
+	// OSPx - Pause wrapper
+	if (level.match_pause == PAUSE_NONE) {
+		// execute client events
+		ClientEvents(ent, oldEventSequence);
+	}
 
 	// link entity now, after any personal teleporters have been used
 	trap_LinkEntity( ent );
@@ -1161,8 +1309,8 @@ void ClientThink_real( gentity_t *ent ) {
 	// NOTE: now copy the exact origin over otherwise clients can be snapped into solid
 	VectorCopy( ent->client->ps.origin, ent->r.currentOrigin );
 
-	// store the client's current position for antilag traces
-	G_StoreClientPosition( ent );
+	// OSPx - Antilag
+	G_StoreTrail(ent);
 
 	// touch other objects
 	ClientImpacts( ent, &pm );
@@ -1204,40 +1352,98 @@ void ClientThink_real( gentity_t *ent ) {
 		}
 		// dhm - end
 
-		// wait for the attack button to be pressed
-		if ( level.time > client->respawnTime ) {
-			// forcerespawn is to prevent users from waiting out powerups
-			if ( ( g_gametype.integer != GT_SINGLE_PLAYER ) &&
-				 ( g_forcerespawn.integer > 0 ) &&
-				 ( ( level.time - client->respawnTime ) > g_forcerespawn.integer * 1000 )  &&
-				 ( !( ent->client->ps.pm_flags & PMF_LIMBO ) ) ) { // JPW NERVE
-				// JPW NERVE
-				if ( g_gametype.integer >= GT_WOLF ) {
-					limbo( ent, qtrue );
-				} else {
-					respawn( ent );
-				}
-				// jpw
-				return;
+		// OSPx - Rewrote this altogether..
+		if (level.time > client->respawnTime  && !(ent->client->ps.pm_flags & PMF_LIMBO)) {
+			qboolean forceTapout = qfalse;
+			int team = client->sess.sessionTeam;
+			int axisTime = ((g_userAxisRespawnTime.integer * 1000) - teamRespawnTime(TEAM_RED, qfalse));
+			int alliedTime = ((g_userAlliedRespawnTime.integer * 1000) - teamRespawnTime(TEAM_BLUE, qfalse));
+
+			// wait for the attack button to be pressed
+			if (ucmd->upmove > 0) {
+				limbo(ent, qtrue);
 			}
 
-			// DHM - Nerve :: Single player game respawns immediately as before,
-			//				  but in multiplayer, require button press before respawn
-			if ( g_gametype.integer == GT_SINGLE_PLAYER ) {
-				respawn( ent );
+			// This has to be outside due flood check as well as to cope with flood & latency issues, 
+			// it's set to little over 1 sec prior actual spawn to ensure client is there on arrival..
+			if (!forceTapout &&
+				( (team == TEAM_RED) && (axisTime < 1200) )|| 
+				( (team == TEAM_BLUE) && (alliedTime < 1200) )
+				) {
+				forceTapout = qtrue;
 			}
-			// NERVE - SMF - we want to only respawn on jump button now
-			else if ( ( ucmd->upmove > 0 ) &&
-					  ( !( ent->client->ps.pm_flags & PMF_LIMBO ) ) ) { // JPW NERVE
-				// JPW NERVE
-				if ( g_gametype.integer >= GT_WOLF ) {
-					limbo( ent, qtrue );
-				} else {
-					respawn( ent );
+
+			// Cap this to approx half a second checks to avoid flooding the client..
+			if (level.spawnFloodTimer < level.time) {				
+
+				if (g_maxlives.integer || g_alliedmaxlives.integer || g_axismaxlives.integer) {
+					// OSPx					
+					// If you wonder what's this all about..we don't want to force a tapout when 
+					// client has no lives left- although they can manually tapout in that case..
+					//
+					// It may look like an overkill but lives can be either set for both teams or 
+					// independently (just for one team), thus it would break the feature as
+					// it would never reach it (client respawn defaults to -1 when not set..).
+					//
+					// FYI: 
+					// reqforcespawn	= instant tapout when player dies "& is not gibbed" (cg_instantTapout)
+					// reqforcetapout	= tapout occurs just before respawn is due (cg_forceTapout)
+					// - If both enabled, client solves that by favouring cg_forceTapout and ignoring cg_instantTapout..
+
+					// Both teams..
+					if (g_maxlives.integer) 
+					{
+						if (client->ps.persistant[PERS_RESPAWNS_LEFT] >= 0) {
+							trap_SendServerCommand(ent - g_entities, "reqforcespawn");
+
+							if (forceTapout) 
+								trap_SendServerCommand(ent - g_entities, "reqforcetapout");	
+						}
+					} // Allies only
+					else if (g_axismaxlives.integer && team == TEAM_RED) 
+					{
+						if (client->ps.persistant[PERS_RESPAWNS_LEFT] >= 0) {
+							trap_SendServerCommand(ent - g_entities, "reqforcespawn");
+
+							if (forceTapout) 
+								trap_SendServerCommand(ent - g_entities, "reqforcetapout");
+						}
+					} // Axis only
+					else if (g_alliedmaxlives.integer && team == TEAM_BLUE) 
+					{
+						if (client->ps.persistant[PERS_RESPAWNS_LEFT] >= 0) {
+							trap_SendServerCommand(ent - g_entities, "reqforcespawn");
+
+							if (forceTapout)
+								trap_SendServerCommand(ent - g_entities, "reqforcetapout");
+						}
+					} // A team with no max lives ...
+					else {
+						trap_SendServerCommand(ent - g_entities, "reqforcespawn");
+
+						if (forceTapout) {
+							trap_SendServerCommand(ent - g_entities, "reqforcetapout");							
+						}
+					}
 				}
-				// jpw
+				// We're running a normal game with no max lives..so go for it..
+				else {
+					trap_SendServerCommand(ent - g_entities, "reqforcespawn");						
+
+					if (forceTapout)
+						trap_SendServerCommand(ent - g_entities, "reqforcetapout");
+				}
+				// Timestamp
+				level.spawnFloodTimer = level.time + 600;
+				forceTapout = qfalse;
 			}
-			// dhm - Nerve :: end
+
+			// forcerespawn is to prevent users from waiting out powerups
+			if ( (g_forcerespawn.integer > 0) &&
+				((level.time - client->respawnTime) > g_forcerespawn.integer * 1000) )
+			{
+				limbo(ent, qfalse);
+			} 
 			// NERVE - SMF - we want to immediately go to limbo mode if gibbed
 			else if ( client->ps.stats[STAT_HEALTH] <= GIB_HEALTH && !( ent->client->ps.pm_flags & PMF_LIMBO ) ) {
 				if ( g_gametype.integer >= GT_WOLF ) {
@@ -1247,12 +1453,15 @@ void ClientThink_real( gentity_t *ent ) {
 				}
 			}
 			// -NERVE - SMF
-		}
+		} // -OSPx
 		return;
 	}
 
-	// perform once-a-second actions
-	ClientTimerActions( ent, msec );
+	// OSPx - Pause wrapper
+	if (level.match_pause == PAUSE_NONE) {
+		// perform once-a-second actions
+		ClientTimerActions(ent, msec);
+	}
 }
 
 /*
@@ -1289,6 +1498,31 @@ void G_RunClient( gentity_t *ent ) {
 
 /*
 ==================
+OSPx - Respawn check
+
+Moved this here so it can be reused..
+==================
+*/
+int teamRespawnTime(int team, qboolean warmup) {
+	int time = 0; 
+
+	if (team == TEAM_RED) {
+		if (warmup)
+			time = level.time % 3000;
+		else
+			time = (level.dwRedReinfOffset + level.time - level.startTime) % g_redlimbotime.integer;
+	}
+	else {
+		if (warmup)
+			time = level.time % 3000;
+		else
+			time = (level.dwBlueReinfOffset + level.time - level.startTime) % g_bluelimbotime.integer;
+	}
+	return time;
+}
+
+/*
+==================
 SpectatorClientEndFrame
 
 ==================
@@ -1302,18 +1536,37 @@ void SpectatorClientEndFrame( gentity_t *ent ) {
 	int flags;
 	int testtime;
 
+//	// OSP - specs periodically get score updates for useful demo playback info
+//	if ( /*ent->client->pers.mvCount > 0 &&*/ ent->client->pers.mvScoreUpdate < level.time ) {
+//		ent->client->pers.mvScoreUpdate = level.time + MV_SCOREUPDATE_INTERVAL;
+//		ent->client->wantsscore = qtrue;
+////		G_SendScore(ent);
+//	}
+	
 	// if we are doing a chase cam or a remote view, grab the latest info
 	if ( ( ent->client->sess.spectatorState == SPECTATOR_FOLLOW ) || ( ent->client->ps.pm_flags & PMF_LIMBO ) ) { // JPW NERVE for limbo
 		int clientNum;
 
 		if ( ent->client->sess.sessionTeam == TEAM_RED ) {
-			testtime = level.time % g_redlimbotime.integer;
+			// OSPx - Warmup Damage
+			if (match_warmupfire.integer && g_gamestate.integer != GS_PLAYING)
+				testtime = teamRespawnTime(TEAM_RED, qtrue);
+			else
+				// OSPx - Reinforcements Offset (patched)
+				testtime = teamRespawnTime(TEAM_RED, qfalse);
+
 			if ( testtime < ent->client->pers.lastReinforceTime ) {
 				do_respawn = 1;
 			}
 			ent->client->pers.lastReinforceTime = testtime;
-		} else if ( ent->client->sess.sessionTeam == TEAM_BLUE )     {
-			testtime = level.time % g_bluelimbotime.integer;
+		} else if ( ent->client->sess.sessionTeam == TEAM_BLUE ) {
+			// OSPx - Warmup Damage
+			if (match_warmupfire.integer && g_gamestate.integer != GS_PLAYING)
+				testtime = teamRespawnTime(TEAM_BLUE, qtrue);
+			else
+				// OSPx - Reinforcements Offset (patched)
+				testtime = teamRespawnTime(TEAM_BLUE, qfalse);
+
 			if ( testtime < ent->client->pers.lastReinforceTime ) {
 				do_respawn = 1;
 			}
@@ -1341,6 +1594,7 @@ void SpectatorClientEndFrame( gentity_t *ent ) {
 			cl = &level.clients[ clientNum ];
 			if ( cl->pers.connected == CON_CONNECTED && cl->sess.sessionTeam != TEAM_SPECTATOR ) {
 				// DHM - Nerve :: carry flags over
+				int ping = ent->client->ps.ping;
 				flags = ( cl->ps.eFlags & ~( EF_VOTED ) ) | ( ent->client->ps.eFlags & ( EF_VOTED ) );
 				// JPW NERVE -- limbo latch
 				if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->ps.pm_flags & PMF_LIMBO ) {
@@ -1365,6 +1619,7 @@ void SpectatorClientEndFrame( gentity_t *ent ) {
 				// jpw
 				// DHM - Nerve :: carry flags over
 				ent->client->ps.eFlags = flags;
+				ent->client->ps.ping = ping;
 				return;
 			} else {
 				// drop them to free spectators unless they are dedicated camera followers
@@ -1381,6 +1636,9 @@ void SpectatorClientEndFrame( gentity_t *ent ) {
 	} else {
 		ent->client->ps.pm_flags &= ~PMF_SCOREBOARD;
 	}
+	// OSPx - Speclock
+	ent->client->ps.powerups[PW_BLACKOUT] = (G_blockoutTeam(ent, TEAM_RED) * TEAM_RED) |
+											(G_blockoutTeam(ent, TEAM_BLUE) * TEAM_BLUE);
 }
 
 
@@ -1549,6 +1807,10 @@ while a slow client may have multiple ClientEndFrame between ClientThink.
 void ClientEndFrame( gentity_t *ent ) {
 	int i;
 
+	// OSPx
+	// used for informing of speclocked teams.
+	// Zero out here and set only for certain specs
+	ent->client->ps.powerups[PW_BLACKOUT] = 0;
 	if ( ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ) || ( ent->client->ps.pm_flags & PMF_LIMBO ) ) { // JPW NERVE
 		SpectatorClientEndFrame( ent );
 		return;
@@ -1556,7 +1818,7 @@ void ClientEndFrame( gentity_t *ent ) {
 
 	if ( !ent->aiCharacter ) {
 		// turn off any expired powerups
-		for ( i = 0 ; i < MAX_POWERUPS ; i++ ) {
+		for ( i = 0; i < PW_NUM_POWERUPS; i++ ) {
 
 			if ( i == PW_FIRE ||             // these aren't dependant on level.time
 				 i == PW_ELECTRIC ||
@@ -1566,10 +1828,36 @@ void ClientEndFrame( gentity_t *ent ) {
 				continue;
 			}
 
+			// OSPx - Pause
+			if (level.match_pause != PAUSE_NONE &&
+				ent->client->ps.powerups[i] != INT_MAX) {
+				ent->client->ps.powerups[i] += level.time - level.previousTime;
+			}
+
 			if ( ent->client->ps.powerups[ i ] < level.time ) {
 				ent->client->ps.powerups[ i ] = 0;
 			}
 		}
+	}
+
+	// OSPx - Pause
+	if (level.match_pause != PAUSE_NONE) {
+		int time_delta = level.time - level.previousTime;
+
+		ent->client->airOutTime += time_delta;
+		ent->client->inactivityTime += time_delta;
+		ent->client->lastBurnTime += time_delta;
+		ent->client->pers.connectTime += time_delta;
+		ent->client->pers.enterTime += time_delta;
+		ent->client->pers.teamState.lastreturnedflag += time_delta;
+		ent->client->pers.teamState.lasthurtcarrier += time_delta;
+		ent->client->pers.teamState.lastfraggedcarrier += time_delta;
+		ent->client->ps.classWeaponTime += time_delta;
+		ent->client->respawnTime += time_delta;
+		ent->client->sniperRifleFiredTime += time_delta;
+		ent->lastHintCheckTime += time_delta;
+		ent->pain_debounce_time += time_delta;
+		ent->s.onFireEnd += time_delta;
 	}
 
 	// save network bandwidth

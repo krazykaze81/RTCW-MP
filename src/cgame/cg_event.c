@@ -83,6 +83,22 @@ const char  *CG_PlaceString( int rank ) {
 }
 
 /*
+===============
+OSPx - getGender
+
+Returns player gender
+===============
+*/
+char *getGender(char *gender, qboolean pNoun) {	
+
+	if (!Q_stricmp(gender, "f") || !Q_stricmp(gender, "female"))
+		return "her";
+	else if (!Q_stricmp(gender, "m") || !Q_stricmp(gender, "male"))
+		return (pNoun ? "him" : "his");
+	else
+		return (pNoun ? "him" : "his");
+}
+/*
 =============
 CG_Obituary
 =============
@@ -98,6 +114,7 @@ static void CG_Obituary( entityState_t *ent ) {
 	char targetName[32];
 	char attackerName[32];
 	clientInfo_t    *ci, *ca; // JPW NERVE ca = attacker
+	char *gender;	// OSPx
 
 	// Ridah, no obituaries in single player
 	if ( cgs.gametype == GT_SINGLE_PLAYER ) {
@@ -128,6 +145,7 @@ static void CG_Obituary( entityState_t *ent ) {
 	Q_strncpyz( targetName, Info_ValueForKey( targetInfo, "n" ), sizeof( targetName ) - 2 );
 	strcat( targetName, S_COLOR_WHITE );
 
+	gender = Info_ValueForKey(targetInfo, "ug");	// OSPx - Gender
 	message2 = "";
 
 	// DHM - Nerve :: Set killtype
@@ -146,7 +164,7 @@ static void CG_Obituary( entityState_t *ent ) {
 		message = "committed suicide";
 		break;
 	case MOD_FALLING:
-		message = "fell to his death";
+		message = va("fell to %s death", getGender(gender, qfalse));
 		break;
 	case MOD_CRUSH:
 		message = "was crushed";
@@ -166,6 +184,11 @@ static void CG_Obituary( entityState_t *ent ) {
 	case MOD_TRIGGER_HURT:
 		message = "was killed";
 		break;
+// OSPx
+	case MOD_ADMKILL:
+		message = "was killed";
+		break;
+// -OSPx
 	default:
 		message = NULL;
 		break;
@@ -176,26 +199,41 @@ static void CG_Obituary( entityState_t *ent ) {
 // JPW NERVE per atvi req
 		case MOD_DYNAMITE:
 		case MOD_DYNAMITE_SPLASH:
-			message = "dynamited himself to pieces";
+			message = va("dynamited %sself to pieces", getGender(gender, qtrue));
 			break;
 // jpw
 		case MOD_GRENADE_SPLASH:
-			message = "dove on his own grenade";
+			message = va("dove on %s own grenade", getGender(gender, qfalse));
 			break;
 		case MOD_ROCKET_SPLASH:
-			message = "vaporized himself";
+			message = va("vaporized %sself", getGender(gender, qtrue));
 			break;
 		case MOD_AIRSTRIKE:
-			message = "obliterated himself";
+			message = "";
+			message = va("obliterated %sself", getGender(gender, qtrue));
 			break;
 			//case MOD_BFG_SPLASH:
 			//message = "should have used a smaller gun";
 			//break;
 		case MOD_EXPLOSIVE:
-			message = "died in his own explosion";
+			message = va("died in %s own explosion", getGender(gender, qfalse));
 			break;
-		default:
-			message = "killed himself";
+// OSPx - MODs
+		case MOD_ARTY:			
+			message = va("obliterated %sself", getGender(gender, qtrue));
+			break;
+		case MOD_SWITCHTEAM:
+			return;
+		case MOD_SUICIDE:
+			message = "committed suicide";
+			break;
+		case MOD_SELFKILL:
+			//message = "slit his own throat";
+			message = va("slit %s own throat", getGender(gender, qfalse));
+			break;			
+// -OSPx
+		default:			
+			message = va("killed %sself", getGender(gender, qtrue));
 			break;
 		}
 	}
@@ -358,6 +396,12 @@ static void CG_Obituary( entityState_t *ent ) {
 			message = "was blasted by";
 			message2 = "'s support fire"; // JPW NERVE changed since it gets called for both air strikes and artillery
 			break;
+// OSPx
+		case MOD_ARTY:
+			message = "stood under";
+			message2 = "'s air strike";			
+			break;
+// -OSPx
 // jpw
 // (SA) leaving a sample of two part obit's
 //		case MOD_ROCKET:
@@ -2234,7 +2278,34 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 
 		break;
 		// dhm - end
+// OSPx
+	// Announcer sounds
+	case EV_ANNOUNCER_SOUND:
+		DEBUGNAME("EV_ANNOUNCER_SOUND");
+		if (cg_announcer.integer) {
+			// Ridah, check for a sound script
+			s = CG_ConfigString(CS_SOUNDS + es->eventParm);
+			if (!strstr(s, ".wav")) {
+				if (CG_SoundPlaySoundScript(s, NULL, es->number)) {
+					break;
+				}
+				// try with .wav
+				Q_strncpyz(tempStr, s, sizeof(tempStr));
+				Q_strcat(tempStr, sizeof(tempStr), ".wav");
+				s = tempStr;
+			}
+			// done.
 
+			if (cgs.gameSounds[es->eventParm]) {
+				trap_S_StartSound(NULL, cg.snap->ps.clientNum, CHAN_ANNOUNCER, cgs.gameSounds[es->eventParm]);
+			}
+			else {
+				s = CG_ConfigString(CS_SOUNDS + es->eventParm);
+				trap_S_StartSound(NULL, cg.snap->ps.clientNum, CHAN_ANNOUNCER, CG_CustomSound(es->number, s));
+			}
+		}
+		break;
+// -OSPx
 	case EV_PAIN:
 		// local player sounds are triggered in CG_CheckLocalSounds,
 		// so ignore events on the player

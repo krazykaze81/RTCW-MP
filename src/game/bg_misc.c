@@ -55,7 +55,6 @@ extern vmCvar_t g_gametype;
 #define MAX_AMMO_FG42   500
 #define MAX_AMMO_BAR    500
 
-
 // these defines are matched with the character torso animations
 #define DELAY_LOW       100 // machineguns, tesla, spear, flame
 #define DELAY_HIGH      100 // mauser, garand
@@ -3768,6 +3767,9 @@ char *eventnames[] = {
 	"EV_GRENADE_BOUNCE",     // eventParm will be the soundindex
 	"EV_GENERAL_SOUND",
 	"EV_GLOBAL_SOUND",       // no attenuation
+// OSPx
+	"EV_ANNOUNCER_SOUND",	// Deals with countdown
+// -OSPx
 	"EV_BULLET_HIT_FLESH",
 	"EV_BULLET_HIT_WALL",
 	"EV_MISSILE_HIT",
@@ -4110,6 +4112,7 @@ colorTable_t OSP_Colortable[] =
 	{ "black",       &colorBlack },
 	{ NULL,         NULL }
 };
+extern void trap_Cvar_Set(const char *var_name, const char *value);
 void BG_setCrosshair( char *colString, float *col, float alpha, char *cvarName ) {
 	char *s = colString;
 
@@ -4127,7 +4130,8 @@ void BG_setCrosshair( char *colString, float *col, float alpha, char *cvarName )
 			col[2] = ( (float)( gethex( *( s + 4 ) ) * 16 + gethex( *( s + 5 ) ) ) ) / 255.00;
 			return;
 		}
-	} else {
+	}
+	else {
 		int i = 0;
 		while ( OSP_Colortable[i].colorname != NULL ) {
 			if ( Q_stricmp( s, OSP_Colortable[i].colorname ) == 0 ) {
@@ -4141,4 +4145,55 @@ void BG_setCrosshair( char *colString, float *col, float alpha, char *cvarName )
 	}
 
 	trap_Cvar_Set( cvarName, "White" );
+}
+// consts to offset random reinforcement seeds
+const unsigned int aReinfSeeds[MAX_REINFSEEDS] = { 11, 3, 13, 7, 2, 5, 1, 17 };
+
+// OSPx - Stats (It matches extWeaponStats_t in bg_public.h)
+// I think i'm missing few...sniper?
+//
+//
+// Weapon full names + headshot capability
+const weap_ws_t aWeaponInfo[WS_MAX] = {
+	{ qfalse, "KNIF", "Knife" },  // 0
+	{ qtrue, "LUGR", "Luger" },  // 1
+	{ qtrue, "COLT", "Colt" },  // 2
+	{ qtrue, "MP40", "MP-40" },  // 3
+	{ qtrue, "TMPS", "Thompson" },  // 4
+	{ qtrue, "STEN", "Sten" },  // 5
+	{ qtrue, "FG42", "FG-42" },  // 6
+	{ qtrue, "PNZR", "Panzer" },      // 7
+	{ qtrue, "FLAM", "F.Thrower" },  // 8
+	{ qfalse, "GRND", "Grenade" },  // 9
+	{ qfalse, "MRTR", "Mortar" },	  // 10
+	{ qfalse, "DYNA", "Dynamite" },  // 11
+	{ qfalse, "ARST", "Airstrike" },  // 12
+	{ qfalse, "ARTY", "Artillery" },  // 13
+	{ qfalse, "SRNG", "Syringe" },  // 14
+	{ qfalse, "SMOK", "SmokeScrn" },  // 15
+	{ qtrue, "MG42", "MG-42 Gun" },  // 16
+	{ qtrue, "RIFL", "Mauser" },	  // 17
+	{ qtrue, "VENM", "Venom" },		  // 18
+};
+
+// strip colors and control codes, copying up to dwMaxLength-1 "good" chars and nul-terminating
+// returns the length of the cleaned string
+int BG_cleanName(const char *pszIn, char *pszOut, unsigned int dwMaxLength, qboolean fCRLF) {
+	const char *pInCopy = pszIn;
+	const char *pszOutStart = pszOut;
+
+	while (*pInCopy && (pszOut - pszOutStart < dwMaxLength - 1)) {
+		if (*pInCopy == '^') {
+			pInCopy += ((pInCopy[1] == 0) ? 1 : 2);
+		}
+		else if ((*pInCopy < 32 && (!fCRLF || *pInCopy != '\n')) || (*pInCopy > 126))    {
+			pInCopy++;
+		}
+		else {
+			*pszOut++ = *pInCopy++;
+		}
+	}
+
+	*pszOut = 0;
+	return(pszOut - pszOutStart);
 }

@@ -58,6 +58,62 @@ void Controls_GetConfig( void );
 ///////////////////////
 ///////////////////////
 
+/*
+	OSPx - HUD names ETpro port
+*/
+int	numnames = 0;
+
+typedef struct {
+	float x;
+	float y;
+	float dist;
+	char name[MAX_NAME_LENGTH + 1];
+} etpro_name_t;
+
+etpro_name_t hudnames[128];
+
+void VP_ResetNames(void) {
+	numnames = 0;
+}
+int RealStrLen(char *s){
+	int ret = strlen(s);
+	for (; *s; s++) {
+		if (Q_IsColorString(s))
+			ret -= 2;
+	}
+	return ret < 50 ? ret : 50;
+}
+void VP_DrawNames(void) {
+	int i;
+	float fontsize;
+	float dist;
+
+	for (i = 0; i < numnames; i++) 
+	{
+		//need to come up with better scaler
+		fontsize = cgs.media.charsetShader;
+		dist = hudnames[i].dist > 1000.0f ? 1000.0f : hudnames[i].dist;
+		dist /= 2000.0f;
+		fontsize -= (dist * fontsize);
+
+		CG_DrawStringExt((hudnames[i].x - ((RealStrLen(hudnames[i].name) * 6) >> 1)),
+			hudnames[i].y, hudnames[i].name, colorWhite, qfalse, qfalse, 6, 12, 50);
+	}
+}
+void VP_AddName(int x, int y, float dist, int clientNum) {
+
+	if (clientNum == cg.clientNum)
+		return;
+
+	hudnames[numnames].x = x;
+	hudnames[numnames].y = y;
+	hudnames[numnames].dist = dist;
+	Q_strncpyz(hudnames[numnames].name, cgs.clientinfo[clientNum].name, sizeof(hudnames[numnames].name));
+	numnames++;
+
+}
+
+// -OSPx 
 int CG_Text_Width( const char *text, float scale, int limit ) {
 	int count,len;
 	float out;
@@ -853,6 +909,46 @@ static float CG_DrawTeamOverlay( float y ) {
 	return y;
 }
 
+/*
+========================
+OSPx 
+Respawn Timer
+========================
+*/
+static float CG_DrawRespawnTimer(float y) {
+	char		*str = { 0 };
+	int			w;
+	float		x;
+
+	if (!cg_drawReinforcementTime.integer)
+		return y;
+
+	// Don't draw timer if client is checking scoreboard
+	if (CG_DrawScoreboard())
+		return y;
+
+	if (cgs.gamestate != GS_PLAYING)
+		str = "";
+	else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_SPECTATOR)
+		str = "";
+	else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED)
+		str = va("Re: %d", CG_CalculateReinfTime());
+	else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_BLUE)
+		str = va("Re: %d", CG_CalculateReinfTime());
+
+	w = CG_DrawStrlen(str) * TINYCHAR_WIDTH;
+
+	x = 46 + 3;
+	y = 480 - 245;
+
+	if (cgs.gamestate != GS_PLAYING) {
+		CG_DrawStringExt((x + 4) - w, y, str, colorYellow, qtrue, qtrue, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
+	}
+	else if (cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR){
+		CG_DrawStringExt(x - w, y, str, cg.reinforcementColor, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
+	}
+	return y += TINYCHAR_HEIGHT;
+}
 
 /*
 =====================
@@ -882,6 +978,10 @@ static void CG_DrawUpperRight( void ) {
 //		y = CG_DrawAttacker( y );
 //	}
 //----(SA)	end
+	// OSPx - Respawn Timer
+	if (cg_drawReinforcementTime.integer) {
+		y = CG_DrawRespawnTimer(y);
+	}
 }
 
 /*
@@ -1174,6 +1274,10 @@ static void CG_DrawDisconnect( void ) {
 	const char      *s;
 	int w;          // bk010215 - FIXME char message[1024];
 
+	// OSPx - Fix for "connection interrupted" when user is previewing demo with timescale lower than 0.5...
+	if (cg.demoPlayback && cg_timescale.value != 1.0f) {
+		return;
+	}
 	// draw the phone jack if we are completely past our buffers
 	cmdNum = trap_GetCurrentCmdNumber() - CMD_BACKUP + 1;
 	trap_GetUserCmd( cmdNum, &cmd );
@@ -1487,7 +1591,122 @@ static void CG_DrawCenterString( void ) {
 	trap_R_SetColor( NULL );
 }
 
+/*
+===================
+OSPx - Cg_PopinPrint
 
+Pops in messages
+===================
+*/
+#define CP_PMWIDTH 84
+void CG_PopinPrint(const char *str, int y, int charWidth, qboolean blink) {
+	char    *s;
+	int i, len;                         // NERVE - SMF
+	qboolean neednewline = qfalse;      // NERVE - SMF
+
+	Q_strncpyz(cg.popinPrint, str, sizeof(cg.popinPrint));
+
+	// Turn spaces into newlines, if we've run over the linewidth
+	len = strlen(cg.popinPrint);
+	for (i = 0; i < len; i++) {
+
+		// Subtract a few chars here so long words still get displayed properly
+		if (i % (CP_PMWIDTH - 20) == 0 && i > 0) {
+			neednewline = qtrue;
+		}
+		if (cg.popinPrint[i] == ' ' && neednewline) {
+			cg.popinPrint[i] = '\n';
+			neednewline = qfalse;
+		}
+	}
+	// -NERVE - SMF
+
+	cg.popinPrintTime = cg.time;
+	cg.popinPrintY = y + 45;
+	cg.popinPrintCharWidth = charWidth;
+	cg.popinBlink = blink;
+
+	// count the number of lines for centering
+	cg.popinPrintLines = 1;
+	s = cg.popinPrint;
+	while (*s) {
+		if (*s == '\n') {
+			cg.popinPrintLines++;
+		}
+		s++;
+	}
+}
+
+/*
+===================
+L0 - CG_DrawPopinString
+===================
+*/
+static void CG_DrawPopinString(void) {
+	char    *start;
+	int l;
+	int y;
+	int x;
+	float   *color;
+
+	if (!cg.popinPrintTime) {
+		return;
+	}
+
+	color = CG_FadeColor(cg.popinPrintTime, 1000 * 3);
+	if (!color) {
+		cg.popinPrintTime = 0;
+		return;
+	}
+
+	trap_R_SetColor(color);
+	start = cg.popinPrint;
+
+	// Specs see prints at different possition...
+	if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR)
+	{
+		y = (cg.popinPrintY + 75) - cg.popinPrintLines * TINYCHAR_HEIGHT / 2;
+		x = 3 + (cg.popinPrintLines * TINYCHAR_HEIGHT / 2);
+	}
+	else
+	{
+		y = (cg.popinPrintY - 7) - cg.popinPrintLines * TINYCHAR_HEIGHT / 2;
+		x = 25 + (cg.popinPrintLines * TINYCHAR_HEIGHT / 2);
+	}
+
+	if (cg.popinBlink)
+		color[3] = fabs(sin(cg.time * 0.001)) * cg_hudAlpha.value;
+
+	while (1) {
+		char linebuffer[1024];
+
+		for (l = 0; l < CP_PMWIDTH; l++) {          // NERVE - SMF - added CP_LINEWIDTH
+			if (!start[l] || start[l] == '\n') {
+				break;
+			}
+			linebuffer[l] = start[l];
+		}
+		linebuffer[l] = 0;
+
+		if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR)
+			CG_DrawStringExt(x, y, linebuffer, color, qfalse, qfalse,
+			TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
+		else
+			CG_DrawStringExt(x, y, linebuffer, color, qfalse, qfalse,
+			TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
+
+		y += cg.popinPrintCharWidth * 1.5;
+
+		while (*start && (*start != '\n')) {
+			start++;
+		}
+		if (!*start) {
+			break;
+		}
+		start++;
+	}
+	trap_R_SetColor(NULL);
+}
 
 /*
 ================================================================================
@@ -1705,13 +1924,14 @@ static void CG_DrawCrosshair( void ) {
 		CG_ColorForHealth( hcolor );
 		trap_R_SetColor( hcolor );
 	} else {
-		trap_R_SetColor( NULL );
+		trap_R_SetColor(cg.xhairColor);
 	}
 
 	w = h = cg_crosshairSize.value;
 
 	// RF, crosshair size represents aim spread
-	f = (float)cg.snap->ps.aimSpreadScale / 255.0;
+	// OSPx - Patched for Solid crosshair 
+	f = (float)((cg_crosshairPulse.integer == 0) ? 0 : cg.snap->ps.aimSpreadScale / 255.0);
 	w *= ( 1 + f * 2.0 );
 	h *= ( 1 + f * 2.0 );
 
@@ -1737,6 +1957,10 @@ static void CG_DrawCrosshair( void ) {
 		x = cg_crosshairX.integer;
 		y = cg_crosshairY.integer;
 		CG_AdjustFrom640( &x, &y, &w, &h );
+		// OSPx - Crosshairs
+		if (!cg_crosshairHealth.integer) {
+			trap_R_SetColor(cg.xhairColorAlt);
+		}
 
 		if ( cg.limboMenu ) { // JPW NERVE
 			trap_R_DrawStretchPic( x + 0.5 * ( cg.refdef.width - w ), y + 0.5 * ( cg.refdef.height - h ),
@@ -2066,7 +2290,13 @@ static void CG_DrawCrosshairNames( void ) {
 	w = CG_DrawStrlen( s ) * SMALLCHAR_WIDTH;
 
 	// draw the name and class
-	CG_DrawSmallStringColor( 320 - w / 2, 170, s, color );
+	// OSPx - Colored names
+	if (cg_coloredCrosshairNames.integer) {
+		CG_DrawStringExt(320 - w / 2, 170, s, color, qfalse, qfalse, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 40);
+	}
+	else {
+		CG_DrawSmallStringColor(320 - w / 2, 170, s, color);
+	}
 
 	// draw the health bar
 	playerHealth = cg.identifyClientHealth;
@@ -2138,7 +2368,7 @@ static void CG_DrawVote( void ) {
 			CG_DrawStringExt( 8, 200, CG_TranslateString( s ), color, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 80 );
 			return;
 		}
-		if ( cgs.complaintClient == -4 ) {
+		if (cgs.complaintClient == -4 && cg_complaintPopUp.integer) {
 			s = "You were team-killed by the Server Host";
 			CG_DrawStringExt( 8, 200, CG_TranslateString( s ), color, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 80 );
 			return;
@@ -2153,11 +2383,15 @@ static void CG_DrawVote( void ) {
 			Q_strncpyz( str2, "vote no", 32 );
 		}
 
-		s = va( CG_TranslateString( "File complaint against %s for team-killing?" ), cgs.clientinfo[cgs.complaintClient].name );
-		CG_DrawStringExt( 8, 200, s, color, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 80 );
+		// OSPx - Complaint popup
+		if (cg_complaintPopUp.integer)
+		{
+			s = va(CG_TranslateString("File complaint against %s for team-killing?"), cgs.clientinfo[cgs.complaintClient].name);
+			CG_DrawStringExt(8, 200, s, color, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 80);
 
-		s = va( CG_TranslateString( "Press '%s' for YES, or '%s' for No" ), str1, str2 );
-		CG_DrawStringExt( 8, 214, s, color, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 80 );
+			s = va(CG_TranslateString("Press '%s' for YES, or '%s' for No"), str1, str2);
+			CG_DrawStringExt(8, 214, s, color, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 80);
+		}
 		return;
 	}
 
@@ -2208,33 +2442,42 @@ static void CG_DrawIntermission( void ) {
 		return;
 	}
 
-	cg.scoreFadeTime = cg.time;
-	CG_DrawScoreboard();
+// OSPx
+	// Auto Actions
+	if (!cg.demoPlayback) {
+		static int doScreenshot = 0, doDemostop = 0;
 
-	static int doScreenshot = 0, doDemostop = 0;
-	// OSP - End-of-level autoactions
-	if(!cg.demoPlayback) {
-		if(!cg.latchVictorySound) {
-			if(cg_autoAction.integer & AA_SCREENSHOT) {
-				doScreenshot = cg.time + 1000;
-			}
-			if(cg_autoAction.integer & AA_STATSDUMP) {
+		if (!cg.latchAutoActions) {
+			cg.latchAutoActions = qtrue;
+
+			// Some instantly open console to check the stats..
+			if (cg_autoAction.integer & AA_SCREENSHOT) {
+				doScreenshot = cg.time + 250;
+			}			
+			if (cg_autoAction.integer & AA_STATSDUMP) {
 				CG_dumpStats_f();
-			}
-			if((cg_autoAction.integer & AA_DEMORECORD) && (cgs.gametype == GT_WOLF_STOPWATCH && cgs.currentRound != 1)) {
-				doDemostop = cg.time + 5000;	// stats should show up within 5 seconds
+			}			
+			if ((cg_autoAction.integer & AA_DEMORECORD) &&
+				((cgs.gametype == GT_WOLF_STOPWATCH && cgs.currentRound == 0) ||
+				cgs.gametype != GT_WOLF_STOPWATCH)) {
+				doDemostop = cg.time + 5000;
 			}
 		}
-		if(doScreenshot > 0 && doScreenshot < cg.time) {
+
+		if (doScreenshot > 0 && doScreenshot < cg.time) {
 			CG_autoScreenShot_f();
 			doScreenshot = 0;
 		}
-		if(doDemostop > 0 && doDemostop < cg.time) {
+
+		if (doDemostop > 0 && doDemostop < cg.time) {
 			trap_SendConsoleCommand("stoprecord\n");
 			doDemostop = 0;
 		}
-	}
-	//-OSP
+	} 
+// -OSPx
+
+	cg.scoreFadeTime = cg.time;
+	CG_DrawScoreboard();
 }
 
 /*
@@ -2336,19 +2579,39 @@ static void CG_DrawSpectatorMessage( void ) {
 	if ( !Q_stricmp( str2, "???" ) ) {
 		str2 = "ESCAPE";
 	}
-	str = va( CG_TranslateString( "- Press %s to open Limbo Menu" ), str2 );
-	CG_DrawStringExt( x, y, str, color, qtrue, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
+	str = va( CG_TranslateString( "- Press ^n%s ^7to open Limbo Menu" ), str2 );
+	CG_DrawStringExt( x, y, str, color, qfalse, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
 	y += TINYCHAR_HEIGHT;
 
 	str2 = BindingFromName( "mp_QuickMessage" );
-	str = va( CG_TranslateString( "- Press %s to open quick message menu" ), str2 );
-	CG_DrawStringExt( x, y, str, color, qtrue, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
+	str = va( CG_TranslateString( "- Press ^n%s ^7to open quick message menu" ), str2 );
+	CG_DrawStringExt( x, y, str, color, qfalse, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
 	y += TINYCHAR_HEIGHT;
 
 	str2 = BindingFromName( "+attack" );
-	str = va( CG_TranslateString( "- Press %s to follow next player" ), str2 );
-	CG_DrawStringExt( x, y, str, color, qtrue, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
+	str = va( CG_TranslateString( "- Press ^n%s ^7to follow next player" ), str2 );
+	CG_DrawStringExt( x, y, str, color, qfalse, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
 	y += TINYCHAR_HEIGHT;
+}
+/*
+=================
+OSPx 
+
+Reinforcement Offset
+=================
+*/
+float CG_CalculateReinfTime_Float( void ) {
+	team_t team;
+	int dwDeployTime;
+	
+	team = cgs.clientinfo[cg.snap->ps.clientNum].team;
+
+	dwDeployTime = (team == TEAM_RED) ? cg_redlimbotime.integer : cg_bluelimbotime.integer;
+	return (1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
+}
+
+int CG_CalculateReinfTime( void ) {
+	return((int)CG_CalculateReinfTime_Float());
 }
 
 /*
@@ -2392,12 +2655,9 @@ static void CG_DrawLimboMessage( void ) {
 	// JPW NERVE
 	if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
 		str = CG_TranslateString( "No more reinforcements this round." );
-	} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
-		str = va( CG_TranslateString( "Reinforcements deploy in %d seconds." ),
-				  (int)( 1 + (float)( cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer ) ) * 0.001f ) );
 	} else {
-		str = va( CG_TranslateString( "Reinforcements deploy in %d seconds." ),
-				  (int)( 1 + (float)( cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer ) ) * 0.001f ) );
+		// OSPx - Reinforcement Offset
+		str = va(CG_TranslateString("Reinforcements deploy in %d seconds."), CG_CalculateReinfTime());
 	}
 
 	CG_DrawSmallStringColor( INFOTEXT_STARTX, 104, str, color );
@@ -2432,12 +2692,9 @@ static qboolean CG_DrawFollow( void ) {
 		color[2] = 0.0;
 		if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
 			sprintf( deploytime, CG_TranslateString( "No more deployments this round" ) );
-		} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
-			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
-					 (int)( 1 + (float)( cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer ) ) * 0.001f ) );
 		} else {
-			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
-					 (int)( 1 + (float)( cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer ) ) * 0.001f ) );
+			// OSPx - Reinforcement Offset
+			sprintf(deploytime, CG_TranslateString("Deploying in %d seconds"), CG_CalculateReinfTime() );
 		}
 
 		CG_DrawStringExt( INFOTEXT_STARTX, 68, deploytime, color, qtrue, qfalse, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 80 );
@@ -2458,6 +2715,57 @@ static qboolean CG_DrawFollow( void ) {
 	return qtrue;
 }
 
+/*
+=================
+OSPx - CG_DrawPause
+
+Deals with client views/prints when paused.
+=================
+*/
+static void CG_PausePrint(void) {
+	const char  *s, *s2;
+	float color[4];
+	int w;
+
+	// Not in warmup...
+	if (cg.warmup)
+		return;
+
+	if (cgs.match_paused == PAUSE_ON) {
+		s = va("%s", CG_TranslateString("^nMatch is Paused!"));
+		s2 = va("%s", CG_TranslateString(va("Timeout expires in ^n%i ^7seconds", cgs.match_resumes - cgs.match_expired)));
+
+		color[3] = fabs(sin(cg.time * 0.001)) * cg_hudAlpha.value;
+
+		if (cg.time > cgs.match_stepTimer) {
+			cgs.match_expired++;
+			cgs.match_stepTimer = cg.time + 1000;
+		}
+		//cgs.fadeAlpha = .1;
+	}
+	else if (cgs.match_paused == PAUSE_RESUMING) {
+		s = va("%s", CG_TranslateString("^3Prepare to fight!"));
+		s2 = va("%s", CG_TranslateString(va("Resuming Match in ^3%d", 8 - cgs.match_expired)));		
+		
+		color[3] = fabs(sin(cg.time * 0.002)) * cg_hudAlpha.value;
+
+		if (cg.time > cgs.match_stepTimer) {
+			cgs.match_expired++;
+			cgs.match_stepTimer = cg.time + 1000;
+		}
+	}
+	else {
+		return;
+	}
+
+	color[0] = color[1] = color[2] = 1.0;
+
+	w = CG_DrawStrlen(s);
+	CG_DrawStringExt(320 - w * 6, 100, s, color, qfalse, qtrue, 12, 18, 0);
+
+	w = CG_DrawStrlen(s2);
+	CG_DrawStringExt(320 - w * 6, 120, s2, colorWhite, qfalse, qtrue, 12, 18, 0);
+}
 
 /*
 =================
@@ -2474,18 +2782,37 @@ static void CG_DrawWarmup( void ) {
 		return;     // (SA) don't bother with this stuff in sp
 	}
 
+	// OSPx - Ready
+	if (cgs.gamestate == GS_WARMUP && cgs.readyState != CREADY_NONE) {
+		cw = 10;
+
+		s = CG_TranslateString(va("^nWARMUP:^7 Waiting on ^n%i ^7%s", cgs.minclients, cgs.minclients == 1 ? "player" : "players"));
+		w = CG_DrawStrlen(s);
+		CG_DrawStringExt(320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0);
+
+		// Show only to real active clients..
+		if (!cg.demoPlayback && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR &&
+			(!(cg.snap->ps.pm_flags & PMF_FOLLOW) || (cg.snap->ps.pm_flags & PMF_LIMBO))) 
+		{
+			s1 = CG_TranslateString("Type ^n\\ready ^7in the console to start");
+			w = CG_DrawStrlen(s1);
+			CG_DrawStringExt(320 - w * cw / 2, 160, s1, colorWhite,
+				qfalse, qtrue, cw, (int)(cw * 1.5), 0);
+		}
+		return;
+	}
 	sec = cg.warmup;
 	if ( !sec ) {
 		if ( cgs.gamestate == GS_WAITING_FOR_PLAYERS ) {
 			cw = 10;
 
-			s = CG_TranslateString( "Game Stopped - Waiting for more players" );
+			s = CG_TranslateString( "^3Game Stopped ^7Waiting for more players" );
 
 			w = CG_DrawStrlen( s );
 			CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
 
 
-			s1 = va( CG_TranslateString( "Waiting for %i players" ), cgs.minclients );
+			s1 = va( CG_TranslateString( "Waiting for ^3%i ^7players" ), cgs.minclients );
 			s2 = CG_TranslateString( "or call a vote to start match" );
 
 			w = CG_DrawStrlen( s1 );
@@ -2508,9 +2835,9 @@ static void CG_DrawWarmup( void ) {
 	}
 
 	if ( cgs.gametype == GT_WOLF_STOPWATCH ) {
-		s = va( "%s %i", CG_TranslateString( "(WARMUP) Match begins in:" ), sec + 1 );
+		s = va( "%s %i", CG_TranslateString( "(^3WARMUP^7) Match begins in:" ), sec + 1 );
 	} else {
-		s = va( "%s %i", CG_TranslateString( "(WARMUP) Match begins in:" ), sec + 1 );
+		s = va( "%s %i", CG_TranslateString( "(^3WARMUP^7) Match begins in:" ), sec + 1 );
 	}
 
 	w = CG_DrawStrlen( s );
@@ -2574,15 +2901,15 @@ static void CG_DrawWarmup( void ) {
 		cw = 10;
 
 		w = CG_DrawStrlen( s );
-		CG_DrawStringExt( 320 - w * cw / 2, 140, s, colorWhite,
+		CG_DrawStringExt(320 - w * cw / 2, 160, s, colorWhite,
 						  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
 
 		w = CG_DrawStrlen( s1 );
-		CG_DrawStringExt( 320 - w * cw / 2, 160, s1, colorWhite,
+		CG_DrawStringExt(320 - w * cw / 2, 180, s1, colorWhite,
 						  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
 
 		w = CG_DrawStrlen( s2 );
-		CG_DrawStringExt( 320 - w * cw / 2, 180, s2, colorWhite,
+		CG_DrawStringExt(320 - w * cw / 2, 200, s2, colorWhite,
 						  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
 	}
 }
@@ -2598,6 +2925,7 @@ static void CG_DrawFlashFade( void ) {
 	static int lastTime;
 	int elapsed, time;
 	vec4_t col;
+	qboolean fBlackout = (int_ui_blackout.integer > 0); // OSPx - Speclock
 
 	if ( cgs.fadeStartTime + cgs.fadeDuration < cg.time ) {
 		cgs.fadeAlphaCurrent = cgs.fadeAlpha;
@@ -2618,14 +2946,44 @@ static void CG_DrawFlashFade( void ) {
 			}
 		}
 	}
-	// now draw the fade
-	if ( cgs.fadeAlphaCurrent > 0.0 ) {
+	// OSPx - Speclock
+	if (int_ui_blackout.integer == 0) {
+		if (cg.snap->ps.powerups[PW_BLACKOUT] > 0) {
+			trap_Cvar_Set("ui_blackout", va("%d", cg.snap->ps.powerups[PW_BLACKOUT]));
+		}
+	}
+	else if (cg.snap->ps.powerups[PW_BLACKOUT] == 0) {
+		trap_Cvar_Set("ui_blackout", "0");
+	}
+
+	// now draw the fade		   // OSPx - Speclock
+	if (cgs.fadeAlphaCurrent > 0.0 || fBlackout) {
 		VectorClear( col );
-		col[3] = cgs.fadeAlphaCurrent;
-		CG_FillRect( -10, -10, 650, 490, col );
+		col[3] = (fBlackout) ? 1.0f : cgs.fadeAlphaCurrent; // OSPx - Speclock
+		CG_FillRect(0, 0, 640, 480, col);
+
+		//bani - #127 - bail out if we're a speclocked spectator with cg_draw2d = 0
+		if (cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR && !cg_draw2D.integer) {
+			return;
+		}
+
+		// OSPx - Speclocked
+		if (fBlackout) {
+			int i, nOffset = 90;
+			char *str, *format = "The %s team is speclocked!";
+			char *teams[TEAM_NUM_TEAMS] = { "??", "AXIS", "ALLIED", "???" };	
+			float color[4] = { 1, 1, 0.75, 1 };
+
+			for (i = TEAM_RED; i <= TEAM_BLUE; i++) {
+				if (cg.snap->ps.powerups[PW_BLACKOUT] & i) {
+					str = va(format, teams[i]);
+					CG_DrawStringExt(INFOTEXT_STARTX, nOffset, str, color, qtrue, qfalse, 10, 10, 0);
+					nOffset += 12;
+				}
+			}
+		}
 	}
 }
-
 
 
 /*
@@ -2704,7 +3062,10 @@ static void CG_DrawFlashDamage( void ) {
 		}
 
 		VectorSet( col, 0.2, 0, 0 );
-		col[3] =  0.7 * ( redFlash / 5.0 );
+		// OSPx - Blood Flash
+		col[3] = 0.7 * (redFlash / 5.0) * ( (cg_bloodFlash.value > 1.0) ? 1.0 :
+											(cg_bloodFlash.value < 0.0) ? 0.0 :
+											cg_bloodFlash.value);
 
 		CG_FillRect( -10, -10, 650, 490, col );
 	}
@@ -3026,7 +3387,11 @@ void CG_DrawObjectiveIcons() {
 	seconds -= mins * 60;
 	tens = seconds / 10;
 	seconds -= tens * 10;
-	if ( msec < 0 ) {
+	// OSPx - Print fancy warmup in corner..
+	if (cgs.gamestate != GS_PLAYING) {
+		fade = fabs(sin(cg.time * 0.002)) * cg_hudAlpha.value;
+		s = va("^3Warmup");
+	} else if (msec < 0) {
 		fade = fabs( sin( cg.time * 0.002 ) ) * cg_hudAlpha.value;
 		s = va( "0:00" );
 	} else {
@@ -3251,6 +3616,60 @@ static void CG_ScreenFade( void ) {
 	}
 }
 
+// OSPx - Draw HUD Names
+void CG_DrawOnScreenNames(void)
+{
+	static vec3_t	mins = { -1, -1, -1 };
+	static vec3_t	maxs = { 1, 1, 1 };
+	vec4_t			white = { 1.0f, 1.0f, 1.0f, 1.0f };
+	specName_t		*spcNm;
+	trace_t			tr;
+	int				clientNum;
+	int				FadeOut = 0;
+	int				FadeIn = 0;
+
+	for (clientNum = 0; clientNum < cgs.maxclients; clientNum++) {
+
+		if (!cgs.clientinfo[clientNum].infoValid)
+			continue;
+
+		spcNm = &cg.specOnScreenNames[clientNum];
+		if (!spcNm || !spcNm->visible)
+			continue;
+
+		CG_Trace(&tr, cg.refdef.vieworg, mins, maxs, spcNm->origin, -1, CONTENTS_SOLID);
+
+		if (tr.fraction < 1.0f) {
+			spcNm->lastInvisibleTime = cg.time;
+		}
+		else {
+			spcNm->lastVisibleTime = cg.time;
+		}
+
+		FadeOut = cg.time - spcNm->lastVisibleTime;
+		FadeIn = cg.time - spcNm->lastInvisibleTime;
+
+		if (FadeIn) {
+			white[3] = (FadeIn > 500) ? 1.0 : FadeIn / 500.0f;
+			if (white[3] < spcNm->alpha)
+				white[3] = spcNm->alpha;
+		}
+		if (FadeOut) {
+			white[3] = (FadeOut > 500) ? 0.0 : 1.0 - FadeOut / 500.0f;
+			if (white[3] > spcNm->alpha)
+				white[3] = spcNm->alpha;
+		}
+		if (white[3] > 1.0)
+			white[3] = 1.0;
+
+		spcNm->alpha = white[3];
+		if (spcNm->alpha <= 0.0) continue;	// no alpha = nothing to draw..
+
+		CG_Text_Paint_ext2(spcNm->x, spcNm->y, spcNm->scale, white, spcNm->text, 0, 0, 0);
+		// expect update next frame again
+		spcNm->visible = qfalse;
+	}
+}
 // JPW NERVE
 void CG_Draw2D2( void ) {
 	qhandle_t weapon;
@@ -3458,6 +3877,12 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
+	// OSPx - Hud Names
+	if (vp_drawnames.integer)
+		VP_DrawNames();
+
+	VP_ResetNames();
+	// -OSPx
 	CG_DrawFlashBlendBehindHUD();
 
 #ifndef PRE_RELEASE_DEMO
@@ -3471,7 +3896,11 @@ static void CG_Draw2D( void ) {
 	if ( cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR ) {
 		CG_DrawSpectator();
 		CG_DrawCrosshair();
-		CG_DrawCrosshairNames();
+		// OSPx - Draw Hud Names
+		if (cg_drawNames.integer)
+			CG_DrawOnScreenNames();
+		else
+			CG_DrawCrosshairNames();
 
 		// NERVE - SMF - we need to do this for spectators as well
 		if ( cgs.gametype >= GT_TEAM ) {
@@ -3489,7 +3918,9 @@ static void CG_Draw2D( void ) {
 			// DHM - Nerve :: Don't draw icon in upper-right when switching weapons
 			//CG_DrawWeaponSelect();
 
-			CG_DrawPickupItem();
+			// OSPx - In warmup we print ready intel there..
+			if (!(cgs.gamestate == GS_WARMUP && cgs.readyState != CREADY_NONE))
+				CG_DrawPickupItem();
 		}
 		if ( cgs.gametype >= GT_TEAM ) {
 			CG_DrawTeamInfo();
@@ -3512,6 +3943,11 @@ static void CG_Draw2D( void ) {
 	if ( !CG_DrawScoreboard() ) {
 		CG_DrawCenterString();
 
+		// OSPx - Pause		
+		CG_PausePrint();
+
+		// OSPx - Pop in print..
+		CG_DrawPopinString();
 		CG_DrawFollow();
 		CG_DrawWarmup();
 
@@ -3532,6 +3968,11 @@ static void CG_Draw2D( void ) {
 		// -NERVE - SMF
 	}
 
+	// OSPx - Announcer
+	CG_DrawAnnouncer();
+
+	// OSPx - window updates
+	CG_windowDraw();
 	// Ridah, draw flash blends now
 	CG_DrawFlashBlend();
 }
@@ -3545,7 +3986,7 @@ void CG_StartShakeCamera( float p ) {
 	cg.cameraShakePhase = crandom() * M_PI; // start chain in random dir
 }
 
-void CG_ShakeCamera() {
+void CG_ShakeCamera( void ) {
 	float x, val;
 
 	if ( cg.time > cg.cameraShakeTime ) {
@@ -3556,13 +3997,14 @@ void CG_ShakeCamera() {
 	// JPW NERVE starts at 1, approaches 0 over time
 	x = ( cg.cameraShakeTime - cg.time ) / cg.cameraShakeLength;
 
-	// up/down
-	val = sin( M_PI * 8 * x + cg.cameraShakePhase ) * x * 18.0f * cg.cameraShakeScale;
-	cg.refdefViewAngles[0] += val;
-
-	// left/right
-	val = sin( M_PI * 15 * x + cg.cameraShakePhase ) * x * 16.0f * cg.cameraShakeScale;
-	cg.refdefViewAngles[1] += val;
+	// OSPx - NQ's shake cam..
+	val = sin(M_PI * 7 * x + cg.cameraShakePhase) * x * 4.0f * cg.cameraShakeScale;
+	cg.refdef.vieworg[2] += val;
+	val = sin(M_PI * 13 * x + cg.cameraShakePhase) * x * 4.0f * cg.cameraShakeScale;
+	cg.refdef.vieworg[1] += val;
+	val = cos(M_PI * 17 * x + cg.cameraShakePhase) * x * 4.0f * cg.cameraShakeScale;
+	cg.refdef.vieworg[0] += val;
+	// End
 
 	AnglesToAxis( cg.refdefViewAngles, cg.refdef.viewaxis );
 }
@@ -3661,4 +4103,372 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 	CG_Draw2D();
 }
 
+/*
 
+	OSPx - New stuff below
+
+	Various ports from ET, wolfX..
+
+*/
+/*
+=====================
+CG_Text_PaintChar_Ext
+=====================
+*/
+void CG_Text_PaintChar_Ext(float x, float y, float w, float h, float scalex, float scaley, float s, float t, float s2, float t2, qhandle_t hShader) {
+	w *= scalex;
+	h *= scaley;
+	CG_AdjustFrom640(&x, &y, &w, &h);
+	trap_R_DrawStretchPic(x, y, w, h, s, t, s2, t2, hShader);
+}
+
+/*
+=====================
+CG_Text_Paint_ext2
+=====================
+*/
+void CG_Text_Paint_ext2(float x, float y, float scale, vec4_t color, const char *text, float adjust, int limit, int style) {
+	int len, count;
+	vec4_t newColor;
+	glyphInfo_t *glyph;
+	float useScale;
+	fontInfo_t *font = &cgDC.Assets.textFont;
+	
+	font = &cgDC.Assets.bigFont;
+
+	useScale = scale * font->glyphScale;
+
+	color[3] *= cg_hudAlpha.value;	// (SA) adjust for cg_hudalpha
+
+	if (text) {
+		const char *s = text;
+		trap_R_SetColor(color);
+		memcpy(&newColor[0], &color[0], sizeof(vec4_t));
+		len = strlen(text);
+		if (limit > 0 && len > limit) {
+			len = limit;
+		}
+		count = 0;
+		while (s && *s && count < len) {
+			glyph = &font->glyphs[(int)*s];			
+			if (Q_IsColorString(s)) {
+				memcpy(newColor, g_color_table[ColorIndex(*(s + 1))], sizeof(newColor));
+				newColor[3] = color[3];
+				trap_R_SetColor(newColor);
+				s += 2;
+				continue;
+			}
+			else {
+				float yadj = useScale * glyph->top;
+				if (style == ITEM_TEXTSTYLE_SHADOWED || style == ITEM_TEXTSTYLE_SHADOWEDMORE) {
+					int ofs = style == ITEM_TEXTSTYLE_SHADOWED ? 1 : 2;
+					colorBlack[3] = newColor[3];
+					trap_R_SetColor(colorBlack);
+					CG_Text_PaintChar(x + ofs, y - yadj + ofs,
+						glyph->imageWidth,
+						glyph->imageHeight,
+						useScale,
+						glyph->s,
+						glyph->t,
+						glyph->s2,
+						glyph->t2,
+						glyph->glyph);
+					colorBlack[3] = 1.0;
+					trap_R_SetColor(newColor);
+				}
+				CG_Text_PaintChar(x, y - yadj,
+					glyph->imageWidth,
+					glyph->imageHeight,
+					useScale,
+					glyph->s,
+					glyph->t,
+					glyph->s2,
+					glyph->t2,
+					glyph->glyph);				
+				x += (glyph->xSkip * useScale) + adjust;
+				s++;
+				count++;
+			}
+		}
+		trap_R_SetColor(NULL);
+	}
+}
+
+/*
+=====================
+CG_Text_Width_ext2
+=====================
+*/
+int CG_Text_Width_ext2(const char *text, float scale, int limit) {
+	int count, len;
+	float out;
+	glyphInfo_t *glyph;
+	float useScale;
+	const char *s = text;
+	fontInfo_t *font = &cgDC.Assets.textFont;
+
+	font = &cgDC.Assets.bigFont;
+
+	useScale = scale * font->glyphScale;
+	out = 0;
+	if (text) {
+		len = strlen(text);
+		if (limit > 0 && len > limit) {
+			len = limit;
+		}
+		count = 0;
+		while (s && *s && count < len) {
+			if (Q_IsColorString(s)) {
+				s += 2;
+				continue;
+			}
+			else {
+				glyph = &font->glyphs[(int)*s];
+				out += glyph->xSkip;
+				s++;
+				count++;
+			}
+		}
+	}
+	return out * useScale;
+}
+
+/*
+=====================
+CG_Text_Height_ext2
+=====================
+*/
+int CG_Text_Height_ext2(const char *text, float scale, int limit) {
+	int len, count;
+	float max;
+	glyphInfo_t *glyph;
+	float useScale;
+	const char *s = text;
+	fontInfo_t *font = &cgDC.Assets.textFont;
+
+	font = &cgDC.Assets.bigFont;
+
+	useScale = scale * font->glyphScale;
+	max = 0;
+	if (text) {
+		len = strlen(text);
+		if (limit > 0 && len > limit) {
+			len = limit;
+		}
+		count = 0;
+		while (s && *s && count < len) {
+			if (Q_IsColorString(s)) {
+				s += 2;
+				continue;
+			}
+			else {
+				glyph = &font->glyphs[(int)*s];
+				if (max < glyph->height) {
+					max = glyph->height;
+				}
+				s++;
+				count++;
+			}
+		}
+	}
+	return max * useScale;
+}
+
+/*
+=====================
+CG_Text_Paint_Ext
+=====================
+*/
+void CG_Text_Paint_Ext(float x, float y, float scalex, float scaley, vec4_t color, const char *text, float adjust, int limit, int style, fontInfo_t* font) {
+	int len, count;
+	vec4_t newColor;
+	glyphInfo_t *glyph;
+
+	scalex *= font->glyphScale;
+	scaley *= font->glyphScale;
+
+	if (text) {
+		const char *s = text;
+		trap_R_SetColor(color);
+		memcpy(&newColor[0], &color[0], sizeof(vec4_t));
+		len = strlen(text);
+		if (limit > 0 && len > limit) {
+			len = limit;
+		}
+		count = 0;
+		while (s && *s && count < len) {
+			glyph = &font->glyphs[(unsigned char)*s];
+			if (Q_IsColorString(s)) {
+				if (*(s + 1) == COLOR_NULL) {
+					memcpy(newColor, color, sizeof(newColor));
+				}
+				else {
+					memcpy(newColor, g_color_table[ColorIndex(*(s + 1))], sizeof(newColor));
+					newColor[3] = color[3];
+				}
+				trap_R_SetColor(newColor);
+				s += 2;
+				continue;
+			}
+			else {
+				float yadj = scaley * glyph->top;
+				if (style == ITEM_TEXTSTYLE_SHADOWED || style == ITEM_TEXTSTYLE_SHADOWEDMORE) {
+					int ofs = style == ITEM_TEXTSTYLE_SHADOWED ? 1 : 2;
+					colorBlack[3] = newColor[3];
+					trap_R_SetColor(colorBlack);
+					CG_Text_PaintChar_Ext(x + (glyph->pitch * scalex) + ofs, y - yadj + ofs, glyph->imageWidth, glyph->imageHeight, scalex, scaley, glyph->s, glyph->t, glyph->s2, glyph->t2, glyph->glyph);
+					colorBlack[3] = 1.0;
+					trap_R_SetColor(newColor);
+				}
+				CG_Text_PaintChar_Ext(x + (glyph->pitch * scalex), y - yadj, glyph->imageWidth, glyph->imageHeight, scalex, scaley, glyph->s, glyph->t, glyph->s2, glyph->t2, glyph->glyph);
+				x += (glyph->xSkip * scalex) + adjust;
+				s++;
+				count++;
+			}
+		}
+		trap_R_SetColor(NULL);
+	}
+}
+
+/*
+=====================
+CG_Text_Height_Ext
+=====================
+*/
+int CG_Text_Height_Ext(const char *text, float scale, int limit, fontInfo_t* font) {
+	int len, count;
+	float max;
+	glyphInfo_t *glyph;
+	float useScale;
+	const char *s = text;
+
+	useScale = scale * font->glyphScale;
+	max = 0;
+	if (text) {
+		len = strlen(text);
+		if (limit > 0 && len > limit) {
+			len = limit;
+		}
+		count = 0;
+		while (s && *s && count < len) {
+			if (Q_IsColorString(s)) {
+				s += 2;
+				continue;
+			}
+			else {
+				glyph = &font->glyphs[(unsigned char)*s];
+				if (max < glyph->height) {
+					max = glyph->height;
+				}
+				s++;
+				count++;
+			}
+		}
+	}
+	return max * useScale;
+}
+
+/*
+=====================
+CG_Text_Width_Ext
+=====================
+*/
+int CG_Text_Width_Ext(const char *text, float scale, int limit, fontInfo_t* font) {
+	int count, len;
+	glyphInfo_t *glyph;
+	const char *s = text;
+	float out, useScale = scale * font->glyphScale;
+
+	out = 0;
+	if (text) {
+		len = strlen(text);
+		if (limit > 0 && len > limit) {
+			len = limit;
+		}
+		count = 0;
+		while (s && *s && count < len) {
+			if (Q_IsColorString(s)) {
+				s += 2;
+				continue;
+			}
+			else {
+				glyph = &font->glyphs[(unsigned char)*s];
+				out += glyph->xSkip;
+				s++;
+				count++;
+			}
+		}
+	}
+	return out * useScale;
+}
+
+/*
+=====================
+CG_DrawAnnouncer
+
+Ported from ET
+=====================
+*/
+
+void CG_DrawAnnouncer(void)
+{
+	int		x, y, w, h;
+	float	scale, fade;
+	vec4_t	color;
+
+	if (!cg_announcer.integer || cg.centerPrintAnnouncerTime <= cg.time)
+		return;
+
+	fade = (float)(cg.centerPrintAnnouncerTime - cg.time) / cg.centerPrintAnnouncerDuration;
+
+	color[0] = cg.centerPrintAnnouncerColor[0];
+	color[1] = cg.centerPrintAnnouncerColor[1];
+	color[2] = cg.centerPrintAnnouncerColor[2];
+
+	switch (cg.centerPrintAnnouncerMode){
+	default:
+	case ANNOUNCER_NORMAL:
+		color[3] = fade;
+		break;
+	case ANNOUNCER_SINE:
+		color[3] = sin(M_PI * fade);
+		break;
+	case ANNOUNCER_INVERSE_SINE:
+		color[3] = 1 - sin(M_PI * fade);
+		break;
+	case ANNOUNCER_TAN:
+		color[3] = tan(M_PI * fade);
+	}
+
+	scale = (1.1f - color[3]) * cg.centerPrintAnnouncerScale;
+
+	h = CG_Text_Height_Ext(cg.centerPrintAnnouncer, scale, 0, &cgDC.Assets.textFont);
+
+	y = (SCREEN_HEIGHT - h) / 2;
+
+	w = CG_Text_Width_Ext(cg.centerPrintAnnouncer, scale, 0, &cgDC.Assets.textFont);
+
+	x = (SCREEN_WIDTH - w) / 2;
+
+	CG_Text_Paint_Ext(x, y, scale, scale, color, cg.centerPrintAnnouncer, 0, 0, 0, &cgDC.Assets.textFont);
+}
+
+void CG_AddAnnouncer(char *text, sfxHandle_t sound, float scale, int duration, float r, float g, float b, int mode)
+{
+	if (!cg_announcer.integer)
+		return;
+
+	if (sound)
+		trap_S_StartLocalSound(sound, CHAN_ANNOUNCER);
+
+	if (text){
+		cg.centerPrintAnnouncer = text;
+		cg.centerPrintAnnouncerTime = cg.time + duration;
+		cg.centerPrintAnnouncerScale = scale;
+		cg.centerPrintAnnouncerDuration = duration;
+		cg.centerPrintAnnouncerColor[0] = r;
+		cg.centerPrintAnnouncerColor[1] = g;
+		cg.centerPrintAnnouncerColor[2] = b;
+		cg.centerPrintAnnouncerMode = mode;
+	}
+}

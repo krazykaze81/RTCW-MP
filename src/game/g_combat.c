@@ -264,8 +264,15 @@ char    *modNames[] = {
 	"MOD_LT_AIRSTRIKE",
 	"MOD_ENGINEER",  // not sure if we'll use
 	"MOD_MEDIC",     // these like this or not
+	"MOD_BAT",
+	
 // jpw
-	"MOD_BAT"
+// OSPx
+	"MOD_ADMKILL",
+	"MOD_SELFKILL",
+	"MOD_SWITCHTEAM",
+	"MOD_NUM_MODS"
+// -OSPx
 };
 
 /*
@@ -294,6 +301,8 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	if ( level.intermissiontime ) {
 		return;
 	}
+	// OSP - Stats
+	G_addStats(self, attacker, damage, meansOfDeath);
 
 	self->client->ps.pm_type = PM_DEAD;
 
@@ -325,6 +334,12 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	G_LogPrintf( "Kill: %i %i %i: %s killed %s by %s\n",
 				 killer, self->s.number, meansOfDeath, killerName,
 				 self->client->pers.netname, obit );
+	// OSP - Life Stats for Max Kills Peak
+	if (attacker && attacker->client) {		
+		if (!OnSameTeam(attacker, self)) {
+			attacker->client->pers.life_kills++;
+		}
+	}
 
 	// broadcast the death event to everyone
 	ent = G_TempEntity( self->r.currentOrigin, EV_OBITUARY );
@@ -408,7 +423,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			if ( !item ) {
 				item = BG_FindItem( "Objective" );
 			}
-
+			G_matchPrintInfo(va("Allies have lost %s!", self->message));
 			self->client->ps.powerups[PW_REDFLAG] = 0;
 		}
 		if ( self->client->ps.powerups[PW_BLUEFLAG] ) {
@@ -416,7 +431,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			if ( !item ) {
 				item = BG_FindItem( "Objective" );
 			}
-
+			G_matchPrintInfo(va("Axis have lost %s!", self->message));
 			self->client->ps.powerups[PW_BLUEFLAG] = 0;
 		}
 
@@ -638,7 +653,7 @@ qboolean IsHeadShot( gentity_t *targ, qboolean isAICharacter, vec3_t dir, vec3_t
 		} else {
 			float height, dest;
 			vec3_t v, angles, forward, up, right;
-
+			VectorClear(v); // OSPx - clear stuff..
 			G_SetOrigin( head, targ->r.currentOrigin );
 
 			if ( targ->client->ps.pm_flags & PMF_DUCKED ) { // closer fake offset for 'head' box when crouching
@@ -658,6 +673,7 @@ qboolean IsHeadShot( gentity_t *targ, qboolean isAICharacter, vec3_t dir, vec3_t
 
 			AngleVectors( angles, forward, right, up );
 			VectorScale( forward, 5, v );
+			VectorMA(v, 5, right, v); // OSPx - Align it better..
 			VectorMA( v, 18, up, v );
 
 			VectorAdd( v, head->r.currentOrigin, head->r.currentOrigin );
@@ -669,7 +685,7 @@ qboolean IsHeadShot( gentity_t *targ, qboolean isAICharacter, vec3_t dir, vec3_t
 		VectorCopy( targ->r.currentAngles, head->s.angles );
 		VectorCopy( head->s.angles, head->s.apos.trBase );
 		VectorCopy( head->s.angles, head->s.apos.trDelta );
-		VectorSet( head->r.mins, -6, -6, -2 ); // JPW NERVE changed this z from -12 to -6 for crouching, also removed standing offset
+		VectorSet( head->r.mins, -6, -6, -1 );	// OSPx - Changed it to -1  (was -2)
 		VectorSet( head->r.maxs, 6, 6, 10 ); // changed this z from 0 to 6
 		head->clipmask = CONTENTS_SOLID;
 		head->r.contents = CONTENTS_SOLID;
@@ -728,7 +744,7 @@ gentity_t* G_BuildHead( gentity_t *ent ) {
 	} else {
 		float height, dest;
 		vec3_t v, angles, forward, up, right;
-
+		VectorClear(v); // OSPx - clear stuff..
 		G_SetOrigin( head, ent->r.currentOrigin );
 
 		if ( ent->client->ps.pm_flags & PMF_DUCKED ) { // closer fake offset for 'head' box when crouching
@@ -748,6 +764,7 @@ gentity_t* G_BuildHead( gentity_t *ent ) {
 
 		AngleVectors( angles, forward, right, up );
 		VectorScale( forward, 5, v );
+		VectorMA(v, 5, right, v); // OSPx - Align it better..
 		VectorMA( v, 18, up, v );
 
 		VectorAdd( v, head->r.currentOrigin, head->r.currentOrigin );
@@ -759,7 +776,7 @@ gentity_t* G_BuildHead( gentity_t *ent ) {
 	VectorCopy( ent->r.currentAngles, head->s.angles );
 	VectorCopy( head->s.angles, head->s.apos.trBase );
 	VectorCopy( head->s.angles, head->s.apos.trDelta );
-	VectorSet( head->r.mins, -6, -6, -2 ); // JPW NERVE changed this z from -12 to -6 for crouching, also removed standing offset
+	VectorSet( head->r.mins, -6, -6, -1 );	// OSPx - Changed it to -1  (was -2)
 	VectorSet( head->r.maxs, 6, 6, 10 ); // changed this z from 0 to 6
 	head->clipmask = CONTENTS_SOLID;
 	head->r.contents = CONTENTS_SOLID;
@@ -887,7 +904,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 
 	// the intermission has allready been qualified for, so don't
 	// allow any extra scoring
-	if ( level.intermissionQueued || g_gamestate.integer != GS_PLAYING ) {
+	if (level.intermissionQueued || g_gamestate.integer != GS_PLAYING && match_warmupfire.integer == 0) {
 		return;
 	}
 
@@ -932,6 +949,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 			case MOD_ROCKET:
 			case MOD_ROCKET_SPLASH:
 			case MOD_AIRSTRIKE:
+			case MOD_ARTY:
 			case MOD_GRENADE_PINEAPPLE:
 			case MOD_MORTAR:
 			case MOD_MORTAR_SPLASH:
@@ -1023,7 +1041,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 		// if TF_NO_FRIENDLY_FIRE is set, don't do damage to the target
 		// if the attacker was on the same team
 		if ( targ != attacker && OnSameTeam( targ, attacker )  ) {
-			if ( !g_friendlyFire.integer ) {
+			// OSPx - Warmup Damage
+			if ((g_gamestate.integer != GS_PLAYING && match_warmupfire.integer == 1)) {
+				return;
+			} // - OSPx
+			else if (!g_friendlyFire.integer) {
 				return;
 			}
 		}
@@ -1087,6 +1109,14 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 		}
 
 		targ->client->ps.eFlags |= EF_HEADSHOT;
+		// OSPx - Stats
+		if (client && attacker && attacker->client
+			&& attacker->client->sess.sessionTeam != targ->client->sess.sessionTeam) {
+			G_addStatsHeadShot(attacker, mod);
+		}
+
+		// OSPx - Hitsounds
+		attacker->client->ps.persistant[PERS_HITHEAD]++;
 	}
 
 	if ( g_debugDamage.integer ) {
@@ -1145,9 +1175,17 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 		if ( targ->health <= 0 ) {
 			if ( client ) {
 				targ->flags |= FL_NO_KNOCKBACK;
+				// OSPx - Stats			
+				if (targ->client->ps.pm_type == PM_DEAD) {
+					G_addStats(targ, attacker, take, mod);
+				} 
 // JPW NERVE -- repeated shooting sends to limbo
 				if ( g_gametype.integer >= GT_WOLF ) {
 					if ( ( targ->health < FORCE_LIMBO_HEALTH ) && ( targ->health > GIB_HEALTH ) && ( !( targ->client->ps.pm_flags & PMF_LIMBO ) ) ) {
+						// OSPx - Stats
+						if (!OnSameTeam(attacker, targ) && attacker->client)
+							attacker->client->sess.gibs++;
+						// -OSPx
 						limbo( targ, qtrue );
 					}
 				}
@@ -1188,6 +1226,9 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 			if ( targ->s.number >= MAX_CLIENTS ) {
 				G_Script_ScriptEvent( targ, "pain", va( "%d %d", targ->health, targ->health + take ) );
 			}
+		} // OSPx - update weapon/dmg stats
+		else {
+			G_addStats(targ, attacker, take, mod);
 		}
 
 		//G_ArmorDamage(targ);	//----(SA)	moved out to separate routine

@@ -107,6 +107,16 @@ typedef enum {
 	CLDMG_MAX
 } clientDamage_t;
 
+// OSPx
+
+// Random reinforcement seed settings
+#define MAX_REINFSEEDS  8
+#define REINF_RANGE     16      // (0 to n-1 second offset)
+#define REINF_BLUEDELT  3       // Allies shift offset
+#define REINF_REDDELT   2       // Axis shift offset
+extern const unsigned int aReinfSeeds[MAX_REINFSEEDS];
+
+// -OSPx
 // RF
 #define MAX_TAGCONNECTS     32
 
@@ -176,9 +186,12 @@ typedef enum {
 #define CS_TARGETEFFECT         35      //----(SA)
 
 #define CS_WOLFINFO             36      // NERVE - SMF
-#define CS_VERSIONINFO          37      // Versioning info for demo playback compatibility //original ET-OSP value was 30
-#define CS_REINFSEEDS           38      // Reinforcement seeds // original ET-OSP value was 31
-#define CS_ENDGAME_STATS        39		// original ET-osp value was 37
+// OSPx
+#define CS_REINFSEEDS           37      // Reinforcement seeds
+#define CS_READY				38		// Ready
+#define CS_PAUSED				39		// Pause
+#define CS_VERSIONINFO          40      // Versioning info for demo playback compatibility
+// -OSPx
 
 #define CS_MODELS               64
 #define CS_SOUNDS               ( CS_MODELS + MAX_MODELS )
@@ -334,6 +347,7 @@ typedef struct {
 	// for fixed msec Pmove
 	int pmove_fixed;
 	int pmove_msec;
+	int fixedphysicsfps; // OSPx
 
 	// callbacks to test the world
 	// these will be different functions during game and cgame
@@ -396,7 +410,10 @@ typedef enum {
 	// Rafael - mg42		// (SA) I don't understand these here.  can someone explain?
 	PERS_HWEAPON_USE,
 	// Rafael wolfkick
-	PERS_WOLFKICK
+	PERS_WOLFKICK,
+	// OSPx
+	PERS_HITHEAD,
+	PERS_HITBODY
 } persEnum_t;
 
 
@@ -464,8 +481,10 @@ typedef enum {
 	PW_BLUEFLAG,
 	PW_BALL,
 
-	PW_BLACKOUT = 14,       // OSP - spec blackouts. FIXME: we don't need 32bits here...relocate
-	PW_MVCLIENTLIST = 15,   // OSP - MV client info.. need a full 32 bits
+// OSPx	
+	PW_READY,			// Ready
+	PW_BLACKOUT = 14,	// Specklock
+// -OSPx
 
 	PW_NUM_POWERUPS
 } powerup_t;
@@ -658,26 +677,6 @@ typedef enum {
 	HR_NUM_HITREGIONS,
 } hitRegion_t;
 
-typedef enum {
-	SK_BATTLE_SENSE,
-	SK_EXPLOSIVES_AND_CONSTRUCTION,
-	SK_FIRST_AID,
-	SK_SIGNALS,
-	SK_LIGHT_WEAPONS,
-	SK_HEAVY_WEAPONS,
-	SK_MILITARY_INTELLIGENCE_AND_SCOPED_WEAPONS,
-	SK_NUM_SKILLS
-} skillType_t;
-
-// KK do we need these in RtCW? Or is this part of the ET-XP functionality?
-extern const char* mpSkillNames[SK_NUM_SKILLS];       // KK renamed these to mp* to not conflict with SP SkilNames
-extern const char* mpSkillNamesLine1[SK_NUM_SKILLS];  // KK renamed these to mp* to not conflict with SP SkilNames
-extern const char* mpSkillNamesLine2[SK_NUM_SKILLS];  // KK renamed these to mp* to not conflict with SP SkilNames
-extern const char* mpMedalNames[SK_NUM_SKILLS];       // KK renamed these to mp* to not conflict with SP SkilNames
-
-#define NUM_SKILL_LEVELS 5
-extern const int mpSkillLevels[NUM_SKILL_LEVELS];     // KK renamed these to mp* to not conflict with SP
-
 typedef struct {
 	weaponStats_t weaponStats[WP_NUM_WEAPONS];
 	int suicides;
@@ -827,6 +826,9 @@ typedef enum {
 	EV_GENERAL_SOUND,
 	EV_GLOBAL_SOUND,        // no attenuation
 	EV_GLOBAL_CLIENT_SOUND, // DHM - Nerve :: no attenuation, only plays for specified client
+// OSPx
+	EV_ANNOUNCER_SOUND,		// Deals with countdown
+// -OSPx
 	EV_BULLET_HIT_FLESH,
 	EV_BULLET_HIT_WALL,
 	EV_MISSILE_HIT,
@@ -1156,43 +1158,13 @@ typedef enum {
 // How many players on the overlay
 #define TEAM_MAXOVERLAY     8
 
-// OSP - weapon stat info: mapping between MOD_ and WP_ types (FIXME for new ET weapons)
-typedef enum extWeaponStats_s
-{
-	WS_KNIFE,               // 0
-	WS_LUGER,               // 1
-	WS_COLT,                // 2
-	WS_MP40,                // 3
-	WS_THOMPSON,            // 4
-	WS_STEN,                // 5
-	WS_FG42,                // 6	-- Also includes WS_BAR (allies version of fg42)
-	WS_PANZERFAUST,         // 7
-	WS_FLAMETHROWER,        // 8
-	WS_GRENADE,             // 9	-- Includes axis and allies grenade types
-	WS_MORTAR,              // 10
-	WS_DYNAMITE,            // 11
-	WS_AIRSTRIKE,           // 12	-- Lt. smoke grenade attack
-	WS_ARTILLERY,           // 13	-- Lt. binocular attack
-	WS_SYRINGE,             // 14	-- Medic syringe uses/successes
-
-	WS_SMOKE,               // 15
-	WS_SATCHEL,             // 16
-	WS_GRENADELAUNCHER,     // 17
-	WS_LANDMINE,            // 18
-	WS_MG42,                // 19
-	WS_GARAND,              // 20 // Gordon: (carbine and garand)
-	WS_K43,                 // 21 // Gordon: (kar98 and k43)
-
-	WS_MAX
-} extWeaponStats_t;
-
 typedef struct {
 	qboolean fHasHeadShots;
 	const char *pszCode;
 	const char *pszName;
 } weap_ws_t;
 
-extern const weap_ws_t aWeaponInfo[WS_MAX];
+//extern const weap_ws_t aWeaponInfo[WS_MAX];
 // -OSP
 
 // means of death
@@ -1285,10 +1257,12 @@ typedef enum {
 //
 	MOD_BAT,
 
-	// OSP -- keep these 2 entries last
+// OSPx
+	MOD_ADMKILL,
+	MOD_SELFKILL,
 	MOD_SWITCHTEAM,
-
 	MOD_NUM_MODS
+// -OSPx
 
 } meansOfDeath_t;
 
@@ -1818,11 +1792,83 @@ int BG_GetAnimScriptEvent( playerState_t *ps, scriptAnimEventTypes_t event );
 extern animStringItem_t animStateStr[];
 extern animStringItem_t animBodyPartsStr[];
 // OSP
-#define NUM_EXPERIENCE_LEVELS 11
-extern const char* rankNames_Axis[NUM_EXPERIENCE_LEVELS];
-extern const char* rankNames_Allies[NUM_EXPERIENCE_LEVELS];
-extern const char* miniRankNames_Axis[NUM_EXPERIENCE_LEVELS];
-extern const char* miniRankNames_Allies[NUM_EXPERIENCE_LEVELS];
-extern const char* rankSoundNames_Axis[NUM_EXPERIENCE_LEVELS];
-extern const char* rankSoundNames_Allies[NUM_EXPERIENCE_LEVELS];
-// -OSP
+#define MATCH_MINPLAYERS "4" //"1"	// Minimum # of players needed to start a match
+
+// Multiview support
+int BG_simpleHintsCollapse( int hint, int val );
+int BG_simpleHintsExpand( int hint, int val );
+int BG_simpleWeaponState( int ws );
+
+// Color escape handling
+int BG_colorstrncpyz( char *in, char *out, int str_max, int out_max );
+int BG_drawStrlen( const char *str );
+int BG_strRelPos( char *in, int index );
+int BG_cleanName( const char *pszIn, char *pszOut, unsigned int dwMaxLength, qboolean fCRLF );
+
+// Crosshair support
+void BG_setCrosshair( char *colString, float *col, float alpha, char *cvarName );
+
+// Client flags for server processing
+#define CGF_AUTORELOAD      0x01
+#define CGF_STATSDUMP       0x02
+#define CGF_AUTOACTIVATE    0x04
+#define CGF_PREDICTITEMS    0x08
+
+// Stats
+typedef enum extWeaponStats_s
+{
+	WS_KNIFE,               // 0
+	WS_LUGER,               // 1
+	WS_COLT,                // 2
+	WS_MP40,                // 3
+	WS_THOMPSON,            // 4
+	WS_STEN,                // 5
+	WS_FG42,                // 6	-- Also includes WS_BAR (allies version of fg42)
+	WS_PANZERFAUST,         // 7
+	WS_FLAMETHROWER,        // 8
+	WS_GRENADE,             // 9	-- Includes axis and allies grenade types
+	WS_MORTAR,              // 10
+	WS_DYNAMITE,            // 11
+	WS_AIRSTRIKE,           // 12	-- Lt. smoke grenade attack
+	WS_ARTILLERY,           // 13	-- Lt. binocular attack
+	WS_SYRINGE,             // 14	-- Medic syringe uses/successes
+	WS_SMOKE,               // 15
+	WS_MG42,                // 16
+	WS_RIFLE,				// 17 - equivalent american weapon to german mauser
+	WS_VENOM,				// 18						
+	WS_MAX
+} extWeaponStats_t;
+
+//typedef struct {
+//	qboolean fHasHeadShots;
+//	const char *pszCode;
+//	const char *pszName;
+//} weap_ws_t;
+
+extern const weap_ws_t aWeaponInfo[WS_MAX];
+
+// Voting
+#define VOTING_DISABLED     ( ( 1 << numVotesAvailable ) - 1 )
+
+typedef struct {
+	const char  *pszCvar;
+	int flag;
+} voteType_t;
+
+extern const voteType_t voteToggles[];
+extern int numVotesAvailable;
+//
+// bg_stats.c
+//
+
+typedef struct weap_ws_convert_s {
+	weapon_t iWeapon;
+	extWeaponStats_t iWS;
+} weap_ws_convert_t;
+
+extWeaponStats_t BG_WeapStatForWeapon( weapon_t iWeaponID );
+
+// ET Port
+int BG_cleanName(const char *pszIn, char *pszOut, unsigned int dwMaxLength, qboolean fCRLF);
+
+// -OSPx

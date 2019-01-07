@@ -402,7 +402,7 @@ void Team_ReturnFlagSound( gentity_t *ent, int team ) {
 
 void Team_ReturnFlag( int team ) {
 	Team_ReturnFlagSound( Team_ResetFlag( team ), team );
-	PrintMsg( NULL, "The %s flag has returned!\n", TeamName( team ) );
+	G_matchPrintInfo(va("The %s flag has returned!\n", (team == TEAM_RED ? "Axis" : "Allied")));
 }
 
 void Team_FreeEntity( gentity_t *ent ) {
@@ -433,13 +433,13 @@ void Team_DroppedFlagThink( gentity_t *ent ) {
 	if ( ent->item->giTag == PW_REDFLAG ) {
 		Team_ReturnFlagSound( Team_ResetFlag( TEAM_RED ), TEAM_RED );
 		if ( gm ) {
-			trap_SendServerCommand( -1, "cp \"Axis have returned the objective!\" 2" );
+			G_matchPrintInfo( "Axis have returned the objective!");
 			G_Script_ScriptEvent( gm, "trigger", "axis_object_returned" );
 		}
 	} else if ( ent->item->giTag == PW_BLUEFLAG )     {
 		Team_ReturnFlagSound( Team_ResetFlag( TEAM_BLUE ), TEAM_BLUE );
 		if ( gm ) {
-			trap_SendServerCommand( -1, "cp \"Allies have returned the objective!\" 2" );
+			G_matchPrintInfo("Allies have returned the objective!");
 			G_Script_ScriptEvent( gm, "trigger", "allied_object_returned" );
 		}
 	}
@@ -475,13 +475,13 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 
 			if ( cl->sess.sessionTeam == TEAM_RED ) {
 				te->s.eventParm = G_SoundIndex( "sound/multiplayer/axis/g-objective_secure.wav" );
-				trap_SendServerCommand( -1, va( "cp \"Axis have returned %s!\n\" 2", ent->message ) );
+				G_matchPrintInfo(va("Axis have returned %s!", ent->message));
 				if ( gm ) {
 					G_Script_ScriptEvent( gm, "trigger", "axis_object_returned" );
 				}
 			} else {
 				te->s.eventParm = G_SoundIndex( "sound/multiplayer/allies/a-objective_secure.wav" );
-				trap_SendServerCommand( -1, va( "cp \"Allies have returned %s!\n\" 2", ent->message ) );
+				G_matchPrintInfo(va("Allies have returned %s!", ent->message));
 				if ( gm ) {
 					G_Script_ScriptEvent( gm, "trigger", "allied_object_returned" );
 				}
@@ -608,13 +608,13 @@ int Team_TouchEnemyFlag( gentity_t *ent, gentity_t *other, int team ) {
 
 		if ( cl->sess.sessionTeam == TEAM_RED ) {
 			te->s.eventParm = G_SoundIndex( "sound/multiplayer/axis/g-objective_taken.wav" );
-			trap_SendServerCommand( -1, va( "cp \"Axis have stolen %s!\n\" 2", ent->message ) );
+			G_matchPrintInfo(va("Axis have stolen %s!", ent->message));
 			if ( gm ) {
 				G_Script_ScriptEvent( gm, "trigger", "allied_object_stolen" );
 			}
 		} else {
 			te->s.eventParm = G_SoundIndex( "sound/multiplayer/allies/a-objective_taken.wav" );
-			trap_SendServerCommand( -1, va( "cp \"Allies have stolen %s!\n\" 2", ent->message ) );
+			G_matchPrintInfo(va("Allies have stolen %s!", ent->message));
 			if ( gm ) {
 				G_Script_ScriptEvent( gm, "trigger", "axis_object_stolen" );
 			}
@@ -709,7 +709,7 @@ Team_GetLocation
 Report a location for the player. Uses placed nearby target_location entities
 ============
 */
-qboolean Team_GetLocationMsg( gentity_t *ent, char *loc, int loclen ) {
+qboolean Team_GetLocationMsg(gentity_t *ent, char *loc, int loclen, qboolean sanitized) {
 	gentity_t *best;
 
 	best = Team_GetLocation( ent );
@@ -725,9 +725,17 @@ qboolean Team_GetLocationMsg( gentity_t *ent, char *loc, int loclen ) {
 		if ( best->count > 7 ) {
 			best->count = 7;
 		}
-		Com_sprintf( loc, loclen, "%c%c[lon]%s[lof]" S_COLOR_WHITE, Q_COLOR_ESCAPE, best->count + '0', best->message );
+		// OSPx - Do nicer prints when asked..
+		if (sanitized)
+			Com_sprintf(loc, loclen, "%c%c%s" S_COLOR_WHITE, Q_COLOR_ESCAPE, best->count + '0', best->message);
+		else
+			Com_sprintf(loc, loclen, "%c%c[lon]%s[lof]" S_COLOR_WHITE, Q_COLOR_ESCAPE, best->count + '0', best->message);
 	} else {
-		Com_sprintf( loc, loclen, "[lon]%s[lof]", best->message );
+		// OSPx - Do nicer prints when asked..
+		if (sanitized)
+			Com_sprintf(loc, loclen, "%s", best->message);
+		else
+			Com_sprintf(loc, loclen, "[lon]%s[lof]", best->message);
 	}
 
 	return qtrue;
@@ -1599,14 +1607,14 @@ int Team_ClassForString( char *string ) {
 		return PC_MEDIC;
 	} else if ( !Q_stricmp( string, "engineer" ) ) {
 		return PC_ENGINEER;
-	} else if ( !Q_stricmp( string, "lieutenant" ) ) {
+	} else if ( !Q_stricmp( string, "lieutenant" ) ) { // FIXME: remove from missionpack
 		return PC_LT;
 	}
 	return -1;
 }
 
-// OSP
-char *aTeams[TEAM_NUM_TEAMS] = { "FFA", "^1Axis^7", "^4Allies^7", "Spectators" };
+// OSPx
+char *aTeams[TEAM_NUM_TEAMS] = { "FFA", "^1Axis^7", "^4Allies^7", "^3Spectators^7" };
 team_info teamInfo[TEAM_NUM_TEAMS];
 
 
@@ -1614,7 +1622,7 @@ team_info teamInfo[TEAM_NUM_TEAMS];
 void G_teamReset( int team_num, qboolean fClearSpecLock ) {
 	teamInfo[team_num].team_lock = ( match_latejoin.integer == 0 && g_gamestate.integer == GS_PLAYING );
 	teamInfo[team_num].team_name[0] = 0;
-	teamInfo[team_num].team_score = 0;
+	//teamInfo[team_num].team_score = 0;
 	teamInfo[team_num].timeouts = match_timeoutcount.integer;
 
 	if ( fClearSpecLock ) {
@@ -1699,12 +1707,12 @@ void G_shuffleTeams( void ) {
 		cTeam = ( i % 2 ) + TEAM_RED;
 
 		if ( cl->sess.sessionTeam != cTeam ) {
-			G_LeaveTank( g_entities + sortClients[i], qfalse );
+			/*G_LeaveTank( g_entities + sortClients[i], qfalse );
 			G_RemoveClientFromFireteams( sortClients[i], qtrue, qfalse );
 			if ( g_landminetimeout.integer ) {
 				G_ExplodeMines( g_entities + sortClients[i] );
 			}
-			G_FadeItems( g_entities + sortClients[i], MOD_SATCHEL );
+			G_FadeItems( g_entities + sortClients[i], MOD_SATCHEL );*/
 		}
 
 		cl->sess.sessionTeam = cTeam;
@@ -1718,13 +1726,13 @@ void G_shuffleTeams( void ) {
 }
 
 
-// Returns player's "real" team.
-int G_teamID( gentity_t *ent ) {
-	if ( ent->client->sess.coach_team ) {
-		return( ent->client->sess.coach_team );
-	}
-	return( ent->client->sess.sessionTeam );
-}
+//// Returns player's "real" team.
+//int G_teamID( gentity_t *ent ) {
+//	if ( ent->client->sess.coach_team ) {
+//		return( ent->client->sess.coach_team );
+//	}
+//	return( ent->client->sess.sessionTeam );
+//}
 
 
 // Determine if the "ready" player threshold has been reached.
@@ -1765,11 +1773,11 @@ qboolean G_checkReady( void ) {
 // Checks ready states to start/stop the sequence to get the match rolling.
 qboolean G_readyMatchState( void ) {
 	if ( ( g_doWarmup.integer ||
-		   ( g_gametype.integer == GT_WOLF_LMS && g_lms_lockTeams.integer ) ||
+		/*( g_gametype.integer == GT_WOLF_LMS && g_lms_lockTeams.integer ) ||*/
 		   level.warmupTime > ( level.time + 10 * 1000 ) ) &&
 		 g_gamestate.integer == GS_WARMUP && G_checkReady() ) {
 		level.ref_allready = qfalse;
-		if ( g_doWarmup.integer > 0 || ( g_gametype.integer == GT_WOLF_LMS && g_lms_lockTeams.integer ) ) {
+		if ( g_doWarmup.integer > 0 /*|| ( g_gametype.integer == GT_WOLF_LMS && g_lms_lockTeams.integer )*/ ) {
 			teamInfo[TEAM_RED].team_lock = qtrue;
 			teamInfo[TEAM_BLUE].team_lock = qtrue;
 		}
@@ -1834,7 +1842,7 @@ qboolean G_teamJoinCheck( int team_num, gentity_t *ent ) {
 			return( qtrue );
 		}
 
-		if ( g_gametype.integer != GT_WOLF_LMS ) {
+		/*if ( g_gametype.integer != GT_WOLF_LMS ) {*/
 			// Check for full teams
 			if ( team_maxplayers.integer > 0 && team_maxplayers.integer <= cnt ) {
 				G_printFull( va( "The %s team is full!", aTeams[team_num] ), ent );
@@ -1845,7 +1853,7 @@ qboolean G_teamJoinCheck( int team_num, gentity_t *ent ) {
 				G_printFull( va( "The %s team is LOCKED!", aTeams[team_num] ), ent );
 				return( qfalse );
 			}
-		} else {
+		/*} else {
 			if ( team_maxplayers.integer > 0 && team_maxplayers.integer <= cnt ) {
 				G_printFull( va( "The %s team is full!", aTeams[team_num] ), ent );
 				return( qfalse );
@@ -1853,7 +1861,7 @@ qboolean G_teamJoinCheck( int team_num, gentity_t *ent ) {
 				G_printFull( va( "The %s team is LOCKED!", aTeams[team_num] ), ent );
 				return( qfalse );
 			}
-		}
+		}*/
 	}
 
 	return( qtrue );
@@ -1872,9 +1880,9 @@ void G_updateSpecLock( int nTeam, qboolean fLock ) {
 		if ( ent->client->sess.referee ) {
 			continue;
 		}
-		if ( ent->client->sess.coach_team ) {
-			continue;
-		}
+		//if ( ent->client->sess.coach_team ) {
+		//	continue;
+		//}
 
 		ent->client->sess.spec_invite &= ~nTeam;
 
@@ -1920,7 +1928,7 @@ void G_removeSpecInvite( int team ) {
 
 	for ( i = 0; i < level.numConnectedClients; i++ ) {
 		cl = g_entities + level.sortedClients[i];
-		if ( !cl->inuse || cl->client->sess.referee || cl->client->sess.coach_team == team ) {
+		if ( !cl->inuse || cl->client->sess.referee) { // || cl->client->sess.coach_team == team ) {
 			continue;
 		}
 
@@ -1937,15 +1945,15 @@ int G_blockoutTeam( gentity_t *ent, int nTeam ) {
 
 // Figure out if we are allowed/want to follow a given player
 qboolean G_allowFollow( gentity_t *ent, int nTeam ) {
-	if ( g_gametype.integer == GT_WOLF_LMS && g_lms_followTeamOnly.integer ) {
-		if ( ( ent->client->sess.spec_invite & nTeam ) == nTeam ) {
-			return qtrue;
-		}
-		if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR &&
-			 ent->client->sess.sessionTeam != nTeam ) {
-			return qfalse;
-		}
-	}
+	//if ( g_gametype.integer == GT_WOLF_LMS && g_lms_followTeamOnly.integer ) {
+	//	if ( ( ent->client->sess.spec_invite & nTeam ) == nTeam ) {
+	//		return qtrue;
+	//	}
+	//	if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR &&
+	//		 ent->client->sess.sessionTeam != nTeam ) {
+	//		return qfalse;
+	//	}
+	//}
 
 	if ( level.time - level.startTime > 2500 ) {
 		if ( TeamCount( -1, TEAM_RED ) == 0 ) {

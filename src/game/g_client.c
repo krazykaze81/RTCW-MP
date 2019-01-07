@@ -510,9 +510,11 @@ void limbo( gentity_t *ent, qboolean makeCorpse ) {
 		}
 
 		for ( i = 0 ; i < level.maxclients ; i++ ) {
-			if ( level.clients[i].ps.pm_flags & PMF_LIMBO
-				 && level.clients[i].sess.spectatorClient == ent->s.number ) {
-				Cmd_FollowCycle_f( &g_entities[i], 1 );
+			gclient_t *cl = &level.clients[level.sortedClients[i]];
+			if (((cl->ps.pm_flags & PMF_LIMBO) ||
+				(cl->sess.sessionTeam == TEAM_SPECTATOR && cl->sess.spectatorState == SPECTATOR_FOLLOW)) &&
+				cl->sess.spectatorClient == ent - g_entities) { //ent->s.number ) {
+				Cmd_FollowCycle_f(&g_entities[level.sortedClients[i]], 1);
 			}
 		}
 	}
@@ -604,6 +606,9 @@ void respawn( gentity_t *ent ) {
 	}
 
 	ClientSpawn( ent, qfalse );
+	// OSPx - Antilag
+	G_ResetTrail(ent);
+	ent->client->saved.leveltime = 0;
 
 	// DHM - Nerve :: Add back if we decide to have a spawn effect
 	// add a teleportation effect
@@ -1161,12 +1166,6 @@ static void ClientCleanName( const char *in, char *out, int outSize ) {
 				break;
 			}
 
-			// don't allow black in a name, period
-			if ( ColorIndex( *in ) == 0 ) {
-				in++;
-				continue;
-			}
-
 			// make sure room in dest for both chars
 			if ( len > outSize - 2 ) {
 				break;
@@ -1330,6 +1329,44 @@ qboolean G_ParseAnimationFiles( char *modelname, gclient_t *cl ) {
 	return qtrue;
 }
 
+/*
+===========
+OSPx - Store Client's IP
+============
+*/
+void SaveIP_f(gclient_t * client, char * sip)
+{
+	if (strcmp(sip, "localhost") == 0 || sip == NULL) {
+		// Localhost, just enter 0 for all values:
+		client->sess.ip[0] = 0;
+		client->sess.ip[1] = 0;
+		client->sess.ip[2] = 0;
+		client->sess.ip[3] = 0;
+		return;
+	}
+
+	sscanf(sip, "%3i.%3i.%3i.%3i",
+		(int *)&client->sess.ip[0], (int *)&client->sess.ip[1],
+		(int *)&client->sess.ip[2], (int *)&client->sess.ip[3]);
+	return;
+}
+
+
+/*
+===========
+OSPx - To save some time..
+============
+*/
+char *clientIP(gentity_t *ent, qboolean full)
+{
+	if (full) {
+		return va("%d.%d.%d.%d",
+			ent->client->sess.ip[0], ent->client->sess.ip[1], ent->client->sess.ip[2], ent->client->sess.ip[3]);
+	}
+	else {
+		return va("%d.*.*.*", ent->client->sess.ip[0]);
+	}
+}
 
 /*
 ===========
@@ -1347,6 +1384,7 @@ void ClientUserinfoChanged( int clientNum ) {
 	gentity_t *ent;
 	char    *s;
 	char model[MAX_QPATH], modelname[MAX_QPATH];
+	char *gender="m";	// OSPx 
 
 //----(SA) added this for head separation
 	char head[MAX_QPATH];
@@ -1370,35 +1408,56 @@ void ClientUserinfoChanged( int clientNum ) {
 
 	// check for local client
 	s = Info_ValueForKey( userinfo, "ip" );
+	// OSPx - save IP
+	if (s[0] != 0) {
+		SaveIP_f(client, s);
+	}
 	if ( s && !strcmp( s, "localhost" ) ) {
 		client->pers.localClient = qtrue;
+		//client->sess.referee = RL_REFEREE;
+	} // OSPx - Country Flags
+	else if (!(ent->r.svFlags & SVF_BOT) && !strlen(s)) {
+		// To solve the IP bug..
+		s =	va("%i.%i.%i.%i",
+			client->sess.ip[0],
+			client->sess.ip[1],
+			client->sess.ip[2],
+			client->sess.ip[3]
+		);
+		sscanf(s, "%[^z]s:%*s", s);
 	}
 
-	// check the item prediction
-	s = Info_ValueForKey( userinfo, "cg_predictItems" );
-	if ( !atoi( s ) ) {
-		client->pers.predictItemPickup = qfalse;
-	} else {
-		client->pers.predictItemPickup = qtrue;
-	}
 
-	// check the auto activation
-	s = Info_ValueForKey( userinfo, "cg_autoactivate" );
-	if ( !atoi( s ) ) {
-		client->pers.autoActivate = PICKUP_ACTIVATE;
-	} else {
+	// OSP - extra client info settings
+	//		 FIXME: move other userinfo flag settings in here
+	if ( ent->r.svFlags & SVF_BOT ) {
 		client->pers.autoActivate = PICKUP_TOUCH;
-	}
-
-	// check the auto reload setting
-	s = Info_ValueForKey( userinfo, "cg_autoReload" );
-	if ( atoi( s ) ) {
 		client->pers.bAutoReloadAux = qtrue;
 		client->pmext.bAutoReload = qtrue;
+		client->pers.predictItemPickup = qfalse;
 	} else {
-		client->pers.bAutoReloadAux = qfalse;
-		client->pmext.bAutoReload = qfalse;
+		int cGender = 0;
+		s = Info_ValueForKey( userinfo, "cg_uinfo" );
+		sscanf(s, "%i %i %i %i",
+				&client->pers.clientFlags,
+				&client->pers.clientTimeNudge,
+			&client->pers.clientMaxPackets,
+			&cGender);
+
+		client->pers.autoActivate = ( client->pers.clientFlags & CGF_AUTOACTIVATE ) ? PICKUP_TOUCH : PICKUP_ACTIVATE;
+		client->pers.predictItemPickup = ( ( client->pers.clientFlags & CGF_PREDICTITEMS ) != 0 );
+
+		gender = (cGender ? "f" : "m");
+		if ( client->pers.clientFlags & CGF_AUTORELOAD ) {
+			client->pers.bAutoReloadAux = qtrue;
+			client->pmext.bAutoReload = qtrue;
+		}
+		else {
+			client->pers.bAutoReloadAux = qfalse;
+			client->pmext.bAutoReload = qfalse;
+		}
 	}
+
 
 	// set name
 	Q_strncpyz( oldname, client->pers.netname, sizeof( oldname ) );
@@ -1425,6 +1484,14 @@ void ClientUserinfoChanged( int clientNum ) {
 	}
 	client->ps.stats[STAT_MAX_HEALTH] = client->pers.maxHealth;
 
+	// check for custom character
+	/*s = Info_ValueForKey( userinfo, "ch" );
+	if ( *s ) {
+		characterIndex = atoi( s );
+	} else {
+		characterIndex = -1;
+	}*/
+	
 	// set model
 	if ( g_forceModel.integer ) {
 		Q_strncpyz( model, DEFAULT_MODEL, sizeof( model ) );
@@ -1514,23 +1581,47 @@ void ClientUserinfoChanged( int clientNum ) {
 
 	if ( ent->r.svFlags & SVF_BOT ) {
 
-		s = va( "n\\%s\\t\\%i\\model\\%s\\head\\%s\\c1\\%s\\hc\\%i\\w\\%i\\l\\%i\\skill\\%s",
+		s = va("n\\%s\\t\\%i\\model\\%s\\head\\%s\\c1\\%s\\hc\\%i\\w\\%i\\l\\%i\\skill\\%s\\country\\255\\mu\\0\\ug\\%s",
 				client->pers.netname, client->sess.sessionTeam, model, head, c1,
 				client->pers.maxHealth, client->sess.wins, client->sess.losses,
-				Info_ValueForKey( userinfo, "skill" ) );
-	} else {
-		s = va( "n\\%s\\t\\%i\\model\\%s\\head\\%s\\c1\\%s\\hc\\%i\\w\\%i\\l\\%i",
+			Info_ValueForKey(userinfo, "skill"), gender);
+	}
+	else {
+		s = va("n\\%s\\t\\%i\\model\\%s\\head\\%s\\c1\\%s\\hc\\%i\\w\\%i\\l\\%i\\country\\%i\\mu\\%i\\ug\\%s",
 				client->pers.netname, client->sess.sessionTeam, model, head, c1,
-				client->pers.maxHealth, client->sess.wins, client->sess.losses );
+			client->pers.maxHealth, client->sess.wins, client->sess.losses,
+			client->sess.uci, (client->sess.ignored ? 1 : 0), gender);
 	}
 
 //----(SA) end
 
 	trap_SetConfigstring( CS_PLAYERS + clientNum, s );
 
-	// this is not the userinfo actually, it's the config string
+	// OSPx - We need to send client private info (ip..) only to log and not a configstring,
+	// as \configstrings reveals all user data in it which is something we don't want..
+	if (!(ent->r.svFlags & SVF_BOT)) {
+		char *team;
+
+		team = (client->sess.sessionTeam == TEAM_RED) ? "Axis" :
+			((client->sess.sessionTeam == TEAM_BLUE) ? "Allied" : "Spectator");
+
+		// Print essentials and skip the garbage		
+		s = va("name\\%s\\team\\%s\\IP\\%d.%d.%d.%d\\country\\%i\\ignored\\%s\\status\\%i\\timenudge\\%i\\maxpackets\\%i\\gender\\%s",
+			client->pers.netname, team, client->sess.ip[0], client->sess.ip[1], client->sess.ip[2], 
+			client->sess.ip[3], client->sess.uci, (client->sess.ignored ? "yes" : "no"), client->sess.admin,
+			client->pers.clientTimeNudge, client->pers.clientMaxPackets, gender);
+	}
+	// Account for bots..
+	else {
+		char *team;
+
+		team = (client->sess.sessionTeam == TEAM_RED) ? "Axis" :
+			((client->sess.sessionTeam == TEAM_BLUE) ? "Allied" : "Spectator");
+
+		s = va("Bot: name\\%s\\team\\%s", client->pers.netname, team);
+	}
+	
 	G_LogPrintf( "ClientUserinfoChanged: %i %s\n", clientNum, s );
-	G_DPrintf( "ClientUserinfoChanged: %i :: %s\n", clientNum, s );
 }
 
 
@@ -1623,6 +1714,38 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 		}
 	}
 
+	// OSPx - Country Flags
+	if (gidb != NULL) {		
+		value = Info_ValueForKey(userinfo, "ip");
+
+		if (!strcmp(value, "localhost")) {
+			client->sess.uci = 0;
+		}
+		else {
+			unsigned long ip = GeoIP_addr_to_num(value);
+
+			if (((ip & 0xFF000000) == 0x0A000000) ||
+				((ip & 0xFFF00000) == 0xAC100000) ||
+				((ip & 0xFFFF0000) == 0xC0A80000)) {
+
+				client->sess.uci = 0;
+			}
+			else {
+				unsigned int ret = GeoIP_seek_record(gidb, ip);
+
+				if (ret > 0) {
+					client->sess.uci = ret;
+				}
+				else {
+					client->sess.uci = 246;
+					G_LogPrintf("GeoIP: This IP:%s cannot be located\n", value);
+				}
+			}
+		}
+	}
+	else {
+		client->sess.uci = 255;
+	} // -OSPx
 	// get and distribute relevent paramters
 	G_LogPrintf( "ClientConnect: %i\n", clientNum );
 	ClientUserinfoChanged( clientNum );
@@ -1702,6 +1825,9 @@ void ClientBegin( int clientNum ) {
 
 	client->pers.complaintClient = -1;
 	client->pers.complaintEndTime = -1;
+	// OSPx - Antilag
+	G_ResetTrail(ent);
+	ent->client->saved.leveltime = 0;
 
 	// locate ent at a spawn point
 	ClientSpawn( ent, qfalse );
@@ -1775,6 +1901,9 @@ void ClientBegin( int clientNum ) {
 	// count current clients and rank for scoreboard
 	CalculateRanks();
 
+	// OSP
+	G_smvUpdateClientCSList( ent );
+	// OSP
 }
 
 /*
@@ -1931,6 +2060,9 @@ void ClientSpawn( gentity_t *ent, qboolean revived ) {
 	ent->watertype = 0;
 	ent->flags = 0;
 
+	// OSPx
+	ent->client->pers.life_kills = 0;
+	// -OSPx
 	VectorCopy( playerMins, ent->r.mins );
 	VectorCopy( playerMaxs, ent->r.maxs );
 
@@ -2120,7 +2252,7 @@ void ClientDisconnect( int clientNum ) {
 				if ( !item ) {
 					item = BG_FindItem( "Objective" );
 				}
-
+				G_matchPrintInfo(va("Allies have lost %s!", ent->message));
 				ent->client->ps.powerups[PW_REDFLAG] = 0;
 			}
 			if ( ent->client->ps.powerups[PW_BLUEFLAG] ) {
@@ -2128,23 +2260,27 @@ void ClientDisconnect( int clientNum ) {
 				if ( !item ) {
 					item = BG_FindItem( "Objective" );
 				}
-
+				G_matchPrintInfo(va("Axis have lost %s!", ent->message));
 				ent->client->ps.powerups[PW_BLUEFLAG] = 0;
 			}
 
 			if ( item ) {
-				launchvel[0] = crandom() * 20;
-				launchvel[1] = crandom() * 20;
-				launchvel[2] = 10 + random() * 10;
+			// OSP - fix for suicide drop exploit through walls/gates
+			launchvel[0] = 0;    //crandom()*20;
+			launchvel[1] = 0;    //crandom()*20;
+			launchvel[2] = 0;    //10+random()*10;
 
 				flag = LaunchItem( item,ent->r.currentOrigin,launchvel,ent->s.number );
-				flag->s.modelindex2 = ent->s.otherEntityNum2; // JPW NERVE FIXME set player->otherentitynum2 with old modelindex2 from flag and restore here
-				flag->message = ent->message;   // DHM - Nerve :: also restore item name
-				// Clear out player's temp copies
-				ent->s.otherEntityNum2 = 0;
-				ent->message = NULL;
+			flag->s.modelindex2 = ent->s.otherEntityNum2;    // JPW NERVE FIXME set player->otherentitynum2 with old modelindex2 from flag and restore here
+			flag->message = ent->message;       // DHM - Nerve :: also restore item name
+			// Clear out player's temp copies
+			ent->s.otherEntityNum2 = 0;
+			ent->message = NULL;
 			}
 		}
+
+		// OSP - Log stats too
+		G_LogPrintf( "WeaponStats: %s\n", G_createStats( ent ) );
 	}
 
 	G_LogPrintf( "ClientDisconnect: %i\n", clientNum );
@@ -2162,6 +2298,7 @@ void ClientDisconnect( int clientNum ) {
 	ent->classname = "disconnected";
 	ent->client->pers.connected = CON_DISCONNECTED;
 	ent->client->ps.persistant[PERS_TEAM] = TEAM_FREE;
+	i = ent->client->sess.sessionTeam;
 	ent->client->sess.sessionTeam = TEAM_FREE;
 // JPW NERVE -- mg42 additions
 	ent->active = 0;
@@ -2173,6 +2310,11 @@ void ClientDisconnect( int clientNum ) {
 	if ( ent->r.svFlags & SVF_BOT ) {
 		BotAIShutdownClient( clientNum );
 	}
+	
+	// OSP
+	G_verifyMatchState( i );
+	G_smvAllRemoveSingleClient( ent - g_entities );
+	// OSP
 }
 
 
