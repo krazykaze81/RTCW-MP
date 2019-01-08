@@ -478,6 +478,7 @@ typedef struct {
 	unsigned int hits;
 	unsigned int kills;
 } weapon_stat_t;
+// -OSPx
 
 // client data that stays across multiple levels or tournament restarts
 // this is achieved by writing all the data to cvar strings at game shutdown
@@ -543,8 +544,6 @@ typedef struct {
 #define PICKUP_ACTIVATE 0   // pickup items only when using "+activate"
 #define PICKUP_TOUCH    1   // pickup items when touched
 #define PICKUP_FORCE    2   // pickup the next item when touched (and reset to PICKUP_ACTIVATE when done)
-
-#define NUM_SOLDIERKILL_TIMES 10
 
 // OSP -- multiview handling
 #define MULTIVIEW_MAXVIEWS  16
@@ -735,10 +734,6 @@ struct gclient_s {
 	// -OSPx
 	pmoveExt_t pmext;
 
-	int soldierKillMarker;
-	int soliderKillTimes[NUM_SOLDIERKILL_TIMES];
-
-	qboolean hasaward; // OSP from ET is this needed?
 };
 
 
@@ -895,7 +890,6 @@ typedef struct {
 	int dwRedReinfOffset;
 	qboolean fLocalHost;
 	qboolean fResetStats;
-	int match_pause;                        // Paused state of the match
 	qboolean ref_allready;                  // Referee forced match start
 	int server_settings;
 	int sortedStats[MAX_CLIENTS];           // sorted by weapon stat
@@ -919,6 +913,8 @@ typedef struct {
 	int alliedPlayers;
 	int axisPlayers;
 
+	// Pause
+	int match_pause;
 	// Forced/Instant tapout timer to cope with flood..
 	int spawnFloodTimer;
 	// -OSP
@@ -977,35 +973,35 @@ void SanitizeString(char *in, char *out, qboolean fToLower);
 int ClientNumberFromString(gentity_t *to, char *s);
 int ClientNumberFromNameMatch(char *name, int *matches);
 char *ConcatArgs(int start);
-void G_SayTo(gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message, qboolean localize); // JPW NERVE removed static declaration so it would link
-qboolean Cmd_CallVote_f(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
-void Cmd_Follow_f(gentity_t *ent); // , unsigned int dwCommand, qboolean fValue);
-void Cmd_Say_f(gentity_t *ent, int mode, qboolean arg0);
-void Cmd_Team_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
+//void G_SayTo(gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message, qboolean localize); // JPW NERVE removed static declaration so it would link
+//qboolean Cmd_CallVote_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
+//void Cmd_Follow_f(gentity_t *ent); // , unsigned int dwCommand, qboolean fValue);
+//void Cmd_Say_f(gentity_t *ent, int mode, qboolean arg0);
+//void Cmd_Team_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
 //void Cmd_SetWeapons_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
 //void Cmd_SetClass_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
 
 ///////////////////////
 // g_cmds_ext.c
 //
-qboolean G_commandCheck(gentity_t *ent, char *cmd, qboolean fDoAnytime);
-qboolean G_commandHelp(gentity_t *ent, char *pszCommand, unsigned int dwCommand);
-qboolean G_cmdDebounce(gentity_t *ent, const char *pszCommand);
-void G_commands_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
-void G_lock_cmd(gentity_t *ent, unsigned int dwCommand, qboolean state);
-void G_pause_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
-void G_players_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
-void G_ready_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
-void G_say_teamnl_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
-void G_scores_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
-void G_specinvite_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fLock);
-void G_speclock_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fLock);
-void G_statsall_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
-void G_teamready_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
-void G_weaponRankings_cmd(gentity_t *ent, unsigned int dwCommand, qboolean state);
-void G_weaponStats_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
-void G_weaponStatsLeaders_cmd(gentity_t* ent, qboolean doTop, qboolean doWindow);
-void G_VoiceTo(gentity_t *ent, gentity_t *other, int mode, const char *id, qboolean voiceonly);
+//qboolean G_commandCheck(gentity_t *ent, char *cmd, qboolean fDoAnytime);
+//qboolean G_commandHelp(gentity_t *ent, char *pszCommand, unsigned int dwCommand);
+//qboolean G_cmdDebounce(gentity_t *ent, const char *pszCommand);
+//void G_commands_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
+//void G_lock_cmd(gentity_t *ent, unsigned int dwCommand, qboolean state);
+//void G_pause_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
+//void G_players_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
+//void G_ready_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
+//void G_say_teamnl_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
+//void G_scores_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
+//void G_specinvite_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fLock);
+//void G_speclock_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fLock);
+//void G_statsall_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
+//void G_teamready_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
+//void G_weaponRankings_cmd(gentity_t *ent, unsigned int dwCommand, qboolean state);
+//void G_weaponStats_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
+//void G_weaponStatsLeaders_cmd(gentity_t* ent, qboolean doTop, qboolean doWindow);
+//void G_VoiceTo(gentity_t *ent, gentity_t *other, int mode, const char *id, qboolean voiceonly);
 
 //
 // g_items.c
@@ -1217,12 +1213,12 @@ void DeathmatchScoreboardMessage( gentity_t *client );
 // g_cmds.c
 //
 void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message, qboolean localize ); // JPW NERVE removed static declaration so it would link
-qboolean Cmd_CallVote_f( gentity_t *ent, unsigned int dwCommand, qboolean fValue );
-void Cmd_Follow_f( gentity_t *ent, unsigned int dwCommand, qboolean fValue );
-void Cmd_Say_f( gentity_t *ent, int mode, qboolean arg0 );
-void Cmd_Team_f( gentity_t *ent, unsigned int dwCommand, qboolean fValue );
-void Cmd_SetWeapons_f( gentity_t *ent, unsigned int dwCommand, qboolean fValue );
-void Cmd_SetClass_f( gentity_t *ent, unsigned int dwCommand, qboolean fValue );
+//qboolean Cmd_CallVote_f(gentity_t *ent); // , unsigned int dwCommand, qboolean fValue );
+//void Cmd_Follow_f(gentity_t *ent); // , unsigned int dwCommand, qboolean fValue );
+//void Cmd_Say_f( gentity_t *ent; //, int mode, qboolean arg0 );
+//void Cmd_Team_f( gentity_t *ent; //, unsigned int dwCommand, qboolean fValue );
+//void Cmd_SetWeapons_f( gentity_t *ent; //, unsigned int dwCommand, qboolean fValue );
+//void Cmd_SetClass_f( gentity_t *ent; //, unsigned int dwCommand, qboolean fValue );
 
 //
 // g_pweapon.c
@@ -1510,6 +1506,7 @@ extern vmCvar_t match_timeoutlength;
 extern vmCvar_t match_warmupDamage;
 extern vmCvar_t server_autoconfig;
 extern vmCvar_t g_fixedphysics;
+extern vmCvar_t g_hitsounds;
 extern vmCvar_t server_motd0;
 extern vmCvar_t server_motd1;
 extern vmCvar_t server_motd2;
@@ -1845,7 +1842,17 @@ void G_wipeCvars( void );
 //
 void G_configSet( int mode, qboolean doComp );
 
-///////////////////////
+//
+// g_match.c
+//
+void G_loadMatchGame(void);
+void G_matchInfoDump(unsigned int dwDumpType);
+void CountDown(qboolean restart);
+void G_spawnPrintf(int print_type, int print_time, gentity_t *owner);
+void G_verifyMatchState(int nTeam);
+void G_matchPrintInfo(char *msg);
+
+/*//////////////////////
 // g_match.c
 //
 void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod );
@@ -1869,7 +1876,7 @@ void G_spawnPrintf( int print_type, int print_time, gentity_t *owner );
 void G_statsPrint( gentity_t *ent, int nType );
 unsigned int G_weapStatIndex_MOD( unsigned int iWeaponMOD );
 void G_verifyMatchState(int nTeam);
-void G_matchPrintInfo(char *msg);
+void G_matchPrintInfo(char *msg);*/
 ///////////////////////
 // g_multiview.c
 //

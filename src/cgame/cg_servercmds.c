@@ -534,9 +534,9 @@ static void CG_ConfigStringModified( void ) {
 //----(SA)
 	} else if ( num == CS_SHADERSTATE )   {
 		CG_ShaderStateChanged();
-	} else if (num == CS_VERSIONINFO) {
+	} /*else if (num == CS_VERSIONINFO) {
 		CG_ParseServerVersionInfo(str);         // OSP - set versioning info for older demo playback
-	}
+	}*/
 	else if (num == CS_REINFSEEDS) {
 		CG_ParseReinforcementTimes(str);        // OSP - set reinforcement times for each team
 	}

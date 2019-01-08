@@ -2225,23 +2225,11 @@ extern vmCvar_t int_cl_timenudge;
 extern vmCvar_t int_ui_blackout;
 extern vmCvar_t gender;
 // -OSPx
-extern vmCvar_t cg_bloodDamageBlend;
-extern vmCvar_t cg_bloodFlash;
-extern vmCvar_t cg_complaintPopUp;
-extern vmCvar_t cg_crosshairAlpha;
-extern vmCvar_t cg_crosshairAlphaAlt;
-extern vmCvar_t cg_crosshairColor;
-extern vmCvar_t cg_crosshairColorAlt;
-extern vmCvar_t cg_crosshairPulse;
-extern vmCvar_t cg_drawReinforcementTime;
-extern vmCvar_t cg_drawWeaponIconFlash;
-extern vmCvar_t cg_muzzleFlash;
-extern vmCvar_t cg_noAmmoAutoSwitch;
-extern vmCvar_t cg_printObjectiveInfo;
+
+// OSP
 extern vmCvar_t cg_specHelp;
 extern vmCvar_t cg_specSwing;
 extern vmCvar_t cg_uinfo;
-extern vmCvar_t cg_useScreenshotJPEG;
 extern vmCvar_t ch_font;
 extern vmCvar_t demo_avifpsF1;
 extern vmCvar_t demo_avifpsF2;
@@ -2995,9 +2983,10 @@ void        CG_FreeCamera( int camNum );
 //----(SA)	end
 
 // OSP
-#define Pri( x ) CG_Printf( "[cgnotify]%s", CG_LocalizeServerCommand( x ) )
+/*#define Pri( x ) CG_Printf( "[cgnotify]%s", CG_LocalizeServerCommand( x ) )
 #define CPri( x ) CG_CenterPrint( CG_LocalizeServerCommand( x ), SCREEN_HEIGHT - ( SCREEN_HEIGHT * 0.2 ), SMALLCHAR_WIDTH );
-
+*/
+/*
 // cg_multiview.c
 void CG_mvDelete_f(void);
 void CG_mvHideView_f(void);
@@ -3024,6 +3013,7 @@ void CG_mvUpdateClientInfo(int pID);
 void CG_mvWindowOverlay(int pID, float b_x, float b_y, float b_w, float b_h, float s, int wState, qboolean fSelected);
 void CG_mvZoomBinoc(float x, float y, float w, float h);
 void CG_mvZoomSniper(float x, float y, float w, float h);
+*/
 
 // cg_window.c
 qboolean CG_addString(cg_window_t *w, char *buf);
@@ -3032,11 +3022,11 @@ qboolean CG_addString(cg_window_t *w, char *buf);
 void CG_createStatsWindow(void);
 void CG_createClientStatsWindow(void);
 void CG_createTopShotsWindow(void);
-void CG_createWstatsMsgWindow(void);
+/*void CG_createWstatsMsgWindow(void);
 void CG_createWtopshotsMsgWindow(void);
 void CG_createMOTDWindow(void);
 void CG_cursorUpdate(void);
-void CG_initStrings(void);
+void CG_initStrings(void);*/
 void CG_printWindow(char *str);
 void CG_removeStrings(cg_window_t *w);
 cg_window_t *CG_windowAlloc(int fx, int startupLength);

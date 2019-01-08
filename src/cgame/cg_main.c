@@ -1247,6 +1247,11 @@ static void CG_RegisterSounds( void ) {
 	trap_S_RegisterSound( "sound/Loogie/spit.wav" );
 	trap_S_RegisterSound( "sound/Loogie/sizzle.wav" );
 */
+// OSPx
+	// Hitsounds
+	cgs.media.headShot = trap_S_RegisterSound("sound/game/hitsounds/hithead.wav");
+	cgs.media.bodyShot = trap_S_RegisterSound("sound/game/hitsounds/hit.wav");
+	cgs.media.teamShot = trap_S_RegisterSound("sound/game/hitsounds/hitteam.wav");
 }
 
 
@@ -2558,7 +2563,7 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 	CG_ParseWolfinfo();     // NERVE - SMF
 
 	// OSP
-	CG_ParseServerVersionInfo(CG_ConfigString(CS_VERSIONINFO));
+	//CG_ParseServerVersionInfo(CG_ConfigString(CS_VERSIONINFO));
 
 	// load the new map
 	CG_LoadingString( "collision map" );

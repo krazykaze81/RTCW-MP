@@ -1072,7 +1072,7 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 				client->ps.ammoclip[BG_FindClipForWeapon( WP_THOMPSON )] += 30;
 				// JPW NERVE
 				if ( pc == PC_ENGINEER ) {
-					client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += 32;
+					client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += 30;
 				}
 				// jpw
 				client->ps.weapon = WP_THOMPSON;
@@ -1435,7 +1435,8 @@ void ClientUserinfoChanged( int clientNum ) {
 		client->pers.bAutoReloadAux = qtrue;
 		client->pmext.bAutoReload = qtrue;
 		client->pers.predictItemPickup = qfalse;
-	} else {
+	}
+	else {
 		int cGender = 0;
 		s = Info_ValueForKey( userinfo, "cg_uinfo" );
 		sscanf(s, "%i %i %i %i",
@@ -1902,7 +1903,7 @@ void ClientBegin( int clientNum ) {
 	CalculateRanks();
 
 	// OSP
-	G_smvUpdateClientCSList( ent );
+	//G_smvUpdateClientCSList( ent );
 	// OSP
 }
 
@@ -2184,7 +2185,7 @@ void ClientSpawn( gentity_t *ent, qboolean revived ) {
 	BG_PlayerStateToEntityState( &client->ps, &ent->s, qtrue );
 
 	// show_bug.cgi?id=569
-	G_ResetMarkers( ent );
+	//G_ResetMarkers( ent ); // OSPx had this deleted
 }
 
 
@@ -2313,7 +2314,7 @@ void ClientDisconnect( int clientNum ) {
 	
 	// OSP
 	G_verifyMatchState( i );
-	G_smvAllRemoveSingleClient( ent - g_entities );
+	//G_smvAllRemoveSingleClient( ent - g_entities );
 	// OSP
 }
 

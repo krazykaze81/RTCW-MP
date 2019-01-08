@@ -1158,14 +1158,6 @@ typedef enum {
 // How many players on the overlay
 #define TEAM_MAXOVERLAY     8
 
-typedef struct {
-	qboolean fHasHeadShots;
-	const char *pszCode;
-	const char *pszName;
-} weap_ws_t;
-
-//extern const weap_ws_t aWeaponInfo[WS_MAX];
-// -OSP
 
 // means of death
 typedef enum {
@@ -1839,10 +1831,17 @@ typedef enum extWeaponStats_s
 	WS_MAX
 } extWeaponStats_t;
 
-extern const weap_ws_t aWeaponInfo[WS_MAX];
-
 // Voting
 #define VOTING_DISABLED     ( ( 1 << numVotesAvailable ) - 1 )
+
+typedef struct {
+	qboolean fHasHeadShots;
+	const char *pszCode;
+	const char *pszName;
+} weap_ws_t;
+
+extern const weap_ws_t aWeaponInfo[WS_MAX];
+// -OSP
 
 typedef struct {
 	const char  *pszCvar;
