@@ -1619,6 +1619,82 @@ void G_teamReset(int team_num, qboolean fClearSpecLock) {
 	}
 }
 
+// Swaps active players on teams
+void G_swapTeams( void ) {
+	int i;
+	gclient_t *cl;
+
+	for ( i = TEAM_RED; i <= TEAM_BLUE; i++ ) {
+		G_teamReset( i, qtrue );
+	}
+
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		cl = level.clients + level.sortedClients[i];
+
+		if ( cl->sess.sessionTeam == TEAM_RED ) {
+			cl->sess.sessionTeam = TEAM_BLUE;
+		} else if ( cl->sess.sessionTeam == TEAM_BLUE ) {
+			cl->sess.sessionTeam = TEAM_RED;
+		} else { continue;}
+
+		//G_UpdateCharacter( cl );
+		ClientUserinfoChanged( level.sortedClients[i] );
+		ClientBegin( level.sortedClients[i] );
+	}
+
+	AP( "cp \"^1Teams have been swapped!\n\"" );
+}
+// Shuffle active players onto teams
+void G_shuffleTeams( void ) {
+	int i, cTeam; //, cMedian = level.numNonSpectatorClients / 2;
+	int aTeamCount[TEAM_NUM_TEAMS];
+	int cnt = 0;
+	int sortClients[MAX_CLIENTS];
+
+	gclient_t *cl;
+
+	G_teamReset( TEAM_RED, qtrue );
+	G_teamReset( TEAM_BLUE, qtrue );
+
+	for ( i = 0; i < TEAM_NUM_TEAMS; i++ ) {
+		aTeamCount[i] = 0;
+	}
+
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		cl = level.clients + level.sortedClients[ i ];
+
+		if ( cl->sess.sessionTeam != TEAM_RED && cl->sess.sessionTeam != TEAM_BLUE ) {
+			continue;
+		}
+
+		sortClients[ cnt++ ] = level.sortedClients[ i ];
+	}
+
+	//qsort( sortClients, cnt, sizeof( int ), G_SortPlayersByXP );
+
+	for ( i = 0; i < cnt; i++ ) {
+		cl = level.clients + sortClients[i];
+
+		cTeam = ( i % 2 ) + TEAM_RED;
+
+		if ( cl->sess.sessionTeam != cTeam ) {
+			/*G_LeaveTank( g_entities + sortClients[i], qfalse );
+			G_RemoveClientFromFireteams( sortClients[i], qtrue, qfalse );
+			if ( g_landminetimeout.integer ) {
+				G_ExplodeMines( g_entities + sortClients[i] );
+			}
+			G_FadeItems( g_entities + sortClients[i], MOD_SATCHEL );*/
+		}
+
+		cl->sess.sessionTeam = cTeam;
+
+		//G_UpdateCharacter( cl );
+		ClientUserinfoChanged( sortClients[i] );
+		ClientBegin( sortClients[i] );
+	}
+
+	AP( "cp \"^1Teams have been shuffled!\n\"" );
+}
 /*
 ===========
 OSPx - G_teamJoinCheck (et port)
@@ -1659,7 +1735,7 @@ qboolean G_teamJoinCheck(int team_num, gentity_t *ent) {
 Ready/Not Ready
 =============
 */
-qboolean G_playersReady(void) {
+qboolean G_playersReady(void) { // ET equivalient of G_checkReady
 	int i, ready = 0, notReady = match_minplayers.integer;
 	gclient_t *cl;
 

@@ -555,8 +555,6 @@ typedef struct {
 
 #define MAX_COMPLAINTIPS 5
 
-#define SOLDIERKILL_MAXTIME 60000
-
 // client data that stays across multiple respawns, but is cleared
 // on each level change or team change at ClientBegin()
 typedef struct {
@@ -881,13 +879,10 @@ typedef struct {
 	qboolean latchGametype;             // DHM - Nerve
 
 	// OSP
-	int soldierChargeTime[2];
-	int medicChargeTime[2];
-	int engineerChargeTime[2];
-	int lieutenantChargeTime[2];
-
+	// Reinforcements offset
 	int dwBlueReinfOffset;
 	int dwRedReinfOffset;
+
 	qboolean fLocalHost;
 	qboolean fResetStats;
 	qboolean ref_allready;                  // Referee forced match start
@@ -919,8 +914,6 @@ typedef struct {
 	int spawnFloodTimer;
 	// -OSP
 
-	int objectiveStatsAllies[MAX_OBJECTIVES];
-	int objectiveStatsAxis[MAX_OBJECTIVES];
 } level_locals_t;
 // OSPx - Pause & MW
 typedef enum {
@@ -1933,8 +1926,9 @@ void G_removeSpecInvite( int team );
 void G_shuffleTeams( void );
 void G_swapTeamLocks( void );
 void G_swapTeams( void );
+void G_shuffleTeams(void);
 qboolean G_teamJoinCheck( int team_num, gentity_t *ent );
-int  G_teamID( gentity_t *ent );
+//int  G_teamID( gentity_t *ent );
 void G_teamReset( int team_num, qboolean fClearSpecLock );
 void G_verifyMatchState( int team_id );
 void G_updateSpecLock( int nTeam, qboolean fLock );
