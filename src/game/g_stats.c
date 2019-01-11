@@ -40,8 +40,9 @@ static const weap_ws_convert_t aWeapMOD[MOD_NUM_MODS] = {
 	{ MOD_UNKNOWN,              WS_MAX },
 	{ MOD_MACHINEGUN,           WS_MG42 },
 	{ MOD_GRENADE,              WS_GRENADE },
+	{ MOD_GRENADE_SPLASH,		WS_GRENADE }, // RtcwPro added grenade splash
 	{ MOD_ROCKET,               WS_PANZERFAUST },
-
+	{ MOD_ROCKET_SPLASH,		WS_PANZERFAUST}, // RtcwPro added rocket splash
 	{ MOD_KNIFE2,               WS_KNIFE },
 	{ MOD_KNIFE,                WS_KNIFE },
 	{ MOD_KNIFE_STEALTH,        WS_KNIFE },
@@ -51,6 +52,7 @@ static const weap_ws_convert_t aWeapMOD[MOD_NUM_MODS] = {
 	{ MOD_THOMPSON,             WS_THOMPSON },
 	{ MOD_STEN,                 WS_STEN },
 //	{ MOD_GARAND,               WS_RIFLE },
+	{ MOD_MAUSER,				WS_RIFLE}, // RtcwPro added mauser
 	{ MOD_SNIPERRIFLE,          WS_RIFLE },
 	{ MOD_FG42,                 WS_FG42 },
 	{ MOD_FG42SCOPE,            WS_FG42 },
@@ -58,8 +60,8 @@ static const weap_ws_convert_t aWeapMOD[MOD_NUM_MODS] = {
 	{ MOD_GRENADE_LAUNCHER,     WS_GRENADE },
 	{ MOD_FLAMETHROWER,         WS_FLAMETHROWER },
 	{ MOD_VENOM,				WS_VENOM },
+	{ MOD_VENOM_FULL,			WS_VENOM }, // RtcwPro added venom full
 	{ MOD_GRENADE_PINEAPPLE,    WS_GRENADE },
-
 	{ MOD_DYNAMITE,             WS_DYNAMITE },
 	{ MOD_AIRSTRIKE,            WS_AIRSTRIKE },
 	{ MOD_SYRINGE,              WS_SYRINGE },
@@ -245,8 +247,8 @@ void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod ) {
 		dmg = 100;
 	} else { dmg = dmg_ref;}
 
-	// Player team stats
-	if ( g_gametype.integer >= GT_WOLF &&
+	// Player team stats (team kills)
+	if ( g_gametype.integer >= GT_WOLF && 
 		 targ->client->sess.sessionTeam == attacker->client->sess.sessionTeam ) {
 		attacker->client->sess.team_damage += dmg;
 		// Don't count self kill as team kill..because it ain't!

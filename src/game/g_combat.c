@@ -653,7 +653,7 @@ qboolean IsHeadShot( gentity_t *targ, qboolean isAICharacter, vec3_t dir, vec3_t
 		} else {
 			float height, dest;
 			vec3_t v, angles, forward, up, right;
-			VectorClear(v); // OSPx - clear stuff..
+			//VectorClear(v); // RtcwPro commented this out // OSPx - clear stuff..
 			G_SetOrigin( head, targ->r.currentOrigin );
 
 			if ( targ->client->ps.pm_flags & PMF_DUCKED ) { // closer fake offset for 'head' box when crouching
@@ -673,7 +673,7 @@ qboolean IsHeadShot( gentity_t *targ, qboolean isAICharacter, vec3_t dir, vec3_t
 
 			AngleVectors( angles, forward, right, up );
 			VectorScale( forward, 5, v );
-			VectorMA(v, 5, right, v); // OSPx - Align it better..
+			//VectorMA(v, 5, right, v); // RtcwPro commented this out // OSPx - Align it better..
 			VectorMA( v, 18, up, v );
 
 			VectorAdd( v, head->r.currentOrigin, head->r.currentOrigin );
@@ -685,7 +685,7 @@ qboolean IsHeadShot( gentity_t *targ, qboolean isAICharacter, vec3_t dir, vec3_t
 		VectorCopy( targ->r.currentAngles, head->s.angles );
 		VectorCopy( head->s.angles, head->s.apos.trBase );
 		VectorCopy( head->s.angles, head->s.apos.trDelta );
-		VectorSet( head->r.mins, -6, -6, -1 );	// OSPx - Changed it to -1  (was -2)
+		VectorSet( head->r.mins, -6, -6, -2 ); // RtcwPro change back to -2 // OSPx - Changed it to -1  (was -2)
 		VectorSet( head->r.maxs, 6, 6, 10 ); // changed this z from 0 to 6
 		head->clipmask = CONTENTS_SOLID;
 		head->r.contents = CONTENTS_SOLID;
@@ -744,7 +744,7 @@ gentity_t* G_BuildHead( gentity_t *ent ) {
 	} else {
 		float height, dest;
 		vec3_t v, angles, forward, up, right;
-		VectorClear(v); // OSPx - clear stuff..
+		//VectorClear(v); // RtcwPro commented this out // OSPx - clear stuff..
 		G_SetOrigin( head, ent->r.currentOrigin );
 
 		if ( ent->client->ps.pm_flags & PMF_DUCKED ) { // closer fake offset for 'head' box when crouching
@@ -764,7 +764,7 @@ gentity_t* G_BuildHead( gentity_t *ent ) {
 
 		AngleVectors( angles, forward, right, up );
 		VectorScale( forward, 5, v );
-		VectorMA(v, 5, right, v); // OSPx - Align it better..
+		//VectorMA(v, 5, right, v); // RtcwPro commented this out OSPx - Align it better..
 		VectorMA( v, 18, up, v );
 
 		VectorAdd( v, head->r.currentOrigin, head->r.currentOrigin );
@@ -776,7 +776,7 @@ gentity_t* G_BuildHead( gentity_t *ent ) {
 	VectorCopy( ent->r.currentAngles, head->s.angles );
 	VectorCopy( head->s.angles, head->s.apos.trBase );
 	VectorCopy( head->s.angles, head->s.apos.trDelta );
-	VectorSet( head->r.mins, -6, -6, -1 );	// OSPx - Changed it to -1  (was -2)
+	VectorSet( head->r.mins, -6, -6, -2 );	// RtcwPro change backed to -2 // OSPx - Changed it to -1  (was -2)
 	VectorSet( head->r.maxs, 6, 6, 10 ); // changed this z from 0 to 6
 	head->clipmask = CONTENTS_SOLID;
 	head->r.contents = CONTENTS_SOLID;
