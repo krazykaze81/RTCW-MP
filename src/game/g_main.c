@@ -345,7 +345,7 @@ cvarTable_t gameCvarTable[] = {
 	{&g_dbgRevive, "g_dbgRevive", "0", 0, 0, qfalse},
 
 // OSPx
-	{ &a1_pass, "a1_pass", "iamadmin", CVAR_ARCHIVE, 0, qfalse },
+	{ &a1_pass, "a1_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a2_pass, "a2_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a3_pass, "a3_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a4_pass, "a4_pass", "none", CVAR_ARCHIVE, 0, qfalse },
@@ -366,7 +366,9 @@ cvarTable_t gameCvarTable[] = {
 	{ &g_spectatorInactivity, "g_spectatorInactivity", "0", 0, 0, qfalse, qfalse },
 	{ &g_showFlags, "g_showFlags", "1", 0, qfalse, qfalse },
 	{ &g_allowSoftKill, "g_allowSoftKill", "0", CVAR_ARCHIVE, 0, qfalse, qfalse },
-	{ &server_autoconfig, "server_autoconfig", "0", 0, 0, qfalse, qfalse },
+	{ &server_autoconfig, "server_autoconfig", "1", 0, 0, qfalse, qfalse }, // set to 1 for comp settings
+	{ &g_noTeamSwitching, "g_noTeamSwitching", "0", 0, 0, qfalse, qfalse }, // set to 0 for comp settings
+	{ &g_minGameClients, "g_minGameClients", "2", 0, 0, qfalse, qfalse }, // comp settings
 	{ &g_fixedphysics, "g_fixedphysics", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, qfalse, qfalse },
 	{ &g_hitsounds, "g_hitsounds", "0", 0 },
 
@@ -379,7 +381,7 @@ cvarTable_t gameCvarTable[] = {
 	{ &match_warmupfire, "match_warmupfire", "1", 0, 0, qfalse },
 	{ &match_mutespecs, "match_mutespecs", "0", 0, 0, qfalse, qtrue },
 	{ &match_latejoin, "match_latejoin", "1", 0, 0, qfalse, qfalse },
-	{ &match_minplayers, "match_minplayers", "4", 0, 0, qfalse, qfalse },
+	{ &match_minplayers, "match_minplayers", "2", 0, 0, qfalse, qfalse },
 	{ &match_readypercent, "match_readypercent", "100", 0, 0, qfalse, qtrue },
 	{ &match_timeoutlength, "match_timeoutlength", "180", 0, 0, qfalse, qtrue },
 	{ &match_timeoutcount, "match_timeoutcount", "3", 0, 0, qfalse, qtrue },

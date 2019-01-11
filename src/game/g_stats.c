@@ -598,7 +598,7 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 		tot_shots = 0;
 		tot_acc = 0;
 
-		CP(va("sc \"%s ^7Team\n"
+			CP(va("sc \"%s ^7Team\n"
 			"^7----------------------------------------------------------------------"
 			"\nPlayer          Kll Dth Sui TK ^2Eff Accrcy   HS    ^5DG    DR   TD  ^3Score\n"
 			"^7----------------------------------------------------------------------\n\"", (i == TEAM_RED) ? "^1Axis" : "^4Allied"));

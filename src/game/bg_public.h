@@ -405,7 +405,6 @@ typedef enum {
 
 	PERS_ACCURACY_SHOTS,
 	PERS_ACCURACY_HITS,
-    PERS_REVIVE_COUNT, // KK - added this in case we can use in the stats
 
 	// Rafael - mg42		// (SA) I don't understand these here.  can someone explain?
 	PERS_HWEAPON_USE,
@@ -510,7 +509,7 @@ typedef enum {
 	KEY_14,
 	KEY_15,
 	KEY_16,
-	KEY_LOCKED_PICKABLE, // KK added this in case we can use it - TDF: ent can be unlocked with the WP_LOCKPICK.
+	KEY_LOCKED_PICKABLE, // RtcwPro added this in case we can use it - TDF: ent can be unlocked with the WP_LOCKPICK.
 	KEY_NUM_KEYS
 } wkey_t;           // conflicts with types.h
 
@@ -1146,8 +1145,8 @@ typedef struct headAnimation_s {
 
 typedef enum {
 	TEAM_FREE,
-	TEAM_RED,   // KK - ET has TEAM_RED
-	TEAM_BLUE,  // KK - ET has TEAM_BLUE
+	TEAM_RED,   // RtcwPro ET has TEAM_AXIS
+	TEAM_BLUE,  // RtcwPro ET has TEAM_ALLIED
 	TEAM_SPECTATOR,
 	TEAM_NUM_TEAMS
 } team_t;
@@ -1453,7 +1452,7 @@ typedef enum {
 	HINT_DISARM,            // DHM - Nerve
 	HINT_REVIVE,            // DHM - Nerve
 	HINT_DYNAMITE,          // DHM - Nerve
-	HINT_LOCKPICK, // KK - added this in case we can use it
+	HINT_LOCKPICK, // RtcwPro - added this in case we can use it
 
 	HINT_BAD_USER,  // invisible user with no target
 

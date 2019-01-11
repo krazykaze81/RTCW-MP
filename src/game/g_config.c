@@ -60,6 +60,9 @@ static const modeCvarTable_t aCompSettings[] = {
 	{ M_ALL, "g_teamforcebalance", "0" },
 	{ M_ALL, "g_voicechatsallowed", "50" },
 	{ M_ALL, "g_warmup", "10" },
+	{ M_ALL, "g_noTeamSwitching" "1"}, // RtcwPro fix for readyup system
+	{ M_ALL, "g_minGameClients" "2"}, // RtcwPro fix for readyup system
+	{ M_ALL, "match_minclients" "2"}, // RtcwPro fix for readyup system
 	{ M_ALL, "match_latejoin", "0" },
 	{ M_ALL, "match_mutespecs", "0" },
 	{ M_ALL, "match_timeoutcount", "1" },
@@ -76,11 +79,14 @@ static const modeCvarTable_t aCompSettings[] = {
 static const modeCvarTable_t aPubSettings[] = {
 	{ M_ALL, "g_altStopwatchMode", "0" },
 	{ M_ALL, "g_complaintlimit", "6" },
-	{ M_ALL, "g_doWarmup", "0" },
+	{ M_ALL, "g_doWarmup", "0" }, // RtcwPro don't do warmup for pub settings
 	{ M_ALL, "g_maxlives", "0" },
 	{ M_ALL, "g_teamforcebalance", "1" },
 	{ M_ALL, "g_voicechatsallowed", "50" },
-	{ M_ALL, "g_warmup", "60" },
+	{ M_ALL, "g_warmup", "10" },
+	{ M_ALL, "g_noTeamSwitching" "1"}, // RtcwPro added this
+	{ M_ALL, "g_minGameClients" "2"}, // RtcwPro added this
+	{ M_ALL, "match_minclients" "2"}, // RtcwPro added this
 	{ M_ALL, "match_latejoin", "1" },
 	{ M_ALL, "match_mutespecs", "1" },
 	{ M_ALL, "match_timeoutcount", "0" },
