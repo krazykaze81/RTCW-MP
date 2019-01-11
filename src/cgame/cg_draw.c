@@ -2690,14 +2690,12 @@ static qboolean CG_DrawFollow( void ) {
 	if ( cg.snap->ps.pm_flags & PMF_LIMBO ) {
 		color[1] = 0.0;
 		color[2] = 0.0;
-		if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) // fixed from xMod
-			sprintf( deploytime, CG_TranslateString( "No more deployments this round" ) );
-		else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED)
-			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
-				(int)(1+(float)(cg_redlimbotime.integer - (cg.time%cg_redlimbotime.integer))*0.001f) );
+		if (cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0) // fixed from xMod
+			sprintf(deploytime, CG_TranslateString("No more deployments this round"));
+		/*else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED)
+			sprintf(deploytime, CG_TranslateString("Deploying in %d seconds"), (int)(1 + (float)(cg_redlimbotime.integer - (cg.time%cg_redlimbotime.integer))*0.001f));*/
 		else
-			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
-				(int)(1+(float)(cg_bluelimbotime.integer - (cg.time%cg_bluelimbotime.integer))*0.001f) );
+			sprintf(deploytime, CG_TranslateString("Deploying in %d seconds"), CG_CalculateReinfTime(qfalse)); // RtcwPro fixed spawn times in limbo menu //(int)(1+(float)(cg_bluelimbotime.integer - (cg.time%cg_bluelimbotime.integer))*0.001f) );
 
 		CG_DrawStringExt( INFOTEXT_STARTX, 68, deploytime, color, qtrue, qfalse, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 80 );
 
