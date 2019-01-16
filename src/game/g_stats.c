@@ -218,7 +218,7 @@ void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod ) {
 	// Keep track of only active player-to-player interactions in a real game
 	if ( !targ || !targ->client ||
 		 g_gamestate.integer != GS_PLAYING ||
-		 mod == MOD_ADMKILL ||
+		 mod == MOD_ADMIN ||
 		 mod == MOD_SWITCHTEAM ||
 		 ( g_gametype.integer >= GT_WOLF && ( targ->client->ps.pm_flags & PMF_LIMBO ) ) ||
 		 ( g_gametype.integer < GT_WOLF && ( targ->s.eFlags == EF_DEAD || targ->client->ps.pm_type == PM_DEAD ) ) ) {

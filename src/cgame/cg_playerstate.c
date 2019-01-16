@@ -130,21 +130,13 @@ void CG_DamageFeedback( int yawByte, int pitchByte, int damage ) {
 	// show the attacking player's head and name in corner
 	cg.attackerTime = cg.time;
 
-	// the lower on health you are, the greater the view kick will be
-	health = cg.snap->ps.stats[STAT_HEALTH];
-	if ( health < 40 ) {
-		scale = 1;
-	} else {
-		scale = 40.0 / health;
-	}
-	kick = damage * scale;
-
-	if ( kick < 5 ) {
-		kick = 5;
-	}
-	if ( kick > 10 ) {
-		kick = 10;
-	}
+// OSPx 
+	// Sort scale: float * multiplier
+	scale = ( (cg_damageNudge.value > 1) ? 5 : (cg_damageNudge.value < 0.1) ? 1 : cg_damageNudge.value * 10);
+	
+	// 5 is as high as it goes..
+	kick = (scale > 5 ? scale / 2 : scale);
+// ~OSPx
 
 	// find a free slot
 	for ( slot = 0; slot < MAX_VIEWDAMAGE; slot++ ) {
@@ -421,7 +413,7 @@ void CG_CheckLocalSounds( playerState_t *ps, playerState_t *ops ) {
 		}
 	}
 
-	// OSPx - Hitsounds
+	/*// OSPx - Hitsounds
 	if (cg_hitsounds.integer) {
 		if (ops->persistant[PERS_HITBODY] != ps->persistant[PERS_HITBODY]) {
 			if (ps->persistant[PERS_HITBODY] < ops->persistant[PERS_HITBODY])
@@ -431,7 +423,7 @@ void CG_CheckLocalSounds( playerState_t *ps, playerState_t *ops ) {
 			else
 				trap_S_StartSound(NULL, ps->clientNum, CHAN_AUTO, cgs.media.bodyShot);
 		}
-	}
+	}*/ // uncomment for experimental mode
 
 /*	// NERVE - SMF - don't do this in wolfMP
 	// if we are going into the intermission, don't start any voices

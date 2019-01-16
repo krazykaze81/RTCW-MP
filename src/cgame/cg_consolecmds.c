@@ -112,7 +112,7 @@ static void CG_ScoresDown_f( void ) {
 	}
 }
 
-static void CG_ScoresUp_f( void ) {
+void CG_ScoresUp_f( void ) { // xMod removed static?
 	if ( cg.showScores ) {
 		cg.showScores = qfalse;
 		cg.scoreFadeTime = cg.time;
@@ -567,6 +567,50 @@ void CG_vstrUp_f(void) {
 	else { CG_Printf("[cgnotify]^3Usage: ^7+vstr [down_vstr] [up_vstr]\n"); }
 }
 
+/*
+===================
+OSPx
+
+GetBans
+===================
+*/
+//void CG_getBans_f(void) {
+//	CG_Web_LatestBans(CG_cmdsToPost(1, trap_Argc() - 1));
+//}
+
+/*
+===================
+OSPx
+
+WebStats
+===================
+*/
+//void CG_webReports_f(void) {	
+//	CG_Web_Reports(CG_cmdsToPost(1, trap_Argc() - 1));
+//}
+
+/*
+===================
+OSPx
+
+WebStats
+===================
+*/
+//void CG_webInfo_f(void) {
+//	CG_Web_Info(CG_cmdsToPost(1, trap_Argc() - 1));
+//}
+
+/*
+===================
+OSPx
+
+Admin info
+===================
+*/
+//void CG_webAdmin_f(void) {	
+//	CG_Web_Admin(CG_cmdsToPost(1, trap_Argc() - 1));
+//}
+
 // +wstats
 void CG_wStatsDown_f(void) {
 	if (!cg.demoPlayback) {
@@ -693,6 +737,7 @@ void CG_topshotsUp_f(void) {
 	}
 }
 
+
 // Dumps stats in file
 void CG_dumpStats_f(void) {
 	if (cgs.dumpStatsTime < cg.time) {
@@ -765,6 +810,7 @@ static consoleCommand_t commands[] = {
 	{ "-vstr", CG_vstrUp_f },
 	{ "+zoomView", CG_zoomViewSet_f },
 	{ "-zoomView", CG_zoomViewRevert_f },
+	{ "currentTime", CG_currentTime_f },
 	{ "autoRecord", CG_autoRecord_f },
 	{ "autoScreenshot", CG_autoScreenShot_f },
 	{ "statsdump", CG_dumpStats_f },
@@ -777,6 +823,10 @@ static consoleCommand_t commands[] = {
 	{ "+wtopshots", CG_topshotsDown_f },
 	{ "-wtopshots", CG_topshotsUp_f },
 	{ "forcetapout", CG_ForceTapOut_f },
+	//{ "webbans", CG_getBans_f }, // xMod
+	//{ "webreports", CG_webReports_f }, // xMod
+	//{ "webinfo", CG_webInfo_f }, // xMod
+	//{ "webadmin", CG_webAdmin_f }, // xMod
 	// -OSPx
 
 	// Arnout
@@ -892,12 +942,18 @@ void CG_InitConsoleCommands( void ) {
 	// OSP
 	// Admins
 	trap_AddCommand("login");
-	trap_AddCommand("@login");
 	trap_AddCommand("logout");
 	trap_AddCommand("getstatus");
-	trap_AddCommand( "ref" );
+	trap_AddCommand("ref"); // OSP
+	trap_AddCommand("mp40"); // xMod
+	trap_AddCommand("thompson"); // xMod
+	trap_AddCommand("sten"); // xMod
 	trap_AddCommand( "?" );
 	trap_AddCommand( "commands" );
+	trap_AddCommand("say_admin");
+	trap_AddCommand("a"); // xMod
+	trap_AddCommand("private"); // xMod
+	trap_AddCommand("smoke"); // xMod
 	trap_AddCommand( "follow" );
 	trap_AddCommand( "lock" );
 
@@ -941,6 +997,12 @@ void CG_InitConsoleCommands( void ) {
 	trap_AddCommand("statsall");
 	trap_AddCommand("statsdump");
 
+	// xMod Web stuff.. 
+	trap_AddCommand("webbans");	
+	trap_AddCommand("webreports");
+	trap_AddCommand("webinfo");
+	trap_AddCommand("webadmin");
+	
 #ifdef MV_SUPPORT
 	trap_AddCommand( "mvadd" );
 	trap_AddCommand( "mvaxis" );

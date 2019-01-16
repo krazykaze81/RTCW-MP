@@ -588,7 +588,7 @@ typedef struct {
 	qboolean bAutoReloadAux; // TTimo - auxiliary storage for pmoveExt_t::bAutoReload, to achieve persistance
 
 	// OSP
-	playerStats_t playerStats;
+	//playerStats_t playerStats;
 	unsigned int autoaction;            // End-of-match auto-requests
 	unsigned int clientFlags;           // Client settings that need server involvement
 	unsigned int clientMaxPackets;      // Client com_maxpacket settings
@@ -1788,10 +1788,10 @@ void G_TimeShiftAllClients(int time, gentity_t *skip);
 void G_UnTimeShiftClient(gentity_t *ent);
 void G_UnTimeShiftAllClients(gentity_t *skip);
 void G_HistoricalTrace( gentity_t* ent, trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask );
-void G_LogTeamKill(     gentity_t* ent, weapon_t weap );
-void G_LogDeath(        gentity_t* ent, weapon_t weap );
-void G_LogKill(         gentity_t* ent, weapon_t weap );
-void G_LogRegionHit(    gentity_t* ent, hitRegion_t hr );
+//void G_LogTeamKill(     gentity_t* ent, weapon_t weap );
+//void G_LogDeath(        gentity_t* ent, weapon_t weap );
+//void G_LogKill(         gentity_t* ent, weapon_t weap );
+//void G_LogRegionHit(    gentity_t* ent, hitRegion_t hr );
 //void G_SetPlayerRank(	gentity_t* ent );
 //void G_AddExperience(	gentity_t* ent, float exp );
 
@@ -1821,7 +1821,7 @@ void G_LogRegionHit(    gentity_t* ent, hitRegion_t hr );
 #define AA_STATSALL     0x01    // Client AutoAction: Dump ALL player stats
 #define AA_STATSTEAM    0x02    // Client AutoAction: Dump TEAM player stats
 
-
+#define ARRAY_LEN(x)	(sizeof(x) / sizeof(*(x)))
 
 
 ///////////////////////

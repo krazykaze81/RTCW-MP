@@ -268,7 +268,7 @@ char    *modNames[] = {
 	
 // jpw
 // OSPx
-	"MOD_ADMKILL",
+	"MOD_ADMIN",
 	"MOD_SELFKILL",
 	"MOD_SWITCHTEAM",
 	"MOD_NUM_MODS"
@@ -1116,7 +1116,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 		}
 
 		// OSPx - Hitsounds
-		attacker->client->ps.persistant[PERS_HITHEAD]++;
+		//attacker->client->ps.persistant[PERS_HITHEAD]++;// uncomment for experimental mode
 	}
 
 	if ( g_debugDamage.integer ) {
@@ -1146,7 +1146,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 		}
 	}
 
-	// OSPx - Hitsounds
+	/*// OSPx - Hitsounds
 	if (attacker->client && targ->client && targ != attacker && g_hitsounds.integer) {
 		qboolean onSameTeam = OnSameTeam(targ, attacker);
 
@@ -1154,7 +1154,8 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 			attacker->client->ps.persistant[PERS_HITBODY] -= damage;
 		else
 			attacker->client->ps.persistant[PERS_HITBODY] += damage;
-	}
+	}*/ // uncomment for experimental mode
+
 	// See if it's the player hurting the emeny flag carrier
 	Team_CheckHurtCarrier( targ, attacker );
 

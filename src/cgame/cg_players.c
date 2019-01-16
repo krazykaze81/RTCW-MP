@@ -384,14 +384,14 @@ void CG_CalcMoveSpeeds( clientInfo_t *ci ) {
 				} else {
 					low = 1;
 				}
-				totalSpeed += fabs( oldPos[low][2] - o[low].origin[2] );
+				totalSpeed += Q_fabs( oldPos[low][2] - o[low].origin[2] ); // xMod modified
 			} else {
 				if ( o[0].origin[2] < o[1].origin[2] ) {
 					low = 0;
 				} else {
 					low = 1;
 				}
-				totalSpeed += fabs( oldPos[low][0] - o[low].origin[0] );
+				totalSpeed += Q_fabs( oldPos[low][0] - o[low].origin[0] ); // xMod modified
 			}
 
 			numSpeed++;
@@ -1770,7 +1770,7 @@ static void CG_SwingAngles( float destination, float swingTolerance, float clamp
 	// modify the speed depending on the delta
 	// so it doesn't seem so linear
 	swing = AngleSubtract( destination, *angle );
-	scale = fabs( swing );
+	scale = Q_fabs( swing ); // xMod modified
 	scale *= 0.05;
 	if ( scale < 0.5 ) {
 		scale = 0.5;
@@ -1881,11 +1881,11 @@ static void CG_AddPainTwitch( centity_t *cent, vec3_t torsoAngles ) {
 		f = (float)t / duration;
 		if ( f < FADEIN_RATIO ) {
 			torsoAngles[ROLL] += ( 0.5 * direction * ( f * ( 1.0 / FADEIN_RATIO ) ) );
-			torsoAngles[PITCH] -= ( fabs( direction ) * ( f * ( 1.0 / FADEIN_RATIO ) ) );
+			torsoAngles[PITCH] -= ( Q_fabs( direction ) * ( f * ( 1.0 / FADEIN_RATIO ) ) ); // xMod modified
 			torsoAngles[YAW] += ( direction * ( f * ( 1.0 / FADEIN_RATIO ) ) );
 		} else {
 			torsoAngles[ROLL] += ( 0.5 * direction * ( 1.0 - ( f - FADEIN_RATIO ) ) * ( 1.0 / FADEOUT_RATIO ) );
-			torsoAngles[PITCH] -= ( fabs( direction ) * ( 1.0 - ( f - FADEIN_RATIO ) ) * ( 1.0 / FADEOUT_RATIO ) );
+			torsoAngles[PITCH] -= ( Q_fabs( direction ) * ( 1.0 - ( f - FADEIN_RATIO ) ) * ( 1.0 / FADEOUT_RATIO ) ); // xMod modified
 			torsoAngles[YAW] += ( direction * ( 1.0 - ( f - FADEIN_RATIO ) ) * ( 1.0 / FADEOUT_RATIO ) );
 		}
 	} else {    // fast, Q3 style
@@ -2479,6 +2479,10 @@ static qboolean CG_PlayerShadow( centity_t *cent, float *shadowPlane ) {
 		return qfalse;
 	}
 
+	// L0 - Don't draw this above 1...
+	if (cg_shadows.integer > 1) {
+		trap_Cvar_Set("cg_shadows", "1");
+	}
 	// no shadows when invisible
 	if ( cent->currentState.powerups & ( 1 << PW_INVIS ) ) {
 		return qfalse;
@@ -2827,7 +2831,9 @@ void CG_Player( centity_t *cent ) {
 	refEntity_t head;
 	refEntity_t acc;
 
+#ifndef RETAIL_MOD
 	vec3_t playerOrigin;
+#endif
 	vec3_t lightorigin;
 
 	int clientNum,i;
@@ -2843,7 +2849,9 @@ void CG_Player( centity_t *cent ) {
 
 	shadow = qfalse;                                                // gjd added to make sure it was initialized
 	shadowPlane = 0.0;                                              // ditto
-	VectorCopy( vec3_origin, playerOrigin );
+#ifndef RETAIL_MOD
+	VectorCopy(vec3_origin, playerOrigin);
+#endif
 
 	// if set to invisible, skip
 	if ( cent->currentState.eFlags & EF_NODRAW ) {
@@ -2865,16 +2873,18 @@ void CG_Player( centity_t *cent ) {
 		return;
 	}
 
+#ifndef RETAIL_MOD
 	// Arnout: see if we're attached to a gun
-	if ( cent->currentState.eFlags & EF_MG42_ACTIVE ) {
+	if (cent->currentState.eFlags & EF_MG42_ACTIVE) {
 		centity_t *mg42;
 		int num;
 
 		// find the mg42 we're attached to
-		for ( num = 0 ; num < cg.snap->numEntities ; num++ ) {
-			mg42 = &cg_entities[ cg.snap->entities[ num ].number ];
+		for (num = 0; num < cg.snap->numEntities; num++) {
+			mg42 = &cg_entities[cg.snap->entities[num].number];
+			
 			if ( mg42->currentState.eType == ET_MG42_BARREL &&
-				 mg42->currentState.otherEntityNum == cent->currentState.number ) {
+				mg42->currentState.otherEntityNum == cent->currentState.number ) {
 				// found it, clamp behind gun
 				vec3_t forward, right, up;
 
@@ -2885,14 +2895,15 @@ void CG_Player( centity_t *cent ) {
 				break;
 			}
 
-			if ( num == cg.snap->numEntities ) {
-				VectorCopy( cent->lerpOrigin, playerOrigin );
+			if (num == cg.snap->numEntities) {
+				VectorCopy(cent->lerpOrigin, playerOrigin);
 			}
 		}
-	} else {
-		VectorCopy( cent->lerpOrigin, playerOrigin );
 	}
-
+	else {
+		VectorCopy(cent->lerpOrigin, playerOrigin);
+	}
+#endif
 	memset( &legs, 0, sizeof( legs ) );
 	memset( &torso, 0, sizeof( torso ) );
 	memset( &head, 0, sizeof( head ) );
@@ -2958,9 +2969,18 @@ void CG_Player( centity_t *cent ) {
 	// set renderfx for accessories
 	acc.renderfx    = renderfx;
 
-	//VectorCopy(cent->lerpOrigin, lightorigin);
-	VectorCopy( playerOrigin, lightorigin );
+#ifndef RETAIL_MOD
+	VectorCopy(playerOrigin, lightorigin);
+#else
+	VectorCopy(cent->lerpOrigin, lightorigin);
+#endif
 	lightorigin[2] += 31 + (float)cg_drawFPGun.integer;
+
+	// L0 - Keeping this in for demo preview..
+	if (cg.demoPlayback && cgs.wallhack) {
+		if (cent->currentState.number != cg.snap->ps.clientNum)
+			renderfx = RF_DEPTHHACK;
+	}
 
 	//
 	// add the legs
@@ -2968,8 +2988,11 @@ void CG_Player( centity_t *cent ) {
 	legs.hModel = ci->legsModel;
 	legs.customSkin = ci->legsSkin;
 
-	//VectorCopy( cent->lerpOrigin, legs.origin );
-	VectorCopy( playerOrigin, legs.origin );
+#ifndef RETAIL_MOD
+	VectorCopy(playerOrigin, legs.origin);
+#else
+	VectorCopy( cent->lerpOrigin, legs.origin );
+#endif
 
 	if ( ci->playermodelScale[0] != 0 ) {  // player scaled, adjust for the (-24) offset of player legs origin to ground
 		legs.origin[2] -= 24 * ( 1.0 - ci->playermodelScale[2] );

@@ -585,16 +585,16 @@ void cmd_slap(gentity_t *ent, qboolean fParam) {
 	}
 	
 	if (target->client->ps.stats[STAT_HEALTH] <= 20) {
-		G_Damage(target, NULL, NULL, NULL, NULL, damagetodo, DAMAGE_NO_PROTECTION, MOD_ADMKILL);
+		G_Damage(target, NULL, NULL, NULL, NULL, damagetodo, DAMAGE_NO_PROTECTION, MOD_ADMIN);
 		AP(va("chat \"console: %s ^7was ^3slapped to death ^7by %s!\n\"", target->client->pers.netname, sortTag(ent)));
-		player_die(target, target, target, target->health, MOD_ADMKILL);
+		player_die(target, target, target, target->health, MOD_ADMIN);
 
 		// Log it
 		log = va("%s (IP: %s) has slapped to death player %s.", 
 			ent->client->pers.netname, clientIP(ent, qtrue), target->client->pers.netname);
 	}
 	else {
-		G_Damage(target, NULL, NULL, NULL, NULL, damagetodo, DAMAGE_NO_PROTECTION, MOD_ADMKILL);
+		G_Damage(target, NULL, NULL, NULL, NULL, damagetodo, DAMAGE_NO_PROTECTION, MOD_ADMIN);
 		AP(va("chat \"console: %s ^7was slapped by %s!\n\"", ent->client->pers.netname, sortTag(ent)));
 		APRS(target, "sound/multiplayer/vo_revive.wav");
 		
@@ -635,9 +635,9 @@ void cmd_kill(gentity_t *ent, qboolean fParam) {
 	}
 
 	if (target->client->ps.stats[STAT_HEALTH] > 0) {
-		G_Damage(target, NULL, NULL, NULL, NULL, damagetodo, DAMAGE_NO_PROTECTION, MOD_ADMKILL);
+		G_Damage(target, NULL, NULL, NULL, NULL, damagetodo, DAMAGE_NO_PROTECTION, MOD_ADMIN);
 		AP(va("chat \"console: %s ^7was ^3killed ^7by %s!\n\"", target->client->pers.netname, sortTag(ent)));
-		player_die(target, target, target, target->health, MOD_ADMKILL);
+		player_die(target, target, target, target->health, MOD_ADMIN);
 
 		// Log it
 		log = va("%s (IP: %s) has slapped to death player %s.",

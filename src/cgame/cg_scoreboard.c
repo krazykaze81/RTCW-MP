@@ -343,10 +343,11 @@ int WM_DrawObjectives( int x, int y, int width, float fade ) {
 
 		}
 		CG_DrawSmallString( x,y,s,fade );
-		// OSPx - Reinforcement Offset (patched)
+		// OSPx - Reinforcement Offset (patched) // check this against xMod if not working
 		if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED || cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_BLUE ) {
-			msec = CG_CalculateReinfTime() * 1000;
-		} else { // no team (spectator mode)
+			msec = CG_CalculateReinfTime() * 1000; // if this doesn't work check xMod
+		}
+		else { // no team (spectator mode)
 			msec = 0;
 		}
 
@@ -369,6 +370,14 @@ int WM_DrawObjectives( int x, int y, int width, float fade ) {
 			CG_DrawSmallString( x + 300 - w / 2,y,s,fade );
 		}
 		// -NERVE - SMF
+		// L0 - Death Match mod
+		if (cgs.tournamentMode > TOURNY_NONE)
+		{
+			int w;
+			w = CG_DrawStrlen(s) * SMALLCHAR_WIDTH; // Sloppy.. would need to translate string and calculate offset..
+			CG_DrawSmallString(494, 9, "^nTOURNAMENT MODE", (Q_fabs(sin(cg.time * 0.002)) * cg_hudAlpha.value));
+		}
+		// end
 
 		y = tempy;
 	}
@@ -511,8 +520,9 @@ static void WM_DrawClientScore( int x, int y, score_t *score, float *color, floa
 
 		totalwidth = INFO_CLASS_WIDTH + INFO_SCORE_WIDTH + INFO_LATENCY_WIDTH - 8;
 
-		// OSPx - Show ping for spectators as well
+		// OSPx - Show ping for spectators as well // xMod modified this
 		s = va("^3(%i) %s", score->ping, CG_TranslateString("SPECTATOR"));
+
 		w = CG_DrawStrlen( s ) * SMALLCHAR_WIDTH;
 
 		CG_DrawSmallString( tempx + totalwidth - w, y, s, fade );
@@ -556,7 +566,7 @@ const char* WM_TimeToString( float msec ) {
 	return va( "%i:%i%i", mins, tens, seconds );
 }
 
-static int WM_DrawInfoLine( int x, int y, float fade ) {
+static int WM_DrawInfoLine( int x, int y, float fade ) { // xMod has a layout fix?
 	int w, defender, winner;
 	const char *s;
 
@@ -601,6 +611,23 @@ static int WM_DrawInfoLine( int x, int y, float fade ) {
 	return y + INFO_LINE_HEIGHT + 10;
 }
 
+/*
+	L0 - Calculate Average Ping for desired team
+*/
+int calculateAvgPing(team_t team) {
+	int i, j = 0, k = 0;	
+
+	for (i = 0; i < cg.numScores; i++) {
+		if (team != cgs.clientinfo[cg.scores[i].client].team) {
+			continue;
+		}
+		
+		k += cg.scores[i].ping;
+		j++;		
+	}
+	return ( (j && k) ? round(k / j) : 0 );
+}
+// ~L0
 static int WM_TeamScoreboard( int x, int y, team_t team, float fade, int maxrows ) {
 	vec4_t hcolor;
 	float tempx, tempy;
@@ -627,9 +654,51 @@ static int WM_TeamScoreboard( int x, int y, team_t team, float fade, int maxrows
 
 	// draw header
 	if ( team == TEAM_RED ) {
-		CG_DrawSmallString( x, y, va( "%s [%d] (%d %s)", CG_TranslateString( "Axis" ), cg.teamScores[0], cg.teamPlayers[team], CG_TranslateString( "players" ) ), fade );
+		char *str;
+
+		CG_DrawPic(x + 2, y + 4, 2 * TOURINFO_TEXTSIZE, TOURINFO_TEXTSIZE, trap_R_RegisterShaderNoMip("ui_mp/assets/ger_flag.tga"));
+		CG_DrawSmallString( x + 26, y, va( "%s [%d] (%d %s)", CG_TranslateString( "Axis" ), cg.teamScores[0], cg.teamPlayers[team], CG_TranslateString( "players" ) ), fade );
+
+// L0 - Average Ping
+		str = va("^nAVG PING");
+		CG_DrawStringExt(x + width - 5 - (CG_DrawStrlen(str) * (TINYCHAR_WIDTH - 2)),
+			y,
+			str,
+			colorWhite, qfalse, qfalse,
+			TINYCHAR_WIDTH - 2,
+			TINYCHAR_HEIGHT - 1, 0);
+
+		str = va("^n%3d", calculateAvgPing(TEAM_RED));
+		CG_DrawStringExt(x + width - 5 - (3 * (TINYCHAR_WIDTH - 2)),
+			y + 6,
+			str,
+			colorWhite, qfalse, qfalse,
+			TINYCHAR_WIDTH - 2,
+			TINYCHAR_HEIGHT - 1, 0);
+// ~L0
 	} else if ( team == TEAM_BLUE ) {
-		CG_DrawSmallString( x, y, va( "%s [%d] (%d %s)", CG_TranslateString( "Allies" ), cg.teamScores[1], cg.teamPlayers[team], CG_TranslateString( "players" ) ), fade );
+		char *str;
+
+		CG_DrawPic(x + 2, y + 4, 2 * TOURINFO_TEXTSIZE, TOURINFO_TEXTSIZE, trap_R_RegisterShaderNoMip("ui_mp/assets/usa_flag.tga"));
+		CG_DrawSmallString( x + 26, y, va( "%s [%d] (%d %s)", CG_TranslateString( "Allies" ), cg.teamScores[1], cg.teamPlayers[team], CG_TranslateString( "players" ) ), fade );
+
+// L0 - Average Ping
+		str = va("^nAVG PING");
+		CG_DrawStringExt(x + width - 5 - (CG_DrawStrlen(str) * (TINYCHAR_WIDTH - 2)),
+			y,
+			str,
+			colorWhite, qfalse, qfalse,
+			TINYCHAR_WIDTH - 2,
+			TINYCHAR_HEIGHT - 1, 0);
+
+		str = va("^n%3d", calculateAvgPing(TEAM_BLUE));
+		CG_DrawStringExt(x + width - 5 - (3 * (TINYCHAR_WIDTH - 2)),
+			y + 6,
+			str,
+			colorWhite, qfalse, qfalse,
+			TINYCHAR_WIDTH - 2,
+			TINYCHAR_HEIGHT - 1, 0);
+// ~L0
 	}
 	y += SMALLCHAR_HEIGHT + 4;
 
@@ -663,7 +732,8 @@ static int WM_TeamScoreboard( int x, int y, team_t team, float fade, int maxrows
 	CG_DrawSmallString( tempx, y, CG_TranslateString( "Class" ), fade );
 	tempx += INFO_CLASS_WIDTH;
 
-	CG_DrawSmallString( tempx, y, CG_TranslateString( "Score" ), fade );
+	// L0 - Custom scoreboard (note: Account for new types if ever added..)
+	CG_DrawSmallString(tempx, y, ( cgs.coustomGameType > CGT_NONE ? CG_TranslateString("Kills") : CG_TranslateString("Score") ), fade);
 	tempx += INFO_SCORE_WIDTH;
 
 	CG_DrawSmallString( tempx, y, CG_TranslateString( "Ping" ), fade );

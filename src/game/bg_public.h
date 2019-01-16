@@ -238,6 +238,18 @@ typedef enum {
 	GSKILL_MAX      // must always be last
 } gameskill_t;
 
+// L0 - TE
+typedef enum {
+	TOURNY_NONE,
+	TOURNY_BASIC,
+	TOURNY_FULL
+} tournamentMode_t;
+
+typedef enum {
+	CGT_NONE,
+	CGT_DM
+} customGameType_t;
+// ~L0
 typedef enum { GENDER_MALE, GENDER_FEMALE, GENDER_NEUTER } gender_t;
 
 /*
@@ -419,6 +431,7 @@ typedef enum {
 // entityState_t->eFlags
 #define EF_DEAD             0x00000001      // don't draw a foe marker over players with EF_DEAD
 #define EF_NONSOLID_BMODEL  0x00000002      // bmodel is visible, but not solid
+//#define	EF_POISONED			EF_NONSOLID_BMODEL	// L0 - Poison uncomment for experimental mode
 #define EF_TELEPORT_BIT     0x00000004      // toggled every time the origin abruptly changes
 #define EF_MONSTER_EFFECT   0x00000008      // draw an aiChar dependant effect for this character
 #define EF_CAPSULE          0x00000010      // use capsule for collisions
@@ -482,7 +495,7 @@ typedef enum {
 
 // OSPx	
 	PW_READY,			// Ready
-	PW_BLACKOUT = 14,	// Specklock
+	PW_BLACKOUT = 17,	// Specklock
 // -OSPx
 
 	PW_NUM_POWERUPS
@@ -509,7 +522,6 @@ typedef enum {
 	KEY_14,
 	KEY_15,
 	KEY_16,
-	KEY_LOCKED_PICKABLE, // RtcwPro added this in case we can use it - TDF: ent can be unlocked with the WP_LOCKPICK.
 	KEY_NUM_KEYS
 } wkey_t;           // conflicts with types.h
 
@@ -652,7 +664,7 @@ typedef enum {
 	WP_SMOKE_GRENADE,       // 45
 	// -NERVE - SMF
 	WP_BINOCULARS,          // 46
-	WP_MEDIC_ADRENALINE,    // 47 OSP
+
 	WP_NUM_WEAPONS          // 48 originally 47   NOTE: this cannot be larger than 64 for AI/player weapons!
 
 } weapon_t;
@@ -663,26 +675,7 @@ extern int weapBanksMultiPlayer[MAX_WEAP_BANKS_MP][MAX_WEAPS_IN_BANK_MP];
 
 
 
-// OSP
-typedef struct {
-	int kills, teamkills, killedby;
-} weaponStats_t;
 
-typedef enum {
-	HR_HEAD,
-	HR_ARMS,
-	HR_BODY,
-	HR_LEGS,
-	HR_NUM_HITREGIONS,
-} hitRegion_t;
-
-typedef struct {
-	weaponStats_t weaponStats[WP_NUM_WEAPONS];
-	int suicides;
-	int hitRegions[HR_NUM_HITREGIONS];
-	int objectiveStats[MAX_OBJECTIVES];
-} playerStats_t;
-// -OSP
 typedef struct ammotable_s {
 	int maxammo;            //
 	int uses;               //
@@ -1246,15 +1239,20 @@ typedef enum {
 	MOD_ENGINEER,   // not sure if we'll use
 	MOD_MEDIC,      // these like this or not
 //
-	MOD_BAT,
 
 // OSPx
-	MOD_ADMKILL,
+	MOD_ADMIN,
 	MOD_SELFKILL,
+	MOD_KNIFETHROW,
+	MOD_CHICKEN,
+	MOD_POISONED,
+	MOD_GOOMBA,
+	MOD_ARTILLERY,
 	MOD_SWITCHTEAM,
-	MOD_NUM_MODS
+	MOD_NUM_MODS,
+// End
 // -OSPx
-
+	MOD_BAT
 } meansOfDeath_t;
 
 
@@ -1452,7 +1450,6 @@ typedef enum {
 	HINT_DISARM,            // DHM - Nerve
 	HINT_REVIVE,            // DHM - Nerve
 	HINT_DYNAMITE,          // DHM - Nerve
-	HINT_LOCKPICK, // RtcwPro - added this in case we can use it
 
 	HINT_BAD_USER,  // invisible user with no target
 

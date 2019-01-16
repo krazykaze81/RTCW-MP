@@ -410,7 +410,7 @@ void CG_KickAngles( void ) {
 					cg.kickAngles[i] += kickChange;
 					if ( !cg.kickAngles[i] && frametime ) {
 						cg.kickAVel[i] = 0;
-					} else if ( fabs( cg.kickAngles[i] ) > maxKickAngles[i] ) {
+					} else if ( Q_fabs( cg.kickAngles[i] ) > maxKickAngles[i] ) {
 						cg.kickAngles[i] = maxKickAngles[i] * ( ( 2 * ( cg.kickAngles[i] > 0 ) ) - 1 );
 						cg.kickAVel[i] = 0; // force Avel to return us to center rather than keep going outside range
 					}
@@ -424,7 +424,7 @@ void CG_KickAngles( void ) {
 		// recoil is added to input viewangles per frame
 		if ( cg.recoilPitch ) {
 			// apply max recoil
-			if ( fabs( cg.recoilPitch ) > recoilMaxSpeed ) {
+			if ( Q_fabs( cg.recoilPitch ) > recoilMaxSpeed ) {
 				if ( cg.recoilPitch > 0 ) {
 					cg.recoilPitch = recoilMaxSpeed;
 				} else {
@@ -435,7 +435,7 @@ void CG_KickAngles( void ) {
 			if ( frametime ) {
 				idealCenterSpeed = -( 2.0 * ( cg.recoilPitch > 0 ) - 1.0 ) * recoilCenterSpeed * ft;
 				if ( idealCenterSpeed ) {
-					if ( fabs( idealCenterSpeed ) < fabs( cg.recoilPitch ) ) {
+					if ( Q_fabs( idealCenterSpeed ) < Q_fabs( cg.recoilPitch ) ) {
 						cg.recoilPitch += idealCenterSpeed;
 					} else {    // back zero out
 						cg.recoilPitch = 0;
@@ -443,7 +443,7 @@ void CG_KickAngles( void ) {
 				}
 			}
 		}
-		if ( fabs( cg.recoilPitch ) > recoilIgnoreCutoff ) {
+		if ( Q_fabs( cg.recoilPitch ) > recoilIgnoreCutoff ) {
 			cg.recoilPitchAngle += cg.recoilPitch * ft;
 		}
 	}
@@ -682,6 +682,17 @@ static void CG_OffsetFirstPersonView( void ) {
 
 	CG_ZoomSway();
 
+	// uncomment for "fun" mode
+	// L0 - Poison (View is from NQ)
+	// SYNC WITH THE G_WEAPONS.C CODE!!!
+	/*if (cg.predictedPlayerState.eFlags & EF_POISONED && cgs.match_paused != PAUSE_ON){
+		float phase;
+
+		phase = cg.time / 1000.0 * 0.3 * M_PI; // cg.time / 1000.0 * 0.5 * M_PI * 2;
+		cg.refdefViewAngles[ROLL] += 36 * sin(phase); // amplitude * sin  cg.refdefViewAngles[ROLL] += 4 * sin( phase )
+		cg.refdefViewAngles[YAW] += 24 * sin(phase); // amplitude * sin  cg.refdefViewAngles[YAW] += 4 * sin( phase )
+		cg.refdefViewAngles[PITCH] += 12 * sin(phase*2.5); // amplitude * sin  cg.refdefViewAngles[YAW] += 4 * sin( phase )
+	}*/
 	// adjust for 'lean'
 	if ( cg.predictedPlayerState.leanf != 0 ) {
 		//add leaning offset
@@ -898,11 +909,21 @@ static int CG_CalcZoomedFov(void) {
 		}
 		else {
 			fov_x = cg_fov.value;			
+			if (cgs.gametype == GT_SINGLE_PLAYER) {
+				if (fov_x < 1) {
+					fov_x = 1;	// OSPx - Limited from 120 to 90
+				}
+				else if (fov_x > 120) {
+					fov_x = 120;
+				}
+			}
+			else {
 			if (fov_x < 90) {
 				fov_x = 90;	
 			}
 			else if (fov_x > 120) {
 				fov_x = 120;
+				}
 			}
 		}
 
@@ -910,8 +931,8 @@ static int CG_CalcZoomedFov(void) {
 		if (cg.zoomedVal) {
 			zoomFov = cg.zoomedVal;
 
-			if (zoomFov < 90) {
-				zoomFov = 90;
+			if (zoomFov < 1) {
+				zoomFov = 1;	// OSPx - Limited from 120 to 90
 			}
 			else if (zoomFov > 120) {
 				zoomFov = 120;
@@ -1000,6 +1021,11 @@ static int CG_CalcFov( void ) {
 		cg.zoomedBinoc = qfalse;
 		cg.zoomTime = 0;
 		cg.zoomval = 0;
+	}
+	else {
+		cg.zoomedVal = cg_fov.value;
+		cg.zoomedTime = cg.time;
+		cg.zoomedFOV = qfalse;
 	}
 
 	if ( cg.predictedPlayerState.pm_type == PM_INTERMISSION ) {
@@ -1097,6 +1123,18 @@ static int CG_CalcFov( void ) {
 		cg.refdef.rdflags &= ~RDF_UNDERWATER;
 	}
 
+	// uncomment for "fun" mode
+	/*// L0 - Poison									 // Pause handling
+	if (cg.predictedPlayerState.eFlags & EF_POISONED && !cg.snap->ps.pm_type == PM_FREEZE)
+	{
+		phase = cg.time / 1000.0 * 0.3 * M_PI * 2;	//phase = cg.time / 1000.0 * 0.6 * M_PI * 2;
+		v = 12 * sin(phase);	//v = 2 * sin( phase );
+		fov_x += v;
+		fov_y -= v;
+		cg.refdef.rdflags |= RDF_UNDERWATER;
+
+		inwater = qtrue;
+	} // End*/
 	// set it
 	cg.refdef.fov_x = fov_x;
 	cg.refdef.fov_y = fov_y;
@@ -1128,6 +1166,129 @@ static int CG_CalcFov( void ) {
 	return inwater;
 }
 
+/*
+===============
+CG_WaterBlendBlob
+
+L0 - Water effect / OpenwWolf port
+===============
+*/
+
+#define MAX_DROPS 64
+#define WATER_OUT_TIME 1500
+#define WATER_IN_TIME 150
+
+int num_drops = 0;
+float dropx[MAX_DROPS];
+float dropy[MAX_DROPS];
+float drops[MAX_DROPS];
+qhandle_t dropShader[MAX_DROPS];
+float dropSeed[MAX_DROPS];
+qboolean waswater = qfalse;
+int watertime = 0;
+int waterintime = 0;
+
+float dropAccel[MAX_DROPS][2];
+static void CG_WaterBlendBlob(int inwater) {
+	int             i, n, t, z;
+	float           phase, v, in;
+	refEntity_t     ent;
+
+	if (inwater){
+		if (!waswater) { // new in water
+			waterintime = cg.time + WATER_IN_TIME;
+		}
+
+		waswater = qtrue;
+
+		if (!num_drops)
+		{
+			z = sqrt((float)MAX_DROPS);
+			for (i = 0; i < z; i++)
+			{
+				for (n = 0; n < z; n++)
+				{
+					dropx[num_drops] = (i * z - (MAX_DROPS / 2) + 2 + 1 * crandom()) * 16 / MAX_DROPS;
+					dropy[num_drops] = (n * z - (MAX_DROPS / 2) + 1 + 1 * crandom()) * 16 / MAX_DROPS;
+
+					drops[num_drops] = 8 + crandom();
+					dropShader[num_drops] = trap_R_RegisterShader(va("gfx/hud/drop%i", ((int)(2 + 2 * crandom()))));
+
+					dropAccel[num_drops][0] = 0.0f;
+					dropAccel[num_drops][1] = 0.0f;
+
+					dropSeed[num_drops] = random();
+					num_drops++;
+				}
+
+			}
+		}
+	}
+
+
+	// when coming out of water, draw drops
+	if (!inwater && waswater) // init the drops
+	{
+		watertime = cg.time + WATER_OUT_TIME;
+		waswater = qfalse;
+	}
+
+	t = watertime - cg.time;
+
+	if (t <= 0 && !inwater)
+	{
+		num_drops = 0;
+		return;
+	}
+
+	if (!num_drops) {
+		return;
+	}
+
+	phase = cg.time / 1000.0 * WAVE_FREQUENCY * M_PI * 2;
+	if (cg.time < waterintime) {
+		in = 1.0f - (1.0f / WATER_IN_TIME * (waterintime - cg.time));
+	}
+	else {
+		in = 1.0f;
+	}
+
+	v = (0.7f + 0.1f * sin(phase)) * in;
+
+	// do the drops
+	for (i = 0; i < MAX_DROPS; i++) {
+		memset(&ent, 0, sizeof(ent));
+		ent.reType = RT_SPRITE;
+		ent.renderfx = RF_FIRST_PERSON;
+		ent.rotation = 360 * sin(phase * 0.05f * dropSeed[i]);
+
+		VectorMA(cg.refdef.vieworg, 8, cg.refdef.viewaxis[0], ent.origin);
+		VectorMA(ent.origin, dropx[i] + sin(phase * 0.1f) + dropAccel[i][0], cg.refdef.viewaxis[1], ent.origin);
+		VectorMA(ent.origin, dropy[i] + cos(phase * 0.1f) + dropAccel[i][1], cg.refdef.viewaxis[2], ent.origin);
+		//VectorMA(ent.origin, dropx[i] , cg.refdef.viewaxis[1], ent.origin);
+		//VectorMA(ent.origin, dropy[i] , cg.refdef.viewaxis[2], ent.origin);
+
+		ent.customShader = dropShader[i];
+
+		if (inwater) {
+			ent.shaderTime = v;
+			dropAccel[i][0] = 0.0f;
+			dropAccel[i][1] = 0.0f;
+		}
+		else {
+
+			ent.shaderTime = v / WATER_OUT_TIME * t;
+			dropAccel[i][1] = (1.0f - ent.shaderTime) * (-dropSeed[i] * 10);
+			//dropAccel[i][1] = 0;
+		}
+
+		ent.radius = drops[i] * (ent.shaderTime * dropSeed[i]);
+		//ent.radius = drops[i] * ( ent.shaderTime * ent.shaderTime );
+
+		trap_R_AddRefEntityToScene(&ent);
+	}
+
+}
 
 /*
 ==============
@@ -1193,7 +1354,7 @@ static void CG_DamageBlendBlob( void ) {
 		VectorMA( ent.origin, vd->damageX * -8, cg.refdef.viewaxis[1], ent.origin );
 		VectorMA( ent.origin, vd->damageY * 8, cg.refdef.viewaxis[2], ent.origin );
 
-		ent.radius = vd->damageValue * 0.4 * ( 0.5 + 0.5 * (float)t / maxTime ) * ( 0.75 + 0.5 * fabs( sin( vd->damageTime ) ) );
+		ent.radius = vd->damageValue * 0.4 * ( 0.5 + 0.5 * (float)t / maxTime ) * ( 0.75 + 0.5 * Q_fabs( sin( vd->damageTime ) ) );
 
 		ent.customShader = cgs.media.viewBloodAni[(int)( floor( ( (float)t / maxTime ) * 4.9 ) )]; //cgs.media.viewBloodShader;
 		ent.shaderRGBA[0] = 255;
@@ -1332,12 +1493,12 @@ static int CG_CalcViewValues( void ) {
 	}
 
 	cg.bobcycle = ( ps->bobCycle & 128 ) >> 7;
-	cg.bobfracsin = fabs( sin( ( ps->bobCycle & 127 ) / 127.0 * M_PI ) );
+	cg.bobfracsin = Q_fabs( sin( ( ps->bobCycle & 127 ) / 127.0 * M_PI ) );
 	cg.xyspeed = sqrt( ps->velocity[0] * ps->velocity[0] +
 					   ps->velocity[1] * ps->velocity[1] );
 
-
-//	VectorCopy( ps->origin, cg.refdef.vieworg );
+#ifndef RETAIL_MOD
+	VectorCopy(ps->origin, cg.refdef.vieworg);
 	// Arnout: see if we're attached to a gun
 	if ( cg.renderingThirdPerson && ps->eFlags & EF_MG42_ACTIVE ) {
 		centity_t *mg42 = &cg_entities[ps->viewlocked_entNum];
@@ -1346,9 +1507,13 @@ static int CG_CalcViewValues( void ) {
 		AngleVectors( ps->viewangles, forward, right, up );
 		VectorMA( mg42->currentState.pos.trBase, -36, forward, cg.refdef.vieworg );
 		cg.refdef.vieworg[2] = ps->origin[2];
-	} else {
+}
+	else {
 		VectorCopy( ps->origin, cg.refdef.vieworg );
 	}
+#else
+	VectorCopy( ps->origin, cg.refdef.vieworg );
+#endif
 	VectorCopy( ps->viewangles, cg.refdefViewAngles );
 
 	// add error decay
@@ -1617,6 +1782,17 @@ void CG_DrawSkyBoxPortal( void ) {
 			} else if ( zoomFov > 160 ) {
 				zoomFov = 160;
 			}
+// OSPx - zoomed FOV
+		} else if (cg.zoomedVal) {
+			zoomFov = cg.zoomedVal;   // (SA) use user scrolled amount
+
+			if (zoomFov < 1) {
+				zoomFov = 1;
+			}
+			else if (zoomFov > 140) {
+				zoomFov = 140;
+			}
+// ~OSPx
 		} else {
 			zoomFov = lastfov;
 		}
@@ -1896,6 +2072,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	// first person blend blobs, done after AnglesToAxis
 	if ( !cg.renderingThirdPerson ) {
 		CG_DamageBlendBlob();
+		// L0 - Water effect
+		CG_WaterBlendBlob(inwater);
 	}
 
 	DEBUGTIME
@@ -1916,6 +2094,8 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_AddLocalEntities();
 
 		DEBUGTIME
+		// L0 - NQ smoke		
+		CG_AddSmokeSprites();
 	}
 	// Rafael mg42
 	if ( !( cg.snap->ps.persistant[PERS_HWEAPON_USE] ) ) {
@@ -1993,5 +2173,16 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 	}
 
 	DEBUGTIME
+	// OSPx - Count time..
+	//if (cg.demoPlayback /*|| cg.tournamentInfo.inProgress*/) {
+		if (!cg.timeCounter) {
+			cg.timeCounter = cg.time + 1000;
+			cg.timein++;
+		}
+		else if (cg.timeCounter < cg.time) {
+			cg.timeCounter = cg.time + 1000;
+			cg.timein++;
+		}
+	//}
 }
 

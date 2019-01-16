@@ -86,7 +86,7 @@ int vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4, int a
 		CG_MouseEvent( arg0, arg1 );
 		return 0;
 	case CG_EVENT_HANDLING:
-		CG_EventHandling( arg0 );
+		CG_EventHandling(arg0, qtrue); // xMod modified
 		return 0;
 	case CG_GET_TAG:
 		return CG_GetTag( arg0, (char *)arg1, (orientation_t *)arg2 );
@@ -290,6 +290,7 @@ vmCvar_t cg_antilag;
 vmCvar_t cg_crosshairPulse;
 vmCvar_t cg_bloodDamageBlend;
 vmCvar_t cg_bloodFlash;
+vmCvar_t cg_damageNudge;
 vmCvar_t cg_crosshairAlpha;
 vmCvar_t cg_crosshairAlphaAlt;
 vmCvar_t cg_crosshairColor;
@@ -309,18 +310,33 @@ vmCvar_t cg_zoomedFOV;
 vmCvar_t cg_zoomedSens;
 vmCvar_t vp_drawnames;
 vmCvar_t cg_drawNames;
+vmCvar_t cg_enemyRadar; // xMod
 vmCvar_t cg_showFlags;
+vmCvar_t cg_tournamentHUD; // xMod
+vmCvar_t cg_showPlayingTimer; // xMod
+vmCvar_t cg_drawPickupItems; // xMod
 vmCvar_t cg_announcer;
+vmCvar_t cg_chatAlpha; // xMod
+vmCvar_t cg_chatBackgroundColor; // xMod
 vmCvar_t cg_autoAction;
 vmCvar_t cg_useScreenshotJPEG;
 vmCvar_t cg_instantTapout;
 vmCvar_t cg_forceTapout;
 vmCvar_t cg_hitsounds;
 vmCvar_t cg_uinfo;
-
+vmCvar_t cg_unlockWeapons; // xMod
 // Stats - Font scale
 vmCvar_t cf_wstats; 
 vmCvar_t cf_wtopshots;
+
+// Mappings
+vmCvar_t int_ui_blackout;
+
+vmCvar_t demo_infoWindow;
+vmCvar_t demo_controlsWindow;
+vmCvar_t demo_popupWindow;
+vmCvar_t demo_showTimein;
+vmCvar_t demo_noAdvertisement;
 
 // OSP
 vmCvar_t authLevel;
@@ -389,7 +405,7 @@ cvarTable_t cvarTable[] = {
 	{ &cg_drawFrags, "cg_drawFrags", "1", CVAR_ARCHIVE },
 	{ &cg_drawStatus, "cg_drawStatus", "1", CVAR_ARCHIVE  },
 	{ &cg_drawTimer, "cg_drawTimer", "0", CVAR_ARCHIVE  },
-	{ &cg_drawFPS, "cg_drawFPS", "0", CVAR_ARCHIVE  },
+	{ &cg_drawFPS, "cg_drawFPS", "1", CVAR_ARCHIVE  },
 	{ &cg_drawSnapshot, "cg_drawSnapshot", "0", CVAR_ARCHIVE  },
 	{ &cg_draw3dIcons, "cg_draw3dIcons", "1", CVAR_ARCHIVE  },
 	{ &cg_drawIcons, "cg_drawIcons", "1", CVAR_ARCHIVE  },
@@ -408,13 +424,13 @@ cvarTable_t cvarTable[] = {
 	{ &cg_crosshairHealth, "cg_crosshairHealth", "1", CVAR_ARCHIVE },
 	{ &cg_crosshairX, "cg_crosshairX", "0", CVAR_ARCHIVE },
 	{ &cg_crosshairY, "cg_crosshairY", "0", CVAR_ARCHIVE },
-	{ &cg_brassTime, "cg_brassTime", "2500", CVAR_ARCHIVE }, // JPW NERVE
+	{ &cg_brassTime, "cg_brassTime", "60000", CVAR_ARCHIVE }, // JPW NERVE
 	{ &cg_simpleItems, "cg_simpleItems", "0", CVAR_ARCHIVE },
 	{ &cg_reticles, "cg_reticles", "1", CVAR_CHEAT },
 	{ &cg_reticleType, "cg_reticleType", "1", CVAR_ARCHIVE },
 	{ &cg_reticleBrightness, "cg_reticleBrightness", "0.7", CVAR_ARCHIVE },
-	{ &cg_markTime, "cg_marktime", "10000", CVAR_ARCHIVE },
-	{ &cg_lagometer, "cg_lagometer", "0", CVAR_ARCHIVE },
+	{ &cg_markTime, "cg_marktime", "80000", CVAR_ARCHIVE },
+	{ &cg_lagometer, "cg_lagometer", "1", CVAR_ARCHIVE },
 	{ &cg_railTrailTime, "cg_railTrailTime", "400", CVAR_ARCHIVE  },
 	{ &cg_gun_x, "cg_gunX", "0", CVAR_CHEAT },
 	{ &cg_gun_y, "cg_gunY", "0", CVAR_CHEAT },
@@ -559,6 +575,7 @@ cvarTable_t cvarTable[] = {
 	{ &cg_crosshairPulse, "cg_crosshairPulse", "1", CVAR_ARCHIVE },
 	{ &cg_bloodDamageBlend, "cg_bloodDamageBlend", "1.0", CVAR_ARCHIVE },
 	{ &cg_bloodFlash, "cg_bloodFlash", "1.0", CVAR_ARCHIVE },
+	{ &cg_damageNudge, "cg_damageNudge", "1.0", CVAR_ARCHIVE },
 	{ &cg_crosshairAlpha, "cg_crosshairAlpha", "1.0", CVAR_ARCHIVE },
 	{ &cg_crosshairAlphaAlt, "cg_crosshairAlphaAlt", "1.0", CVAR_ARCHIVE },
 	{ &cg_crosshairColor, "cg_crosshairColor", "White", CVAR_ARCHIVE },
@@ -569,7 +586,7 @@ cvarTable_t cvarTable[] = {
 	{ &cg_muzzleFlash, "cg_muzzleFlash", "1", CVAR_ARCHIVE },
 	{ &cg_complaintPopUp, "cg_complaintPopUp", "1", CVAR_ARCHIVE },
 	{ &cg_drawReinforcementTime, "cg_drawReinforcementTime", "0", CVAR_ARCHIVE },
-	{ &cg_reinforcementTimeColor, "cg_reinforcementTimeColor", "red", CVAR_ARCHIVE },
+	{ &cg_reinforcementTimeColor, "cg_reinforcementTimeColor", "yellow", CVAR_ARCHIVE },
 	{ &cg_noChat, "cg_noChat", "0", CVAR_ARCHIVE },
 	{ &cg_noVoice, "cg_noVoice", "0", CVAR_ARCHIVE },
 	{ &cg_noAmmoAutoSwitch, "cg_noAmmoAutoSwitch", "1", CVAR_ARCHIVE },
@@ -578,10 +595,16 @@ cvarTable_t cvarTable[] = {
 	{ &cg_zoomedSens, "cg_zoomedSens", ".3", CVAR_ARCHIVE },
 	{ &vp_drawnames, "vp_drawnames", "0", CVAR_ARCHIVE | CVAR_CHEAT },
 	{ &cg_drawNames, "cg_drawNames", "1", CVAR_ROM },
+	{ &cg_enemyRadar, "cg_enemyRadar", "0", CVAR_ARCHIVE },
 	{ &cg_showFlags, "cg_showFlags", "1", CVAR_ARCHIVE },
+	{ &cg_tournamentHUD, "cg_tournamentHUD", "1", CVAR_ARCHIVE },
+	{ &cg_showPlayingTimer, "cg_showPlayingTimer", "1", CVAR_ARCHIVE },
+	{ &cg_drawPickupItems, "cg_drawPickupItems", "0", CVAR_ARCHIVE },
 	{ &cg_announcer, "cg_announcer", "1", CVAR_ARCHIVE },
 	{ &cg_autoAction, "cg_autoAction", "0", CVAR_ARCHIVE },
 	{ &cg_useScreenshotJPEG, "cg_useScreenshotJPEG", "1", CVAR_ARCHIVE },
+	{ &cg_chatAlpha, "cg_chatAlpha", "0.33", CVAR_ARCHIVE },
+	{ &cg_chatBackgroundColor, "cg_chatBackgroundColor", "", CVAR_ARCHIVE },
 	{ &cg_instantTapout, "cg_instantTapout", "0", CVAR_ARCHIVE },
 	{ &cg_forceTapout, "cg_forceTapout", "0", CVAR_ARCHIVE },
 	{ &cg_hitsounds, "cg_hitsounds", "0", CVAR_ARCHIVE },
@@ -592,6 +615,11 @@ cvarTable_t cvarTable[] = {
 	{ &int_cl_maxpackets, "cl_maxpackets", "30", CVAR_ARCHIVE },
 	{ &int_cl_timenudge, "cl_timenudge", "0", CVAR_ARCHIVE|CVAR_LATCH },
 	{ &int_ui_blackout, "ui_blackout", "0", CVAR_ROM },
+	{ &demo_infoWindow, "demo_infoWindow", "1", CVAR_ARCHIVE },
+	{ &demo_controlsWindow, "demo_controlsWindow", "1", CVAR_ARCHIVE},
+	{ &demo_popupWindow, "demo_popupWindow", "1", CVAR_ARCHIVE },
+	{ &demo_showTimein, "demo_showTimein", "1", CVAR_ARCHIVE },
+	{ &demo_noAdvertisement, "demo_noAdvertisement", "0", CVAR_ARCHIVE },
 	{ &gender, "gender", "male", CVAR_ARCHIVE }
 	// -OSPx
 };
@@ -671,7 +699,7 @@ void CG_UpdateCvars( void ) {
 		trap_Cvar_Update( cv->vmCvar );
 // OSPx
 		// Check if we need to update any client flags to be sent to the server
-		if (cv->vmCvar == &cg_autoAction || cv->vmCvar == &cg_autoReload ||
+		if (cv->vmCvar == &cg_autoAction || cv->vmCvar == &cg_autoReload || // xMod does not have these?
 			cv->vmCvar == &int_cl_timenudge || cv->vmCvar == &int_cl_maxpackets ||
 			cv->vmCvar == &cg_autoactivate || cv->vmCvar == &cg_predictItems ||
 			cv->vmCvar == &gender) {
@@ -706,7 +734,7 @@ void CG_UpdateCvars( void ) {
 	}
 
 	// OSPx - Client Flags
-	if (fSetFlags) {
+	if (fSetFlags) { // xMod does not have these?
 		CG_setClientFlags();
 	}
 }
@@ -1247,11 +1275,14 @@ static void CG_RegisterSounds( void ) {
 	trap_S_RegisterSound( "sound/Loogie/spit.wav" );
 	trap_S_RegisterSound( "sound/Loogie/sizzle.wav" );
 */
+
+/* uncomment for experimental mode
 // OSPx
 	// Hitsounds
 	cgs.media.headShot = trap_S_RegisterSound("sound/game/hitsounds/hithead.wav");
 	cgs.media.bodyShot = trap_S_RegisterSound("sound/game/hitsounds/hit.wav");
 	cgs.media.teamShot = trap_S_RegisterSound("sound/game/hitsounds/hitteam.wav");
+*/
 }
 
 
@@ -1458,6 +1489,8 @@ static void CG_RegisterGraphics( void ) {
 	cgs.media.noammoShader = trap_R_RegisterShader( "icons/noammo" );
 	// OSPx - Country Flags (by mcwf)
 	cgs.media.countryFlags = trap_R_RegisterShaderNoMip("gfx/flags/world_flags");
+	// L0 - Poison
+	cgs.media.poisonOverlay = trap_R_RegisterShader("gfx/misc/poisonoverlay");
 
 	// powerup shaders
 //	cgs.media.quadShader = trap_R_RegisterShader("powerups/quad" );
@@ -1553,6 +1586,7 @@ static void CG_RegisterGraphics( void ) {
 	cgs.media.medicReviveShader = trap_R_RegisterShader( "sprites/medic_revive" );
 	cgs.media.voiceChatShader = trap_R_RegisterShader( "sprites/voiceChat" );
 	cgs.media.balloonShader = trap_R_RegisterShader( "sprites/balloon3" );
+	cgs.media.medicEnemyShader = trap_R_RegisterShader("sprites/medic_enemy"); // L0 - Enemy radar
 
 	for ( i = 0; i < MAX_AISTATES; i++ ) {
 		cgs.media.aiStateShaders[i] = trap_R_RegisterShader( va( "sprites/aistate%i", i + 1 ) );
@@ -1785,6 +1819,8 @@ static void CG_RegisterGraphics( void ) {
 	cgs.media.selectCursor = trap_R_RegisterShaderNoMip( "ui_mp/assets/selectcursor.tga" );
 	CG_LoadingString( " - game media done" );
 
+	// L0 - NQ smoke
+	InitSmokeSprites();
 }
 
 /*
@@ -2542,6 +2578,8 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 	// get the gamestate from the client system
 	trap_GetGameState( &cgs.gameState );
 
+	// L0 - NQ smoke
+	InitSmokeSprites();
 	// check version
 	s = CG_ConfigString( CS_GAME_VERSION );
 	if ( strcmp( s, GAME_VERSION ) ) {

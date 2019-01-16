@@ -309,7 +309,7 @@ static void CG_EntityEffects( centity_t *cent ) {
 	// Ridah, flaming sounds
 	if ( CG_EntOnFire( cent ) ) {
 		// play a flame blow sound when moving
-		trap_S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.flameBlowSound, (int)( 255.0 * ( 1.0 - fabs( cent->fireRiseDir[2] ) ) ) );
+		trap_S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.flameBlowSound, (int)( 255.0 * ( 1.0 - Q_fabs( cent->fireRiseDir[2] ) ) ) ); // xMod modified
 		// play a burning sound when not moving
 		trap_S_AddLoopingSound( cent->currentState.number, cent->lerpOrigin, vec3_origin, cgs.media.flameSound, (int)( 0.3 * 255.0 * ( pow( cent->fireRiseDir[2],2 ) ) ) );
 	}
@@ -408,7 +408,7 @@ static void CG_General( centity_t *cent ) {
 	if ( s1->number == cg.snap->ps.clientNum ) {
 		ent.renderfx |= RF_THIRD_PERSON;    // only draw from mirrors
 	}
-
+#ifndef RETAIL_MOD // xMod modified
 	if ( cent->currentState.eType == ET_MG42_BARREL ) {
 		// grab angles from first person user or self if not
 		// ATVI Wolfenstein Misc #469 - don't track until viewlocked
@@ -418,9 +418,12 @@ static void CG_General( centity_t *cent ) {
 			AnglesToAxis( cent->lerpAngles, ent.axis );
 		}
 	} else {
+#endif
 		// convert angles to axis
 		AnglesToAxis( cent->lerpAngles, ent.axis );
+#ifndef RETAIL_MOD
 	}
+#endif
 
 	// scale gamemodels
 	if ( cent->currentState.eType == ET_GAMEMODEL ) {
@@ -995,6 +998,9 @@ static void CG_Smoker( centity_t *cent ) {
 	// constantLight = delay
 	// origin2 = normal to emit particles along
 
+// L0 - NQ smoke
+	CG_RenderSmokeGrenadeSmoke(cent, 0);
+// End
 	if ( cg.time - cent->highlightTime > cent->currentState.constantLight ) {
 		// FIXME: make this framerate independant?
 		cent->highlightTime = cg.time;  // fire a particle this frame
@@ -1032,6 +1038,11 @@ static void CG_Missile( centity_t *cent ) {
 
 	// calculate the axis
 	VectorCopy( s1->angles, cent->lerpAngles );
+// L0 - NQ smoke
+	if (s1->weapon == WP_SMOKE_GRENADE || s1->weapon == WP_ROCKET_LAUNCHER) {
+		CG_RenderSmokeGrenadeSmoke(cent, weapon);
+	}
+// End
 
 	// add trails
 	if ( cent->currentState.eType == ET_FP_PARTS
@@ -1916,12 +1927,16 @@ static void CG_ProcessEntity( centity_t *cent ) {
 		if ( !cg_drawGamemodels.integer ) {
 			break;
 		}
+#ifndef RETAIL_MOD // xMod modified
 	case ET_MG42_BARREL:
+#endif
 	case ET_FOOTLOCKER:
 	case ET_GENERAL:
 		CG_General( cent );
 		break;
+#ifndef RETAIL_MOD
 	case ET_CORPSE:
+#endif
 	case ET_PLAYER:
 		CG_Player( cent );
 		break;
@@ -1967,9 +1982,11 @@ static void CG_ProcessEntity( centity_t *cent ) {
 	case ET_BAT:
 		CG_Bat( cent );
 		break;
+#ifndef RETAIL_MOD // xMod modified
 	case ET_SMOKER:
 		CG_Smoker( cent );
 		break;
+#endif
 	}
 }
 

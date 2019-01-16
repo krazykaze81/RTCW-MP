@@ -111,8 +111,8 @@ static void CG_Obituary( entityState_t *ent ) {
 	char        *message2;
 	const char  *targetInfo;
 	const char  *attackerInfo;
-	char targetName[32];
-	char attackerName[32];
+	char targetName[MAX_NETNAME];
+	char attackerName[MAX_NETNAME];
 	clientInfo_t    *ci, *ca; // JPW NERVE ca = attacker
 	char *gender;	// OSPx
 
@@ -185,7 +185,7 @@ static void CG_Obituary( entityState_t *ent ) {
 		message = "was killed";
 		break;
 // OSPx
-	case MOD_ADMKILL:
+	case MOD_ADMIN:
 		message = "was killed";
 		break;
 // -OSPx
@@ -396,6 +396,12 @@ static void CG_Obituary( entityState_t *ent ) {
 			message = "was blasted by";
 			message2 = "'s support fire"; // JPW NERVE changed since it gets called for both air strikes and artillery
 			break;
+		// L0 - Poison
+		case MOD_POISONED:
+			message = "tasted";
+			message2 = "'s poison";
+			break;
+		// End
 // OSPx
 		case MOD_ARTY:
 			message = "stood under";
@@ -2161,7 +2167,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		ByteToDir( es->eventParm, dir );
 		CG_MissileHitWall( es->weapon, 0, position, dir, 0 ); // (SA) modified to send missilehitwall surface parameters
 		break;
-
+#ifndef RETAIL_MOD // xMod modified
 	case EV_MG42BULLET_HIT_WALL:
 		DEBUGNAME( "EV_MG42BULLET_HIT_WALL" );
 		ByteToDir( es->eventParm, dir );
@@ -2172,7 +2178,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		DEBUGNAME( "EV_MG42BULLET_HIT_FLESH" );
 		CG_Bullet( es->pos.trBase, es->otherEntityNum, dir, qtrue, es->eventParm, qfalse, es->otherEntityNum2, es->effect1Time );
 		break;
-
+#endif
 	case EV_BULLET_HIT_WALL:
 		DEBUGNAME( "EV_BULLET_HIT_WALL" );
 		ByteToDir( es->eventParm, dir );

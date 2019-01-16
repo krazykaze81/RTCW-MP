@@ -761,7 +761,10 @@ void CG_AddParticleToScene( cparticle_t *p, vec3_t org, float alpha ) {
 		ratio = time / time2;
 		if ( ratio >= 1.0 ) {
 			ratio = 0.9999;
-		}
+		} // L0 - Fix from NQ
+		else if (ratio < 0.0) {
+			ratio = 0.0001;
+		} // End
 
 		width = p->width + ( ratio * ( p->endwidth - p->width ) );
 		height = p->height + ( ratio * ( p->endheight - p->height ) );
@@ -775,7 +778,7 @@ void CG_AddParticleToScene( cparticle_t *p, vec3_t org, float alpha ) {
 		j = (int)floor( ratio * shaderAnimCounts[p->shaderAnim] );
 		p->pshader = shaderAnims[i][j];
 
-// JPW NERVE more particle testing
+// JPW NERVE more particle testing // xMod removed this?
 		if ( cg_fxflags & 1 ) {
 			p->roll = 0;
 			p->pshader = getTestShader();

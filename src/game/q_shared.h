@@ -290,9 +290,23 @@ typedef int clipHandle_t;
 #define     SND_NOCUT           0x010   // Don't cut off.  Always let finish (overridden by SND_CUTOFF_ALL)
 
 
+// L0 
+#define PAD(base, alignment)	(((base)+(alignment)-1) & ~((alignment)-1))
+#define PADLEN(base, alignment)	(PAD((base), (alignment)) - (base))
+
+#define PADP(base, alignment)	((void *) PAD((intptr_t) (base), (alignment)))
+// ~L0
+
 #ifndef NULL
-#define NULL ( (void *)0 )
+#define NULL ((void *)0)
 #endif
+
+#define	MAX_QINT			0x7fffffff
+#define	MIN_QINT			(-MAX_QINT-1)
+
+// L0 - Ported this
+#define ARRAY_LEN(x)			(sizeof(x) / sizeof(*(x)))
+#define STRARRAY_LEN(x)			(ARRAY_LEN(x) - 1)
 
 #define MAX_QINT            0x7fffffff
 #define MIN_QINT            ( -MAX_QINT - 1 )
