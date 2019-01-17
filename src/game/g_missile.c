@@ -1494,7 +1494,14 @@ gentity_t *fire_grenade( gentity_t *self, vec3_t start, vec3_t dir, int grenadeW
 	case WP_SMOKE_GRENADE:
 		bolt->classname             = "grenade";
 		bolt->s.eFlags              = EF_BOUNCE_HALF | EF_BOUNCE;
-		break;
+			// L0 - smoke
+			if ((g_smokeGrenades.integer) && (self->client->ps.stats[STAT_PLAYER_CLASS] == PC_LT) && (self->client->ps.selectedSmoke))
+			{
+				bolt->r.svFlags |= SVF_SMOKEGRENADE;
+				self->client->ps.selectedSmoke = qfalse;		//re-disable this (must be enabled each use)
+				self->thrownSmoke++;							//record that we've thrown another one
+			}	// end
+			break;
 // jpw
 	case WP_DYNAMITE:
 	case WP_DYNAMITE2:
@@ -1649,7 +1656,8 @@ gentity_t *fire_rocket( gentity_t *self, vec3_t start, vec3_t dir ) {
 //	bolt->clipmask = MASK_SHOT;
 	bolt->clipmask = MASK_MISSILESHOT;
 
-	bolt->s.pos.trType = TR_LINEAR;
+	// L0 - PF arc..
+	bolt->s.pos.trType = (g_panzerArc.integer ? TR_GRAVITY_LOW : TR_LINEAR);
 	bolt->s.pos.trTime = level.time - MISSILE_PRESTEP_TIME;     // move a bit on the very first frame
 	VectorCopy( start, bolt->s.pos.trBase );
 // JPW NERVE

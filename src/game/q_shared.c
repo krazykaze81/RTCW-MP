@@ -833,6 +833,39 @@ char *Q_strupr( char *s1 ) {
 	return s1;
 }
 
+// L0 - IRC
+int Q_strnicmp(const char *string1, const char *string2, int n) {
+	int c1, c2;
+
+	if (string1 == NULL) {
+		if (string2 == NULL)
+			return 0;
+		else
+			return -1;
+	}
+	else if (string2 == NULL)
+		return 1;
+
+	do {
+		c1 = *string1++;
+		c2 = *string2++;
+
+		if (!n--)
+			return 0;// Strings are equal until end point
+
+		if (c1 != c2) {
+			if (c1 >= 'a' && c1 <= 'z')
+				c1 -= ('a' - 'A');
+			if (c2 >= 'a' && c2 <= 'z')
+				c2 -= ('a' - 'A');
+
+			if (c1 != c2)
+				return c1 < c2 ? -1 : 1;
+		}
+	} while (c1);
+
+	return 0;// Strings are equal
+}
 
 // never goes past bounds or leaves without a terminating 0
 void Q_strcat( char *dest, int size, const char *src ) {
@@ -964,7 +997,7 @@ char    * QDECL va( char *format, ... ) {
 
 
 	va_start( argptr, format );
-	vsprintf( temp_buffer, format,argptr );
+	Q_vsnprintf(temp_buffer, sizeof(temp_buffer), format, argptr);
 	va_end( argptr );
 
 	if ( ( len = strlen( temp_buffer ) ) >= MAX_VA_STRING ) {
@@ -1347,6 +1380,20 @@ void Info_SetValueForKey_Big( char *s, const char *key, const char *value ) {
 	strcat( s, newi );
 }
 
+// L0 
+
+// (added due IPv6..)
+int Q_CountChar(const char *string, char tocount) {
+	int count;
+
+	for (count = 0; *string; string++) {
+		if (*string == tocount)
+			count++;
+	}
+	return count;
+}
+
+// L0 - ET port
 // strips whitespaces and bad characters
 qboolean Q_isBadDirChar(char c) {
 	char badchars[] = { ';', '&', '(', ')', '|', '<', '>', '*', '?', '[', ']', '~', '+', '@', '!', '\\', '/', ' ', '\'', '\"', '\0' };

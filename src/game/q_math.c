@@ -46,14 +46,15 @@ vec4_t colorWhite  = {1, 1, 1, 1};
 vec4_t colorLtGrey = {0.75, 0.75, 0.75, 1};
 vec4_t colorMdGrey = {0.5, 0.5, 0.5, 1};
 vec4_t colorDkGrey = {0.25, 0.25, 0.25, 1};
-vec4_t colorOrange		=	{ 1, 0.5, 0, 1 };
-vec4_t colorMdRed = { 0.5, 0, 0, 1 };
-vec4_t colorMdGreen = { 0, 0.5, 0, 1 };
-vec4_t colorDkGreen = { 0, 0.20, 0, 1 };
-vec4_t colorMdCyan = { 0, 0.5, 0.5, 1 };
-vec4_t colorMdYellow = { 0.5, 0.5, 0, 1 };
-vec4_t colorMdOrange = { 0.5, 0.25, 0, 1 };
-vec4_t colorMdBlue = { 0, 0, 0.5, 1 };
+// L0 - Colors
+vec4_t		colorMdRed = { 0.5, 0, 0, 1 };
+vec4_t		colorMdGreen = { 0, 0.5, 0, 1 };
+vec4_t		colorDkGreen = { 0, 0.20, 0, 1 };
+vec4_t		colorMdCyan = { 0, 0.5, 0.5, 1 };
+vec4_t		colorMdYellow = { 0.5, 0.5, 0, 1 };
+vec4_t		colorMdOrange = { 0.5, 0.25, 0, 1 };
+vec4_t		colorMdBlue = { 0, 0, 0.5, 1 };
+vec4_t		colorOrange = { 1, 0.5, 0, 1 };
 
 vec4_t g_color_table[32] =
 {
@@ -521,15 +522,20 @@ void VectorRotate( vec3_t in, vec3_t matrix[3], vec3_t out ) {
 ** float q_rsqrt( float number )
 */
 float Q_rsqrt( float number ) {
-	long i;
+	// L0 - applaying render fix from ioquake fix	
+	union {
+		float f;
+		int i;
+	} t;
+	// ~L0
 	float x2, y;
 	const float threehalfs = 1.5F;
 
 	x2 = number * 0.5F;
-	y  = number;
-	i  = *( long * ) &y;                        // evil floating point bit level hacking
-	i  = 0x5f3759df - ( i >> 1 );               // what the fuck?
-	y  = *( float * ) &i;
+	// L0 - applaying render fix from ioquake fix
+	t.f = number;
+	t.i = 0x5f3759df - (t.i >> 1);               // what the fuck?
+	y = t.f;
 	y  = y * ( threehalfs - ( x2 * y * y ) );   // 1st iteration
 //	y  = y * ( threehalfs - ( x2 * y * y ) );   // 2nd iteration, this can be removed
 
@@ -1029,8 +1035,8 @@ float RadiusFromBounds( const vec3_t mins, const vec3_t maxs ) {
 	float a, b;
 
 	for ( i = 0 ; i < 3 ; i++ ) {
-		a = fabs( mins[i] );
-		b = fabs( maxs[i] );
+		a = Q_fabs(mins[i]);
+		b = Q_fabs(maxs[i]);
 		corner[i] = a > b ? a : b;
 	}
 
@@ -1307,9 +1313,9 @@ void PerpendicularVector( vec3_t dst, const vec3_t src ) {
 	*/
 	for ( pos = 0, i = 0; i < 3; i++ )
 	{
-		if ( fabs( src[i] ) < minelem ) {
+		if (Q_fabs(src[i]) < minelem) {
 			pos = i;
-			minelem = fabs( src[i] );
+			minelem = Q_fabs(src[i]);
 		}
 	}
 	tempvec[0] = tempvec[1] = tempvec[2] = 0.0F;

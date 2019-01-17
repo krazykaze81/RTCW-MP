@@ -1474,7 +1474,7 @@ qboolean G_ScriptAction_Announce( gentity_t *ent, char *params ) {
 
 	// OSPx - Use prints instead of cp..
 	//trap_SendServerCommand( -1, va( "cp \"%s\" 2", token ) );
-	G_matchPrintInfo(va("%s!", token));
+	matchInfo(MT_ME, va("%s", token)); // L0 - Some info //	G_matchPrintInfo(va("%s!", token));
 
 	return qtrue;
 }
@@ -1521,11 +1521,18 @@ qboolean G_ScriptAction_SetRoundTimelimit( gentity_t *ent, char *params ) {
 
 	if ( g_gametype.integer == GT_WOLF_STOPWATCH && nextTimeLimit ) {
 		trap_Cvar_Set( "timelimit", va( "%f", nextTimeLimit ) );
-	} else {
-		if ( g_userTimeLimit.integer ) {
-			trap_Cvar_Set( "timelimit", va( "%i", g_userTimeLimit.integer ) );
-		} else {
-			trap_Cvar_Set( "timelimit", token );
+	}
+	else {
+		// L0 - No time limit in DM..
+		if (g_deathMatch.integer)
+		{
+			trap_Cvar_Set("timelimit", "0");
+		}
+		else {
+			if (g_userTimeLimit.integer)
+				trap_Cvar_Set("timelimit", va("%i", g_userTimeLimit.integer));
+			else
+				trap_Cvar_Set("timelimit", token);
 		}
 	}
 

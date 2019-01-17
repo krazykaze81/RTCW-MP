@@ -32,11 +32,11 @@ If you have questions concerning this license or the applicable additional terms
 // q_shared.h -- included first by ALL program modules.
 // A user mod should never modify this file
 
-#define Q3_VERSION      "Wolf 1.41b-MP"
-// 1.41b-MP: fix autodl sploit
-// 1.4-MP : (== 1.34)
-// 1.3-MP : final for release
-// 1.1b - TTimo SP linux release (+ MP updates)
+#define Q3_VERSION      "RtcwPro Beta 0.1"
+
+// L0 - Guid
+#define GUID_LEN 33
+
 // 1.1b5 - Mac update merge in
 
 #define NEW_ANIMS
@@ -72,6 +72,11 @@ If you have questions concerning this license or the applicable additional terms
 
 #if defined( ppc ) || defined( __ppc ) || defined( __ppc__ ) || defined( __POWERPC__ )
 #define idppc 1
+#endif
+
+// L0 - Fix DirectX
+#ifndef DIRECTINPUT_VERSION
+#define DIRECTINPUT_VERSION 0x0800
 #endif
 
 /**********************************************************************
@@ -130,7 +135,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #ifdef WIN32
 
-#define MAC_STATIC
+//#define MAC_STATIC
 
 #undef QDECL
 #define QDECL   __cdecl
@@ -172,33 +177,33 @@ If you have questions concerning this license or the applicable additional terms
 // This is about 12.4 times faster than sqrt() and according to my testing (not exhaustive)
 // it returns fairly accurate results (error below 1.0e-5 up to 100000.0 in 0.1 increments).
 
-static inline float idSqrt( float x ) {
-	const float half = 0.5;
-	const float one = 1.0;
-	float B, y0, y1;
+static inline float idSqrt(float x) {
+    const float half = 0.5;
+    const float one = 1.0;
+    float B, y0, y1;
 
-	// This'll NaN if it hits frsqrte. Handle both +0.0 and -0.0
-	if ( fabs( x ) == 0.0 ) {
+    // This'll NaN if it hits frsqrte. Handle both +0.0 and -0.0
+	if ( Q_fabs( x ) == 0.0 ) {
 		return x;
 	}
-	B = x;
-
+    B = x;
+    
 #ifdef __GNUC__
-	asm ( "frsqrte %0,%1" : "=f" ( y0 ) : "f" ( B ) );
+    asm("frsqrte %0,%1" : "=f" (y0) : "f" (B));
 #else
-	y0 = __frsqrte( B );
+    y0 = __frsqrte(B);
 #endif
-	/* First refinement step */
-
-	y1 = y0 + half * y0 * ( one - B * y0 * y0 );
-
-	/* Second refinement step -- copy the output of the last step to the input of this step */
-
-	y0 = y1;
-	y1 = y0 + half * y0 * ( one - B * y0 * y0 );
-
-	/* Get sqrt(x) from x * 1/sqrt(x) */
-	return x * y1;
+    /* First refinement step */
+    
+    y1 = y0 + half*y0*(one - B*y0*y0);
+    
+    /* Second refinement step -- copy the output of the last step to the input of this step */
+    
+    y0 = y1;
+    y1 = y0 + half*y0*(one - B*y0*y0);
+    
+    /* Get sqrt(x) from x * 1/sqrt(x) */
+    return x * y1;
 }
 #define sqrt idSqrt
 
@@ -210,21 +215,21 @@ static inline float idSqrt( float x ) {
 #ifdef __MACOS__
 
 #include <MacTypes.h>
-#define MAC_STATIC
+#define	MAC_STATIC
 
-#define CPUSTRING   "MacOS-PPC"
+#define	CPUSTRING	"MacOS-PPC"
 
-#define PATH_SEP ':'
+#define	PATH_SEP ':'
 
 void Sys_PumpEvents( void );
 
-static inline float idSqrt( float x ) {
+static inline float idSqrt(float x) {
 	const float half = 0.5;
 	const float one = 1.0;
 	float B, y0, y1;
 
 	// This'll NaN if it hits frsqrte. Handle both +0.0 and -0.0
-	if ( fabs( x ) == 0.0 ) {
+	if (Q_fabs(x) == 0.0) {
 		return x;
 	}
 	B = x;
@@ -247,6 +252,7 @@ static inline float idSqrt( float x ) {
 	return x * y1;
 }
 #define sqrt idSqrt
+
 
 #endif
 
@@ -308,8 +314,8 @@ typedef int clipHandle_t;
 #define ARRAY_LEN(x)			(sizeof(x) / sizeof(*(x)))
 #define STRARRAY_LEN(x)			(ARRAY_LEN(x) - 1)
 
-#define MAX_QINT            0x7fffffff
-#define MIN_QINT            ( -MAX_QINT - 1 )
+//#define MAX_QINT            0x7fffffff
+//#define MIN_QINT            ( -MAX_QINT - 1 )
 
 // TTimo gcc: was missing, added from Q3 source
 #ifndef max
@@ -498,12 +504,12 @@ extern vec4_t colorBlue;
 extern vec4_t colorYellow;
 extern vec4_t colorMagenta;
 extern vec4_t colorCyan;
+extern	vec4_t		colorOrange;
 extern vec4_t colorWhite;
 extern vec4_t colorLtGrey;
 extern vec4_t colorMdGrey;
 extern vec4_t colorDkGrey;
 // OSPx - Colors
-extern vec4_t colorOrange;
 extern vec4_t colorMdRed;
 extern vec4_t colorMdGreen;
 extern vec4_t colorDkGreen;
@@ -551,12 +557,12 @@ extern vec4_t colorMdBlue;
 #define S_COLOR_WHITE   "^7"
 #define S_COLOR_ORANGE      "^8"
 #define S_COLOR_MDGREY      "^9"
-#define S_COLOR_LTGREY      "^:"
+#define S_COLOR_LTGREY		"^z"
 //#define S_COLOR_LTGREY		"^;"
 #define S_COLOR_MDGREEN     "^<"
 #define S_COLOR_MDYELLOW    "^="
 #define S_COLOR_MDBLUE      "^>"
-#define S_COLOR_MDRED       "^?"
+#define S_COLOR_MDRED		"^j"
 #define S_COLOR_LTORANGE    "^A"
 #define S_COLOR_MDCYAN      "^B"
 #define S_COLOR_MDPURPLE    "^C"
@@ -564,6 +570,8 @@ extern vec4_t colorMdBlue;
 
 extern vec4_t g_color_table[32];
 // Hex Color string support
+#define	MAKERGB( v, r, g, b ) v[0]=r;v[1]=g;v[2]=b
+#define	MAKERGBA( v, r, g, b, a ) v[0]=r;v[1]=g;v[2]=b;v[3]=a
 #define gethex( ch ) ( ( ch ) > '9' ? ( ( ch ) >= 'a' ? ( ( ch ) - 'a' + 10 ) : ( ( ch ) - '7' ) ) : ( ( ch ) - '0' ) )
 #define ishex( ch )  ( ( ch ) && ( ( ( ch ) >= '0' && ( ch ) <= '9' ) || ( ( ch ) >= 'A' && ( ch ) <= 'F' ) || ( ( ch ) >= 'a' && ( ch ) <= 'f' ) ) )
 
@@ -572,8 +580,6 @@ extern vec4_t g_color_table[32];
 #define Q_HexColorStringHasAlpha( p ) ( ishex( *( ( p ) + 6 ) ) && ishex( *( ( p ) + 7 ) ) )
 // -OSPx
 
-#define MAKERGB( v, r, g, b ) v[0] = r; v[1] = g; v[2] = b
-#define MAKERGBA( v, r, g, b, a ) v[0] = r; v[1] = g; v[2] = b; v[3] = a
 
 #define DEG2RAD( a ) ( ( ( a ) * M_PI ) / 180.0F )
 #define RAD2DEG( a ) ( ( ( a ) * 180.0f ) / M_PI )
@@ -820,6 +826,21 @@ char    *Q_strrchr( const char* string, int c );
 // buffer size safe library replacements
 void    Q_strncpyz( char *dest, const char *src, int destsize );
 void    Q_strcat( char *dest, int size, const char *src );
+int		Q_strnicmp(const char *string1, const char *string2, int n);  // L0 - IRC
+
+// L0 - IRC
+#define ID_INLINE __inline
+
+#ifndef __attribute__
+# if !defined(__GNUC__)
+#  define __attribute__(A)
+# elif GCC_VERSION < 2008
+#  define __attribute__(A)
+# elif defined(__cplusplus) && GCC_VERSION < 3004
+#  define __attribute__(A)
+# endif
+#endif
+// ~L0
 
 // strlen that discounts Quake color sequences
 int Q_PrintStrlen( const char *string );
@@ -964,7 +985,7 @@ COLLISION DETECTION
 #define PLANE_Y         1
 #define PLANE_Z         2
 #define PLANE_NON_AXIAL 3
-
+#define PLANE_NON_PLANAR    4 // L0 - ET Port
 
 /*
 =================
@@ -972,7 +993,7 @@ PlaneTypeForNormal
 =================
 */
 
-#define PlaneTypeForNormal( x ) ( x[0] == 1.0 ? PLANE_X : ( x[1] == 1.0 ? PLANE_Y : ( x[2] == 1.0 ? PLANE_Z : PLANE_NON_AXIAL ) ) )
+#define PlaneTypeForNormal( x ) ( x[0] == 1.0 ? PLANE_X : ( x[1] == 1.0 ? PLANE_Y : ( x[2] == 1.0 ? PLANE_Z : ( x[0] == 0.f && x[1] == 0.f && x[2] == 0.f ? PLANE_NON_PLANAR : PLANE_NON_AXIAL ) ) ) )
 
 // plane_t structure
 // !!! if this is changed, it must be changed in asm code too !!!
@@ -1328,6 +1349,10 @@ typedef struct playerState_s {
 	aistateEnum_t aiState;
 
 	int identifyClient;                 // NERVE - SMF
+	// L0 - New stuff
+	qboolean	selectedSmoke;			// Smoke	
+	qboolean	isSpy;					// Spies
+	int			spyType;				// Spies
 } playerState_t;
 
 
@@ -1524,6 +1549,14 @@ typedef enum {
 	CA_CINEMATIC        // playing a cinematic or a static pic, not connected to a server
 } connstate_t;
 
+// L0 
+// Tracks client state (for renderer: mainly to fix Bloom bug)
+// This header is tied all over the code so you can use it anywhere you want to..
+//
+// FYI - Rationality:
+// - Only time this is set to true is in SCR_DrawScreenField (case at CA_CONNECTED) in cl_scrn.c
+// - Additionally: It gets set as false in cl_disconnect (cl_main.c) thus it's always off if not stated otherwise
+qboolean CLIENT_IS_CONNECTED;
 // font support
 
 #define GLYPH_START 0
@@ -1644,4 +1677,13 @@ typedef enum {
 #define VOTEFLAGS_KICK              ( 1 << 6 )
 #define VOTEFLAGS_MAP                   ( 1 << 7 )
 
+// L0 
+
+// Cpu info
+#define lengthof( a ) (sizeof( (a) ) / sizeof( (a)[0] ))
+// Misc
+int Q_CountChar(const char *string, char tocount);
+char *Q_CleanDirName(char *dirname);
+
+// ~L0
 #endif  // __Q_SHARED_H

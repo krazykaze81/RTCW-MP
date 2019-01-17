@@ -30,20 +30,25 @@ If you have questions concerning this license or the applicable additional terms
 
 // g_local.h -- local definitions for game module
 
+// L0 - So we do not include this over and over..
+#ifndef _G_LOCAL_H
+#define _G_LOCAL_H
 #include "q_shared.h"
 #include "bg_public.h"
 #include "g_public.h"
+#include "g_stats.h" // L0 - Global stats
 
 //==================================================================
 
 // the "gameversion" client command will print this plus compile date
 //----(SA) Wolfenstein
-#define GAMEVERSION "RtcwPro Beta 0.1"
+#define MODVERSION "0.1"
+#define GAMEVERSION "RtcwPro Beta"
 // done.
 
 #define BODY_QUEUE_SIZE     8
 
-#define INFINITE            1000000
+//#define INFINITE			1000000
 
 #define FRAMETIME           100                 // msec
 #define EVENT_VALID_MSEC    300
@@ -403,6 +408,15 @@ struct gentity_s {
 	int voiceChatPreviousTime;              // DHM - Nerve
 	int lastBurnedFrameNumber;              // JPW - Nerve   : to fix FT instant-kill exploit
 	// OSPx
+	// L0 - New stuff
+	int			thrownKnifeTime;			// Knife throwing
+	int			thrownSmoke;				// Smoke
+	int			selectedSmoke;				// Smoke	
+	int			lastPushTime;				// Shove	
+	int			lastDragTime;				// Drag bodies
+	int			poisonEnt;					// Poison
+	int			lastPoisonTime;				// Poison
+	qboolean	droppedObj;					// Objective dropping	
 	qboolean	dmginloop;
 	gentity_t	*dmgparent;
 };
@@ -424,12 +438,6 @@ typedef enum {
 	SPECTATOR_SCOREBOARD
 } spectatorState_t;
 
-typedef enum {
-	COMBATSTATE_COLD,
-	COMBATSTATE_DAMAGEDEALT,
-	COMBATSTATE_DAMAGERECEIVED,
-	COMBATSTATE_KILLEDPLAYER
-} combatstate_t;
 
 typedef enum {
 	TEAM_BEGIN,     // Beginning a team game, spawn at base
@@ -462,23 +470,14 @@ typedef struct {
 // OSPx
 // - Admin/Ref..
 typedef enum {
-	USER_REGULAR,
-	USER_REFEREE,	// Temporary, voted in (limited functionality mainly restricted to votes) players..
-	ADMIN_1,		// ADMIN_* can only be obtained by logging in.
-	ADMIN_2,
-	ADMIN_3,
-	ADMIN_4,
-	ADMIN_5
-} adminStatus_t;
-// OSP - weapon stat counters
-typedef struct {
-	unsigned int atts;
-	unsigned int deaths;
-	unsigned int headshots;
-	unsigned int hits;
-	unsigned int kills;
-} weapon_stat_t;
-// -OSPx
+	ADM_NONE, // Normal players	
+	ADM_1,    // Level 1 Admin
+	ADM_2,    // Level 2 Admin
+	ADM_3,    // Level 3 Admin
+	ADM_4,	  // Level 4 Admin 
+	ADM_5	  // Level 5 Admin
+} admLvls_t;
+
 
 // client data that stays across multiple levels or tournament restarts
 // this is achieved by writing all the data to cvar strings at game shutdown
@@ -501,39 +500,19 @@ typedef struct {
 	int latchPlayerSkin;            // DHM - Nerve :: for GT_WOLF not archived
 
 	// OSP
-	unsigned int uci;						// Country Flags
-	unsigned int ip[4];						// IP
-	adminStatus_t admin;					// Admin, ref..
-	qboolean incognito;						// Hidden admin
-	qboolean ignored;						// Ignored..
-	int ignoreClients[MAX_CLIENTS / ( sizeof( int ) * 8 )];
-	qboolean muted;
+	admLvls_t	admin;				// Admins
+	int			incognito;			// Incognito for admins..
+	unsigned char ip[4];			// IPs
+	char		guid[PB_GUID_LENGTH];
+	int			ignored;			// Ignored clients
+	int			selectedWeapon;		// If enabled allows mp40, sten, thompson..
+	int			clientFlags;		// Sort some stuff based upon user settings
+	
 	// Stats
-	int damage_given;
-	int damage_received;
-	int deaths;
-	int game_points;
-	int kills;
-	int referee;
-	int rounds;
-	int spec_invite;
-	int spec_team;
-	int suicides;
-	int team_damage;
-	int team_kills;
-	int headshots;
-	int med_given;
-	int ammo_given;
-	int gibs;
-	int poisoned;
-	int revives;
-	int acc_shots; 
-	int acc_hits;
-	int killPeak;
-	weapon_stat_t aWeaponStats[WS_MAX + 1];   // Weapon stats.  +1 to avoid invalid weapon check
 	// Spec lock
 	int specInvited;
 	int specLocked;
+	unsigned int uci;				// Country Flags
 // -OSPx
 } clientSession_t;
 
@@ -587,20 +566,74 @@ typedef struct {
 
 	qboolean bAutoReloadAux; // TTimo - auxiliary storage for pmoveExt_t::bAutoReload, to achieve persistance
 
-	// OSP
+	// OSPx
 	//playerStats_t playerStats;
 	unsigned int autoaction;            // End-of-match auto-requests
 	unsigned int clientFlags;           // Client settings that need server involvement
 	unsigned int clientMaxPackets;      // Client com_maxpacket settings
 	unsigned int clientTimeNudge;       // Client cl_timenudge settings
-	int cmd_debounce;                   // Dampening of command spam
+	//int cmd_debounce;                   // Dampening of command spam
 	unsigned int invite;                // Invitation to a team to join
 	//mview_t mv[MULTIVIEW_MAXVIEWS];         // Multiview portals
 
 	// Admins
-	char cmd1[128];					//	->!command<-
-	char cmd2[128];					//    !command ->attribute<-
-	char cmd3[128];					//    !command attribute ->extra<-
+	char	cmd1[128];	// !command
+	char	cmd2[128];	// !command attribute
+	char	cmd3[128];	// !command attribute extra	
+
+	// Server Bot
+	int		sb_ping;
+	int		sb_maxPing;
+	int		sb_chatWarned;
+	int		sb_ignored;
+	int		sb_TKforgiven;
+	int		sb_TKkillTime;
+	qboolean sb_TKwarned;
+	int		sb_teamBleed;
+
+	// Shortcuts
+	int		lastkilled_client;
+	int		lastrevive_client;
+	int		lastkiller_client;
+	int		lastammo_client;
+	int		lasthealth_client;
+
+	// Weapon restrictions
+	int		restrictedWeapon;
+
+	// Throwing knives
+	int		throwingKnives;
+
+	// Bypassing Max Lives
+	qboolean evadingMaxLives;
+
+	// Death Spree
+	int		spreeDeaths;
+
+	// Life Stats
+	int		lifeKills;
+	int		lifeRevives;
+	int		lifeAcc_shots;
+	int		lifeAcc_hits;
+	int		lifeHeadshots;
+
+	// Global Stats
+	web_MODs_s MODs[STATS_MAX];							// MODs (Means Of Death)
+	web_deathList_s hitList[MAX_CLIENTS];				// Clients that killed the player	
+	web_classTime_s playerClass[4];						// Count for player classes
+	web_statsTimers_s statsTimers;						// Just some timers for statistics..
+	statsClientData_t stats;
+
+	// HTTP (Web Stats)
+	int		httpCmdIssued;					// debounce time
+
+	// Tournament
+	qboolean ready;
+
+	// Debounce commands (mainly ones that are not cheap to call..)
+	int cmd_debounce;
+// ~L0
+
 	
 	int mvCount;                        // Number of active portals
 	int mvReferenceList;                // Reference list used to generate views after a map_restart
@@ -611,9 +644,7 @@ typedef struct {
 	// Stats
 	int life_kills;
 	
-	// Ready
-	qboolean ready;                     // Ready state to begin play
-	// -OSP
+	// -OSPx
 } clientPersistant_t;
 
 // OSPx - Antilag
@@ -624,11 +655,16 @@ typedef struct {
 	int       time, leveltime;
 } clientTrail_t;
 // -OSPx
+// L0 - Anti Warp
+#define LAG_MAX_COMMANDS 512
+#define LAG_MAX_DELTA 75
+#define LAG_MAX_DROP_THRESHOLD 800
+#define LAG_MIN_DROP_THRESHOLD ( LAG_MAX_DROP_THRESHOLD - 200 )
+#define LAG_DECAY 1.02f
+// End
 
 #define LT_SPECIAL_PICKUP_MOD   3       // JPW NERVE # of times (minus one for modulo) LT must drop ammo before scoring a point
 #define MEDIC_SPECIAL_PICKUP_MOD    4   // JPW NERVE same thing for medic
-#define CMD_DEBOUNCE    5000    // 5s between cmds
-#define HELP_COLUMNS    4
 
 // this structure is cleared on each ClientSpawn(),
 // except for 'client->pers' and 'client->sess'
@@ -673,6 +709,7 @@ struct gclient_s {
 	int lastkilled_client;          // last client that this client killed
 	int lasthurt_client;            // last client that damaged this client
 	int lasthurt_mod;               // type of damage the client did
+	int			lasthurt_time;		// L0 - Chicken check
 
 	// timers
 	int respawnTime;                // can respawn when time > this, force after g_forcerespwan
@@ -727,11 +764,19 @@ struct gclient_s {
 
 	gentity_t       *tempHead;  // Gordon: storing a temporary head for bullet head shot detection
 
-	// OSPx
-	int infoTime;
-	// -OSPx
-	pmoveExt_t pmext;
+	pmoveExt_t	pmext;
 
+	// L0 - New stuff
+	int			doublekill;		// (stats) Double+ Kills
+	int			infoTime;		// LT/spies Info
+
+	// Anti Warp
+	int lastCmdRealTime;
+	int cmdhead;							// antiwarp command queue head
+	int cmdcount;							// antiwarp command queue # valid commands
+	float cmddelta;							// antiwarp command queue # valid commands
+	usercmd_t cmds[LAG_MAX_COMMANDS];       // antiwarp command queue
+	// End
 };
 
 
@@ -773,6 +818,8 @@ typedef struct {
 	int frameStartTime;					// OSPx - time the frame started, for antilag stuff
 
 	int startTime;                      // level.time the map was started
+	int			timeCurrent;			// L0 - Real game clock
+	int			timeDelta;				// L0 - Pause, match info..
 
 	int teamScores[TEAM_NUM_TEAMS];
 	int lastTeamLocationTime;               // last time of client team location update
@@ -870,7 +917,7 @@ typedef struct {
 	// NERVE - SMF - debugging/profiling info
 	int totalHeadshots;
 	int missedHeadshots;
-	qboolean lastRestartTime;
+	int	lastRestartTime;
 	// -NERVE - SMF
 
 	int numFinalDead[2];                // DHM - Nerve :: unable to respawn and in limbo (per team)
@@ -879,9 +926,57 @@ typedef struct {
 	qboolean latchGametype;             // DHM - Nerve
 
 	// OSP
+	int			motdTime;			// MOTDs
+	int			flagTaken;			// Flag retaking
+	int			axisPlayers;		// For auto lock and auto team balance
+	int			alliedPlayers;		// For auto lock and auto team balance
+	int			balanceTimer;		// Auto balance teams timer
+	int			leftCheck;			// When it was checked the last time..
+	int			lastVoteTime;		// Delay between votes..
+	// Weapons restrictions
+	int			axisSniper, alliedSniper;
+	int			axisPF, alliedPF;
+	int			axisVenom, alliedVenom;
+	int			axisFlamer, alliedFlamer;
+	// Air Strike Restrictions
+	int			axisBomber, alliedBomber;
+	int			axisArty, alliedArty;
+	// Map Stats
+	unsigned int	topScore;
+	char			topOwner[MAX_NETNAME+1];
+	qboolean		mapStatsPrinted;	
+	// Last Blood 
+	char		lastKiller[MAX_NETNAME+1];
+	char		lastVictim[MAX_NETNAME+1];
+	// Countdown	
+	qboolean	cnStarted;
+	int			cnPush;	
+	int			cnNum;
+	// Round stats
+	int			statsNum;
+	int			statsPrint;
+	qboolean	statsStarted;
+
+	char		*roundID;
+	int			winningTeam;
+	char		firstBloodAttacker[PB_GUID_LENGTH];
+	char		firstBloodVictim[PB_GUID_LENGTH];
+	char		firstHeadshotAttacker[PB_GUID_LENGTH];
+	char		firstHeadshotVictim[PB_GUID_LENGTH];
+	char		lastBloodAttacker[PB_GUID_LENGTH];
+	char		lastBloodVictim[PB_GUID_LENGTH];
+	int			gsTime;
+	int			gsStepping;
+
+	int			oneSecActions;
+
 	// Reinforcements offset
-	int dwBlueReinfOffset;
-	int dwRedReinfOffset;
+	int			dwBlueReinfOffset;
+	int			dwRedReinfOffset;
+
+	// Pause
+	int match_pause;
+
 
 	qboolean fLocalHost;
 	qboolean fResetStats;
@@ -890,26 +985,16 @@ typedef struct {
 	int sortedStats[MAX_CLIENTS];           // sorted by weapon stat
 	voteInfo_t voteInfo;
 
-	// Timers
-	int timeCurrent;                        // Real game clock
-	int timeDelta;                          // Offset from internal clock - used to calculate real match time
 
-	// Countdown	
-	qboolean cnStarted;
-	int cnPush;
-	int cnNum;
 
 	// Ready
 	qboolean readyAll;
 	qboolean readyPrint;
 	qboolean readyTeam[TEAM_NUM_TEAMS];
 
-	// Track players
-	int alliedPlayers;
-	int axisPlayers;
-
-	// Pause
-	int match_pause;
+	// Tournament
+	qboolean toureyInfoSent;
+	
 	// Forced/Instant tapout timer to cope with flood..
 	int spawnFloodTimer;
 	// -OSP
@@ -928,6 +1013,7 @@ typedef struct {
 	qboolean spec_lock;
 	qboolean team_lock;
 	char team_name[24];
+	int team_score;
 	int timeouts;
 } team_info;
 // -OSP
@@ -1058,7 +1144,7 @@ void G_AddPredictableEvent( gentity_t *ent, int event, int eventParm );
 void G_AddEvent( gentity_t *ent, int event, int eventParm );
 void G_SetOrigin( gentity_t *ent, vec3_t origin );
 void AddRemap( const char *oldShader, const char *newShader, float timeOffset );
-const char *BuildShaderStateConfig();
+const char *BuildShaderStateConfig( void );
 void G_SetAngle( gentity_t *ent, vec3_t angle );
 
 qboolean infront( gentity_t *self, gentity_t *other );
@@ -1074,6 +1160,7 @@ qboolean G_RadiusDamage( vec3_t origin, gentity_t *attacker, float damage, float
 void body_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int meansOfDeath );
 void TossClientItems( gentity_t *self );
 gentity_t* G_BuildHead( gentity_t *ent );
+void MagicSink(gentity_t *self); // L0 - Need this for dropping stuff ..
 
 // damage flags
 #define DAMAGE_RADIUS           0x00000001  // damage was indirect
@@ -1175,19 +1262,19 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 void AddScore( gentity_t *ent, int score );
 void CalculateRanks( void );
 qboolean SpotWouldTelefrag( gentity_t *spot );
-char *clientIP(gentity_t *ent, qboolean full);
+//char *clientIP(gentity_t *ent, qboolean full);
 
 //
 // g_svcmds.c
 //
 qboolean    ConsoleCommand( void );
-void G_ProcessIPBans( void );
+/*void G_ProcessIPBans( void );
 qboolean G_FilterPacket( char *from );
 qboolean G_FilterMaxLivesPacket( char *from );
 void AddMaxLivesIP( char *str );
 void AddMaxLivesGUID( char *str );
 void ClearMaxLivesIP();
-void ClearMaxLivesGUID();
+void ClearMaxLivesGUID();*/
 
 //
 // g_weapon.c
@@ -1237,10 +1324,11 @@ void SendScoreboardMessageToAllClients( void );
 void QDECL G_Printf( const char *fmt, ... );
 void QDECL G_DPrintf( const char *fmt, ... );
 void QDECL G_Error( const char *fmt, ... );
-void G_UpdateCvars(void);
+//void G_UpdateCvars(void);
 // OSPx 
-void G_wipeCvars(void);
+//void G_wipeCvars(void);
 void CheckVote(void);
+void sortedActivePlayers( void );
 
 //
 // g_client.c
@@ -1265,18 +1353,19 @@ qboolean OnSameTeam( gentity_t *ent1, gentity_t *ent2 );
 // OSPx
 extern char *aTeams[TEAM_NUM_TEAMS];
 extern team_info teamInfo[TEAM_NUM_TEAMS];
-void G_teamReset(int team_num, qboolean fClearSpecLock);
-qboolean G_teamJoinCheck(int team_num, gentity_t *ent);
-qboolean G_playersReady(void);
-void G_readyReset(qboolean aForced);
-void G_readyStart(void);
 void G_swapTeamLocks(void);
 int G_blockoutTeam(gentity_t *ent, int nTeam);
 qboolean G_allowFollow(gentity_t *ent, int nTeam);
 qboolean G_desiredFollow(gentity_t *ent, int nTeam);
 void G_updateSpecLock(int nTeam, qboolean fLock);
-void G_setClientSpeclock(gentity_t *ent);
 void G_removeSpecInvite(int team);
+void G_setClientSpeclock(gentity_t *ent);
+void G_teamReset(int team_num, qboolean fClearSpecLock);
+qboolean G_teamJoinCheck(int team_num, gentity_t *ent);
+void G_verifyMatchState(int nTeam);
+qboolean G_playersReady(void);
+void G_readyReset(qboolean aForced);
+void G_readyStart(void);
 // -OSPx
 
 //
@@ -1406,15 +1495,15 @@ extern vmCvar_t g_axismaxlives;             // Xian
 extern vmCvar_t g_fastres;                  // Xian - Fast medic res'ing
 extern vmCvar_t g_fastResMsec;
 extern vmCvar_t g_knifeonly;                // Xian - Wacky Knife-Only rounds
-extern vmCvar_t g_enforcemaxlives;          // Xian - Temp ban with maxlives between rounds
+//extern vmCvar_t g_enforcemaxlives;          // Xian - Temp ban with maxlives between rounds
 
 extern vmCvar_t g_needpass;
 extern vmCvar_t g_weaponTeamRespawn;
 extern vmCvar_t g_doWarmup;
 extern vmCvar_t g_teamAutoJoin;
 extern vmCvar_t g_teamForceBalance;
-extern vmCvar_t g_banIPs;
-extern vmCvar_t g_filterBan;
+/*extern vmCvar_t g_banIPs;
+extern vmCvar_t g_filterBan;*/
 extern vmCvar_t g_rankings;
 extern vmCvar_t g_enableBreath;
 extern vmCvar_t g_smoothClients;
@@ -1485,43 +1574,166 @@ extern vmCvar_t	a3_cmds;
 extern vmCvar_t	a4_cmds;
 extern vmCvar_t	a5_cmds;
 extern vmCvar_t	a5_allowAll;
-extern vmCvar_t g_extendedLog;
-extern vmCvar_t g_spectatorInactivity;
-extern vmCvar_t g_showFlags;
+extern vmCvar_t		adm_help;
+// System
+extern vmCvar_t 	g_extendedLog;
+extern vmCvar_t		g_maxVotes;
+extern vmCvar_t		g_voteDelay;
+extern vmCvar_t		IP_handling;
+extern vmCvar_t		bannedMSG;
+extern vmCvar_t		g_censorWords;
+extern vmCvar_t		g_disallowedNames;
+extern vmCvar_t		g_noHardcodedCensor;
+extern vmCvar_t		g_shortcuts;
+extern vmCvar_t		g_fixedphysics;
+extern vmCvar_t		g_autoSwap;
+extern vmCvar_t		g_autoSwapRounds;
+extern vmCvar_t		g_mapConfigs;
+extern vmCvar_t		g_inactivityToSpecs;
+extern vmCvar_t		g_ignoreSpecs;
+extern vmCvar_t		g_allowPMs;
+extern vmCvar_t		g_teamAutoBalance;
+extern vmCvar_t		g_disallowedVotes;
+extern vmCvar_t		g_autoShuffle;
+extern vmCvar_t		g_printMatchInfo;
+extern vmCvar_t		g_allowLateJoiners;
+extern vmCvar_t		g_handleLateJoiners;
+extern vmCvar_t 	g_spectatorInactivity;
+extern vmCvar_t		g_spectatorAllowDemo;
+extern vmCvar_t		g_antiWarp;
+extern vmCvar_t		g_forceClass;
+extern vmCvar_t 	g_showFlags;
 
-extern vmCvar_t g_allowSoftKill;
-extern vmCvar_t match_latejoin;
-extern vmCvar_t match_minplayers;
-extern vmCvar_t match_mutespecs;
-extern vmCvar_t match_readypercent;
-extern vmCvar_t match_timeoutcount;
-extern vmCvar_t match_timeoutlength;
-extern vmCvar_t match_warmupDamage;
-extern vmCvar_t server_autoconfig;
-extern vmCvar_t g_fixedphysics;
-extern vmCvar_t g_hitsounds;
-extern vmCvar_t server_motd0;
-extern vmCvar_t server_motd1;
-extern vmCvar_t server_motd2;
-extern vmCvar_t server_motd3;
-extern vmCvar_t server_motd4;
-extern vmCvar_t server_motd5;
-extern vmCvar_t team_maxPanzers;
-extern vmCvar_t team_maxplayers;
-extern vmCvar_t team_nocontrols;
-extern vmCvar_t vote_limit;
-extern vmCvar_t vote_percent;
+// Modes
+extern vmCvar_t		g_deathMatch;
+extern vmCvar_t		g_tournamentMode;
+// tournament
+extern vmCvar_t		team_nocontrols;
+extern vmCvar_t		team_maxplayers;
+extern vmCvar_t		match_timeoutlength;
+extern vmCvar_t		match_timeoutcount;
+extern vmCvar_t		match_minplayers;
+extern vmCvar_t		match_readypercent;
+extern vmCvar_t		match_rounds;
 
-extern vmCvar_t match_warmupfire;
-extern vmCvar_t match_mutespecs;
-extern vmCvar_t match_latejoin;
-extern vmCvar_t match_minplayers;
-extern vmCvar_t match_readypercent;
-extern vmCvar_t match_timeoutlength;
-extern vmCvar_t match_timeoutcount;
 
-extern vmCvar_t z_serverflags;
-extern vmCvar_t sv_hostname;
+// Game
+extern vmCvar_t		g_dropReload;
+extern vmCvar_t		g_unlockWeapons;
+extern vmCvar_t		g_disableSMGPickup;
+extern vmCvar_t		g_flagRetake;
+extern vmCvar_t		g_balanceFlagRetake;
+extern vmCvar_t		g_balanceFlagCanClaim;
+extern vmCvar_t		g_warmupDamage;
+extern vmCvar_t		g_easyASBlock;
+extern vmCvar_t		g_hitsounds;
+extern vmCvar_t		g_customMGs;
+extern vmCvar_t		g_ltNades;
+extern vmCvar_t		g_medicNades;
+extern vmCvar_t		g_soldNades;
+extern vmCvar_t		g_engNades;
+extern vmCvar_t		g_medicClips;
+extern vmCvar_t		g_engineerClips;
+extern vmCvar_t		g_soldierClips;
+extern vmCvar_t		g_leutClips;
+extern vmCvar_t		g_pistolClips;
+extern vmCvar_t		g_maxTeamPF;
+extern vmCvar_t		g_maxTeamSniper;
+extern vmCvar_t		g_maxTeamVenom;
+extern vmCvar_t		g_maxTeamFlamer;
+extern vmCvar_t		g_balancePF;
+extern vmCvar_t		g_balanceSniper;
+extern vmCvar_t		g_balanceVenom;
+extern vmCvar_t		g_balanceFlamer;
+extern vmCvar_t		g_dropHealth;
+extern vmCvar_t		g_dropNades;
+extern vmCvar_t		g_dropAmmo;
+extern vmCvar_t		g_throwKnives;
+extern vmCvar_t		g_knifeDamage;
+extern vmCvar_t		g_knifeDamageRand;
+extern vmCvar_t		g_smokeGrenades;
+extern vmCvar_t		g_smokeGrenadesLmt;
+extern vmCvar_t		g_axisSpawnProtectionTime;
+extern vmCvar_t		g_alliedSpawnProtectionTime;
+extern vmCvar_t		g_disableInv;
+extern vmCvar_t		g_chicken;
+extern vmCvar_t		g_dragBodies;
+extern vmCvar_t		g_shove;
+extern vmCvar_t		g_shoveAmount;
+extern vmCvar_t		g_poison;
+extern vmCvar_t		g_gibReports;
+extern vmCvar_t		g_tapReports;
+extern vmCvar_t		g_showLifeStats;
+extern vmCvar_t		g_fastStabSound;
+extern vmCvar_t		g_dropObj;
+extern vmCvar_t		g_panzerArc;
+extern vmCvar_t		g_LTinfoMsg;
+extern vmCvar_t		g_enableSpies;
+extern vmCvar_t		g_reportSpies;
+extern vmCvar_t		g_axisASdelay;
+extern vmCvar_t		g_axisASdelayFFE;
+extern vmCvar_t		g_alliedASdelay;
+extern vmCvar_t		g_alliedASdelayFFE;
+extern vmCvar_t		g_headshotsOnly;
+extern vmCvar_t		g_allowGiveAmmo;
+extern vmCvar_t		g_goomba;
+extern vmCvar_t		g_ammoGivesHelmet;
+extern vmCvar_t		g_dropBinocs;
+
+// Server Bot
+extern vmCvar_t		sb_system;
+extern vmCvar_t		sb_tempbanIP;
+extern vmCvar_t		sb_maxTKs;
+extern vmCvar_t		sb_makTKsTempbanMins;
+extern vmCvar_t		sb_maxTeamBleed;
+extern vmCvar_t		sb_maxTeamBleedTempbanMins;
+extern vmCvar_t		sb_minLowScore;
+extern vmCvar_t		sb_minLowScoreTempbanMins;
+extern vmCvar_t		sb_maxPingFlux;
+extern vmCvar_t		sb_maxPingHits;	
+extern vmCvar_t		sb_censorPenalty;
+extern vmCvar_t		sb_censorPentalityTempbanMin;
+extern vmCvar_t		sb_autoIgnore;
+
+// MOTDs
+extern vmCvar_t		g_serverMessage;
+
+// Static
+extern vmCvar_t		sv_hostname;
+extern vmCvar_t		g_swapCounter;
+extern vmCvar_t		g_needBalance;
+extern vmCvar_t		shuffleTracking;
+
+// General
+extern vmCvar_t		g_screenShake;
+
+// HTTP Stats
+extern vmCvar_t		g_httpToken;
+extern vmCvar_t		g_httpStatsUrl;
+extern vmCvar_t		g_httpStatsAPI;
+extern vmCvar_t		g_httpDebug;
+extern vmCvar_t		g_httpUseThreads;
+extern vmCvar_t		g_httpFlushFile;
+extern vmCvar_t		g_httpIgnoreSafeSize;
+extern vmCvar_t		g_httpEvent;
+extern vmCvar_t		g_httpEventPaused;
+
+// Static
+extern vmCvar_t		int_match_started;
+
+// Stats
+extern vmCvar_t		g_doubleKills;
+extern vmCvar_t		g_killingSprees;
+extern vmCvar_t		g_deathSprees;
+extern vmCvar_t		g_killerSpree;
+extern vmCvar_t		g_showFirstHeadshot;
+extern vmCvar_t		g_showFirstBlood;
+extern vmCvar_t		g_showLastBlood;
+extern vmCvar_t		g_mapStats;
+extern vmCvar_t		g_mapStatsNotify;
+extern vmCvar_t		g_roundStats;
+extern vmCvar_t		g_excludedRoundStats;
+
 
 //
 // NOTE!!! If any vote flags are added, MAKE SURE to update the voteFlags struct in bg_misc.c w/appropriate info,
@@ -1774,102 +1986,192 @@ typedef enum
 	shard_rubble
 } shards_t;
 
-void Svcmd_StartMatch_f( void );
-void Svcmd_ResetMatch_f( qboolean fDoReset, qboolean fDoRestart );
-void Svcmd_SwapTeams_f(void);
+/*========================== L0 - New stuff bellow ===============================*/
+
+//
+// g_admin.c
+//
+void logEntry (char *filename, char *info);
+qboolean cmds_admin(char cmd[MAX_TOKEN_CHARS], gentity_t *ent);
+void ParseAdmStr(const char *strInput, char *strCmd, char *strArgs);
+int ClientNumberFromNameMatch( char *name, int *matches );
+void cmd_incognito(gentity_t *ent);
+void cmd_do_logout(gentity_t *ent);
+void cmd_do_login (gentity_t *ent, qboolean silent);
+void cmd_getstatus(gentity_t *ent);
+
+//
+// g_admin_system.c
+//
+void TEMPBAN_CLIENT(gentity_t *ent, const int minsbanned);
+void clean_tempbans(void);
+extern char *TempBannedMessage;
+int checkBanned(char *data, char * password, qboolean guid);
+void TEMPBAN_GUID_CLIENT(char *guid, const int minsbanned);
+void clean_tempbans_guids(void);
+void IGNORE_CLIENT(char *guid);
+void UNIGNORE_CLIENT(char *guid);
+int checkIgnored(char *guid);
+void SB_maxTeamKill(gentity_t *ent);
+void SB_maxTeamBleed(gentity_t *ent);
+void SB_minLowScore(gentity_t *ent);
+void SB_maxPingFlux(gclient_t *client);
+void SB_chatWarn(gentity_t *ent);
+
+// 
+// g_censored.c
+//
+// (etPub port)
+//
+typedef struct {
+	int num_nulled_words;
+} wordDictionary;
+
+extern wordDictionary censorDictionary;
+extern wordDictionary censorNamesDictionary;
+
+qboolean G_CensorName(char *testname, char *userinfo, int clientNum);
+qboolean G_CensorText(char *text, wordDictionary *dictionary);
+qboolean G_ReservedName(char *testname, char *userinfo, int clientNum);
+
 //
 // g_antilag.c
 //
-// OSPx - Modified
-void G_ResetTrail(gentity_t *ent);
-void G_StoreTrail(gentity_t *ent);
-void G_TimeShiftClient(gentity_t *ent, int time);
-void G_TimeShiftAllClients(int time, gentity_t *skip);
-void G_UnTimeShiftClient(gentity_t *ent);
-void G_UnTimeShiftAllClients(gentity_t *skip);
+void G_ResetTrail( gentity_t *ent );
+void G_StoreTrail( gentity_t *ent );
+void G_TimeShiftClient( gentity_t *ent, int time );
+void G_TimeShiftAllClients( int time, gentity_t *skip );
+void G_UnTimeShiftClient( gentity_t *ent );
+void G_UnTimeShiftAllClients( gentity_t *skip );
 void G_HistoricalTrace( gentity_t* ent, trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask );
-//void G_LogTeamKill(     gentity_t* ent, weapon_t weap );
-//void G_LogDeath(        gentity_t* ent, weapon_t weap );
-//void G_LogKill(         gentity_t* ent, weapon_t weap );
-//void G_LogRegionHit(    gentity_t* ent, hitRegion_t hr );
-//void G_SetPlayerRank(	gentity_t* ent );
-//void G_AddExperience(	gentity_t* ent, float exp );
-
-// Match settings
-#define PAUSE_NONE      0x00    // Match is NOT paused.
-#define PAUSE_UNPAUSING 0x01    // Pause is about to expire
-// HRESULTS
-#define G_OK            0
-#define G_INVALID       -1
-#define G_NOTFOUND  -2
-#define AP( x ) trap_SendServerCommand( -1, x )                 // Print to all
-#define CP( x ) trap_SendServerCommand( ent - g_entities, x )     // Print to an ent
-#define CPx( x, y ) trap_SendServerCommand( x, y )              // Print to id = x
-
-#define PAUSE_NONE      0x00    // Match is NOT paused.
-#define PAUSE_UNPAUSING 0x01    // Pause is about to expire
-
-#define ZSF_COMP        0x01    // Have comp settings loaded for current gametype?
-
-#define HELP_COLUMNS    4
-
-#define CMD_DEBOUNCE    5000    // 5s between cmds
-
-#define EOM_WEAPONSTATS 0x01    // Dump of player weapon stats at end of match.
-#define EOM_MATCHINFO   0x02    // Dump of match stats at end of match.
-
-#define AA_STATSALL     0x01    // Client AutoAction: Dump ALL player stats
-#define AA_STATSTEAM    0x02    // Client AutoAction: Dump TEAM player stats
-
-#define ARRAY_LEN(x)	(sizeof(x) / sizeof(*(x)))
-
-
-///////////////////////
-// g_main.c
-//
-void G_UpdateCvars( void );
-void G_wipeCvars( void );
-
-///////////////////////
-// g_config.c
-//
-void G_configSet( int mode, qboolean doComp );
 
 //
 // g_match.c
 //
+#define MT_EI	0		// Match Times - End info
+#define MT_ME	1		// Match Times - Match Event(s)
+
+int FlagBalance( void );
+int isWeaponLimited( gclient_t *client, int weap );
+qboolean isWeaponBalanced( int weapon );
+void setDefaultWeapon(gclient_t *client, qboolean isSold);
+void setCustomMG( gentity_t* ent, int type );
+gentity_t *G_FearCheck( gentity_t *ent );
+// Sounds - so it's simplified
+void AAPSound(char *sound);
+void CPSound(gentity_t *ent, char *sound);
+void APSound(char *sound);
+void APRSound(gentity_t *ent, char *sound);
+// End Sounds
+void checkEvenTeams( void );
+void balanceTeams( void );
+void CountDown( void );
+void matchInfo( unsigned int type, char *msg );
+// Max Lives
+void CheckMaxLivesGUID( char *guid );
+int SortMaxLivesGUID( gentity_t *ent );
+void TrackMaxLivesGUID( char *guid, int lives, int team );
+void ClearMaxLivesGUID ( void );
+int CalculateLives(gentity_t *ent);
+qboolean canJoinMaxLives( gentity_t *ent );
+// Match stuff
 void G_loadMatchGame(void);
-void G_matchInfoDump(unsigned int dwDumpType);
-void CountDown(qboolean restart);
 void G_spawnPrintf(int print_type, int print_time, gentity_t *owner);
-void G_verifyMatchState(int nTeam);
-void G_matchPrintInfo(char *msg);
+// Tourney stuff
+void G_TourneyHandle(qboolean dReset, qboolean dClear);
+void G_TourneyState(void);
+void G_parseTourneyInfo(qboolean refresh);
 
-/*//////////////////////
-// g_match.c
 //
-void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod );
-void G_addStatsHeadShot( gentity_t *attacker, int mod );
-qboolean G_allowPanzer( gentity_t *ent );
-int G_checkServerToggle( vmCvar_t *cv );
-char *G_createStats( gentity_t *refEnt );
-void G_deleteStats( int nClient );
-qboolean G_desiredFollow( gentity_t *ent, int nTeam );
-void G_globalSound( char *sound );
-void G_initMatch( void );
-void G_loadMatchGame( void );
-void G_matchInfoDump( unsigned int dwDumpType );
-void G_printMatchInfo( gentity_t *ent );
-void G_parseStats( char *pszStatsInfo );
-void G_printFull( char *str, gentity_t *ent );
-void G_resetModeState( void );
-void G_resetRoundState( void );
-void CountDown(qboolean restart);
-void G_spawnPrintf( int print_type, int print_time, gentity_t *owner );
-void G_statsPrint( gentity_t *ent, int nType );
-unsigned int G_weapStatIndex_MOD( unsigned int iWeaponMOD );
-void G_verifyMatchState(int nTeam);
-void G_matchPrintInfo(char *msg);*/
+// g_players.c
+//
+qboolean G_cmdDebounce(gentity_t *ent, const char *pszCommandName);
+void Cmd_ThrowKnives( gentity_t *ent );
+void Cmd_Smoke_f( gentity_t *ent );
+void weapon_smokeGrenade(gentity_t *ent);
+void Cmd_Pmsg( gentity_t *ent );
+void Cmd_Time_f( gentity_t *ent );
+void Cmd_Drag( gentity_t *ent);
+void Cmd_Push(gentity_t* ent);
+void Cmd_DropObj(gentity_t *self);
+void Cmd_Spy( gentity_t *ent );
+void checkSpies( gentity_t *ent );
+void Cmd_Stats_f(gentity_t *ent);
+void Cmd_hitsounds(gentity_t *ent);
+void Cmd_GiveAmmo(gentity_t* ent);
+void Cmd_help(gentity_t *ent);
+void Cmd_specInvite(gentity_t *ent);
+void Cmd_specUnInvite(gentity_t *ent);
+void Cmd_uninviteAll(gentity_t *ent);
+void Cmd_speclock(gentity_t *ent, qboolean lock);
+void Cmd_pauseHandle(gentity_t *ent, qboolean dPause);
+void Cmd_ready(gentity_t *ent, qboolean state);
+void Cmd_teamReady(gentity_t *ent, qboolean ready);
+
+//
+// g_stats.c
+//
+void stats_DoubleKill (gentity_t *ent, int meansOfDeath );
+void stats_FirstHeadshot (gentity_t *attacker, gentity_t *targ);
+void stats_FirstBlood (gentity_t *self, gentity_t *attacker);
+void stats_LastBloodMessage(qboolean fOut);
+void stats_KillingSprees ( gentity_t *ent, int score );
+void stats_DeathSpree ( gentity_t *ent );
+void stats_KillerSpree(gentity_t *ent, int score);
+void stats_MatchInfo( void );
+void stats_MapStats( void );
+void write_MapStats( gentity_t *ent, unsigned int score, int type );
+void write_RoundStats(char *player, unsigned int score, unsigned int stats);
+void add_RoundStats( void );
+void stats_RoundStats( void );
+
+//
+// g_stats_global.c
+//
+void globalStats_writeMOD(gentity_t *victim, meansOfDeath_t MOD);
+void globalStats_hitList(gentity_t *victim, gentity_t *attacker);
+void globalStats_playerClass(int client, int type);
+void globalStats_playerTimers(gclient_t *client);
+void globalStats_statsTimers(gclient_t *client);
+void globalStats_overallTimer(void);
+void globalStats_rename(gclient_t *client, char *name);
+void globalStats_weaponShots(gentity_t *ent, int sWeapon);
+void globalStats_weaponHits(gentity_t *attacker, gentity_t *target, int mod, qboolean headshot);
+void globalStats_damageStats(gentity_t *attacker, gentity_t *target, int mod, int dmg, qboolean onSameTeam);
+void globalStats_gibStats(gentity_t *attacker, gentity_t *target, int uWeapon);
+void globalStats_roundToken(void);
+void globalStats_clientDisconnect(gentity_t *ent);
+void globalStats_buildStats(void);
+void globalStats_dump(void);
+void globalStats_cleanList(void);
+
+//
+// q_shared.c
+//
+void DecolorString( char *in, char *out);
+int is_numeric(const char *p);
+char *Q_CharReplace(char *token, char old, char out);
+char *Q_StrReplace(char *haystack, char *needle, char *newVal);
+void stripChars( char *input, char *output, int cutSize );
+char *parseNames( char *name );
+void Q_Tokenize(char *str, char **splitstr, char *delim);
+void ParseStr(const char *strInput, char *strCmd, char *strArgs);
+qboolean Q_FindToken(char *haystack, char *needle);
+void parseCmds(const char *strCMD1, char *strCMD2, char *strCMD3, qboolean cmd);
+char *getTime(qboolean raw);
+
+//
+// g_antiwarp.c
+//
+qboolean G_DoAntiwarp(gentity_t *ent);
+void etpro_AddUsercmd(int clientNum, usercmd_t *cmd);
+void DoClientThinks(gentity_t *ent);
+
+//
+// g_hacks.c
+//
+qboolean isCustomMOD(meansOfDeath_t mod);
+
 ///////////////////////
 // g_multiview.c
 //
@@ -1915,7 +2217,7 @@ void G_matchPrintInfo(char *msg);*/
 ///////////////////////
 // g_team.c
 //
-extern char *aTeams[TEAM_NUM_TEAMS];
+/*extern char *aTeams[TEAM_NUM_TEAMS];
 extern team_info teamInfo[TEAM_NUM_TEAMS];
 
 qboolean G_allowFollow( gentity_t *ent, int nTeam );
@@ -1931,7 +2233,7 @@ qboolean G_teamJoinCheck( int team_num, gentity_t *ent );
 //int  G_teamID( gentity_t *ent );
 void G_teamReset( int team_num, qboolean fClearSpecLock );
 void G_verifyMatchState( int team_id );
-void G_updateSpecLock( int nTeam, qboolean fLock );
+void G_updateSpecLock( int nTeam, qboolean fLock );*/ // xMod why is this missing?
 
 ///////////////////////
 // g_vote.c
@@ -1983,99 +2285,18 @@ extern GeoIP * gidb;
 void G_ReadIP(gclient_t *client);
 
 //
-// g_config.c
+// Logs
 //
-void G_configSet(int dwMode, qboolean doComp);
-
-//
-// g_shared.c
-//
-void Q_decolorString(char *in, char *out);
-char *getTime(void);
-void Q_tokenize(char *str, char **splitstr, char *delim);
-qboolean Q_findToken(char *haystack, char *needle);
-char *Q_strReplace(char *haystack, char *needle, char *newp);
-void APSound(char *sound);
-void AAPSound(char *sound);
-void CPSound(gentity_t *ent, char *sound);
-void APRSound(gentity_t *ent, char *sound);
-
-//
-// g_admin.c
-//
-void admLog(char *info);
-char *sortTag(gentity_t *ent);
-char *usrTag(gentity_t *ent, qboolean inquiry);
-void ParseAdmStr(const char *strInput, char *strCmd, char *strArgs);
-qboolean cmds_admin(gentity_t *ent, qboolean dHelp);
-char *adminCommandsList(void);
-int ClientNumberFromNameMatch(char *name, int *matches);
-qboolean isHigher(gentity_t *ent, gentity_t *target);
-
-//
-// g_admin_cmds.c
-//
-void cmd_doLogin(gentity_t *ent, qboolean silent);
-void cmd_doLogout(gentity_t *ent);
-void cmd_custom(gentity_t *ent);
-void cmd_getCommands(gentity_t *ent, qboolean fParam);
-void cmd_incognito(gentity_t *ent, qboolean fParam);
-void cmd_ignoreHandle(gentity_t *ent, qboolean dIgnore);
-void cmd_readyHandle(gentity_t *ent, qboolean unready);
-void cmd_specHandle(gentity_t *ent, qboolean lock);
-void cmd_pauseHandle(gentity_t *ent, qboolean fPause);
-void cmd_kick(gentity_t *ent, qboolean fParam);
-void cmd_clientkick(gentity_t *ent, qboolean fParam);
-void cmd_rename(gentity_t *ent, qboolean fParam);
-void cmd_slap(gentity_t *ent, qboolean fParam);
-void cmd_kill(gentity_t *ent, qboolean fParam);
-void cmd_forceToTeam(gentity_t *ent, qboolean tSpecs);
-void cmd_exec(gentity_t *ent, qboolean fParam);
-void cmd_nextmap(gentity_t *ent, qboolean fParam);
-void cmd_map(gentity_t *ent, qboolean fParam);
-void cmd_vstr(gentity_t *ent, qboolean fParam);
-void cmd_cpa(gentity_t *ent, qboolean fParam);
-void cmd_cp(gentity_t *ent, qboolean fParam);
-void cmd_warn(gentity_t *ent, qboolean fParam);
-void cmd_chat(gentity_t *ent, qboolean fParam);
-void cmd_cancelvote(gentity_t *ent, qboolean fParam);
-void cmd_passvote(gentity_t *ent, qboolean fParam);
-void cmd_restart(gentity_t *ent, qboolean fParam);
-void cmd_resetmatch(gentity_t *ent, qboolean fParam);
-void cmd_swap(gentity_t *ent, qboolean fParam);
-void cmd_shuffle(gentity_t *ent, qboolean fParam);
-void cmd_specs999(gentity_t *ent, qboolean fParam);
-void cmd_revealCamper(gentity_t *ent, qboolean fParam);
-void cmd_handleTeamLock(gentity_t *ent, qboolean tLock);
-
-//
-// g_players.c
-//
-qboolean playerCommandsExt(gentity_t *ent, char *cmd);
-
-//
-// g_files.c
-//
-void logEntry(char *filename, char *info);
-
-//
-// g_stats.c
-//
-char *G_createStats(gentity_t *refEnt);
-void G_deleteStats(int nClient);
-void G_parseStats(char *pszStatsInfo);
-void G_addStats(gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod);
-void G_addStatsHeadShot(gentity_t *attacker, int mod);
-void G_statsPrint(gentity_t *ent, int nType);
-void G_clientStatsPrint(gentity_t *ent, int nType, qboolean toWindow);
-void G_weaponStatsLeaders_cmd(gentity_t* ent, qboolean doTop, qboolean doWindow);
-void G_weaponRankings_cmd(gentity_t *ent, unsigned int dwCommand, qboolean state);
-void G_statsall_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
-void G_printMatchInfo(gentity_t *ent, qboolean time);
+#define ADMLOG "./logs/adminLogins.log"
+#define PASSLOG "./logs/adminLoginAttempts.log"
+#define ADMACT "./logs/adminActions.log"
+#define BYPASSLOG "./logs/banBypass.log"
+#define STSPTH "./stats/"
 
 //
 // Macros
 //
+#define ARRAY_LEN(x)	(sizeof(x) / sizeof(*(x)))
 #define AP( x ) trap_SendServerCommand( -1, x )					// Print to all
 #define CP( x ) trap_SendServerCommand( ent - g_entities, x )	// Print to an ent
 #define CPx( x, y ) trap_SendServerCommand( x, y )				// Print to id = x
@@ -2084,7 +2305,14 @@ void G_printMatchInfo(gentity_t *ent, qboolean time);
 #define AAPS(x)		AAPSound(x)									// Global sound but hooked under cg_announcer..
 #define APRS(x, y)	APRSound(x, y)								// Global sound with limited (radius) range
 #define CPS(x, y)	CPSound(x, y)								// Client sound only
-#define ARRAY_LEN(x) (sizeof(x) / sizeof(*(x)))					// Saves some time..
+
+//
+// Bit flags (for color hacks..)
+//
+#define CFLAGS_HITSOUNDS	1
+#define CFLAGS_MP40			2
+#define CFLAGS_THOMPSON		8
+#define CFLAGS_STEN			16
 
 //
 // Constants / Bit Flags
@@ -2096,6 +2324,10 @@ void G_printMatchInfo(gentity_t *ent, qboolean time);
 #define EOM_WEAPONSTATS 0x01    // Dump of player weapon stats at end of match.
 #define EOM_MATCHINFO   0x02    // Dump of match stats at end of match.
 
+// Pause
+#define PAUSE_NONE		0x00	// Match is not paused..
+#define PAUSE_UNPAUSING 0x02    // Pause is about to expire
+
 // - Auto Actions
 #define AA_STATSALL     0x01    // Client AutoAction: Dump ALL player stats
 #define AA_STATSTEAM    0x02    // Client AutoAction: Dump TEAM player stats
@@ -2105,9 +2337,13 @@ void G_printMatchInfo(gentity_t *ent, qboolean time);
 #define READY_AWAITING	0x01	// Awaiting all to ready up..
 #define READY_PENDING	0x02	// Awaiting but can start once treshold (minclients) is reached..
 
-// Pause
-#define PAUSE_NONE		0x00	// Match is not paused..
-#define PAUSE_UNPAUSING 0x02    // Pause is about to expire
+//
+// Include new headers at the bottom so they link correctly
+//
+#include "g_threads.h"
+#include "g_http.h"
+
+#endif // ~_G_LOCAL_H
 
 // Ref tag..
 #define REFEREE	"^3Ref^7"

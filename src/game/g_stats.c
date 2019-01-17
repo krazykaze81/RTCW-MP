@@ -1,585 +1,337 @@
-﻿/*
+/*
 ===========================================================================
+g_stats.c
 
-Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
+Mostly eye candy stuff.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
-
-RTCW MP Source Code is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-RTCW MP Source Code is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with RTCW MP Source Code.  If not, see <http://www.gnu.org/licenses/>.
-
-In addition, the RTCW MP Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the RTCW MP Source Code.  If not, please request a copy in writing from id Software at the address below.
-
-If you have questions concerning this license or the applicable additional terms, you may contact in writing id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
-
-===========================================================================
-OSPx - g_stats.c
-
-Mostly a ET code dump with few modifications..
-
-Created: 3 May / 2014
+Author: Nate 'L0
+Created: 9.Sept/13
+Updated: 14.Sept/13
 ===========================================================================
 */
 #include "g_local.h"
 
+static qboolean firstheadshot;						
+static qboolean firstblood;	
 
-int iWeap = WS_MAX;
-
-static const weap_ws_convert_t aWeapMOD[MOD_NUM_MODS] = {
-	{ MOD_UNKNOWN,              WS_MAX },
-	{ MOD_MACHINEGUN,           WS_MG42 },
-	{ MOD_GRENADE,              WS_GRENADE },
-	{ MOD_GRENADE_SPLASH,		WS_GRENADE }, // RtcwPro added grenade splash
-	{ MOD_ROCKET,               WS_PANZERFAUST },
-	{ MOD_ROCKET_SPLASH,		WS_PANZERFAUST}, // RtcwPro added rocket splash
-	{ MOD_KNIFE2,               WS_KNIFE },
-	{ MOD_KNIFE,                WS_KNIFE },
-	{ MOD_KNIFE_STEALTH,        WS_KNIFE },
-	{ MOD_LUGER,                WS_LUGER },
-	{ MOD_COLT,                 WS_COLT },
-	{ MOD_MP40,                 WS_MP40 },
-	{ MOD_THOMPSON,             WS_THOMPSON },
-	{ MOD_STEN,                 WS_STEN },
-//	{ MOD_GARAND,               WS_RIFLE },
-	{ MOD_MAUSER,				WS_RIFLE}, // RtcwPro added mauser
-	{ MOD_SNIPERRIFLE,          WS_RIFLE },
-	{ MOD_FG42,                 WS_FG42 },
-	{ MOD_FG42SCOPE,            WS_FG42 },
-	{ MOD_PANZERFAUST,          WS_PANZERFAUST },
-	{ MOD_GRENADE_LAUNCHER,     WS_GRENADE },
-	{ MOD_FLAMETHROWER,         WS_FLAMETHROWER },
-	{ MOD_VENOM,				WS_VENOM },
-	{ MOD_VENOM_FULL,			WS_VENOM }, // RtcwPro added venom full
-	{ MOD_GRENADE_PINEAPPLE,    WS_GRENADE },
-	{ MOD_DYNAMITE,             WS_DYNAMITE },
-	{ MOD_AIRSTRIKE,            WS_AIRSTRIKE },
-	{ MOD_SYRINGE,              WS_SYRINGE },
-	{ MOD_ARTY,                 WS_ARTILLERY }
+/**** Map Stats & RMS (Round (Warmup) Match Stats) ****/
+char *stats_chars[]={
+	"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k",
+	"l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v",
+	"w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", 
+	"H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", 
+	"S", "T", "U", "V", "W", "X", "Y", "Z", "1", "2", "3",
+	"4", "5", "6", "7", "8", "9", "0", "!", "@", "#", "$",
+	"%", "^", "&", "*", "(", ")", "[", "]", "|", "'", ";", 
+	":", ",", ".", "?", "/", ">", "<", "-", " ", "+", "=", 
+	"-", "_", "~" 
 };
 
-// Get right stats index based on weapon mod
-unsigned int G_weapStatIndex_MOD( int iWeaponMOD ) {
-	unsigned int i;
+/*
+===========
+Double+ kills
+===========
+*/
+void stats_DoubleKill(gentity_t *ent, int meansOfDeath ) {
+	char *random;	
+	int n = rand() % 3; 
 
-	for ( i = 0; i < MOD_NUM_MODS; i++ ) if ( iWeaponMOD == aWeapMOD[i].iWeapon ) {
-			return( aWeapMOD[i].iWS );
-		}
-	return( WS_MAX );
-}
-
-// +wstats
-char *G_createStats( gentity_t *refEnt ) {
-	unsigned int i, dwWeaponMask = 0, dwSkillPointMask = 0;
-	char strWeapInfo[MAX_STRING_CHARS] = {0};
-	char strSkillInfo[MAX_STRING_CHARS] = {0};
-
-	if ( !refEnt ) {
-		return( NULL );
-	}	
-
-	// Add weapon stats as necessary
-	for ( i = WS_KNIFE; i < WS_MAX; i++ ) {
-		if ( refEnt->client->sess.aWeaponStats[i].atts || refEnt->client->sess.aWeaponStats[i].hits ||
-			 refEnt->client->sess.aWeaponStats[i].deaths ) {
-			dwWeaponMask |= ( 1 << i );
-			Q_strcat( strWeapInfo, sizeof( strWeapInfo ), 
-						va( " %d %d %d %d %d",
-							refEnt->client->sess.aWeaponStats[i].hits, refEnt->client->sess.aWeaponStats[i].atts,
-							refEnt->client->sess.aWeaponStats[i].kills, refEnt->client->sess.aWeaponStats[i].deaths,
-							refEnt->client->sess.aWeaponStats[i].headshots ) );
-		}
+	if (!g_doubleKills.integer) {
+		return;
 	}
-
-	// Additional info
-	Q_strcat( strWeapInfo, sizeof( strWeapInfo ), 
-				va( " %d %d %d %d",
-					refEnt->client->sess.damage_given,
-					refEnt->client->sess.damage_received,
-					refEnt->client->sess.team_damage,
-					refEnt->client->sess.gibs) );	
-
-	return( va( "%d %d %d%s %d%s", 
-				(int)(refEnt - g_entities),
-				refEnt->client->sess.rounds,
-				dwWeaponMask,
-				strWeapInfo,
-				dwSkillPointMask,
-				strSkillInfo) );		
-}
-
-// OSPx - Typical "1.0" info based stats (+stats)
-char *G_createClientStats( gentity_t *refEnt ) {	
-	char strClientInfo[MAX_STRING_CHARS] = {0};
-
-	if ( !refEnt ) {
-		return( NULL );
-	}	
-
-	// Info
-	Q_strcat( strClientInfo, sizeof( strClientInfo ), 
-		va( "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
-			refEnt->client->sess.kills,
-			refEnt->client->sess.headshots,
-			refEnt->client->sess.deaths,
-			refEnt->client->sess.team_kills,
-			refEnt->client->sess.suicides,
-			refEnt->client->sess.acc_shots,
-			refEnt->client->sess.acc_hits,
-			refEnt->client->sess.damage_given,
-			refEnt->client->sess.damage_received,
-			refEnt->client->sess.team_damage,
-			refEnt->client->sess.gibs,
-			refEnt->client->sess.med_given,
-			refEnt->client->sess.ammo_given,
-			refEnt->client->sess.revives,
-			refEnt->client->sess.killPeak
-			));	
-
-	return( va( "%d %s", (int)(refEnt - g_entities), strClientInfo) );		
-}
-
-// Sends a player's stats to the requesting client.
-void G_statsPrint( gentity_t *ent, int nType ) {
-	int pid;
-	char *cmd = ( nType == 0 ) ? "ws" : ( "wws" /* ( nType == 1 ) ? "wws" : "gstats" */ );   // Yes, not the cleanest
-	char arg[MAX_TOKEN_CHARS];
-
-	if ( !ent || ( ent->r.svFlags & SVF_BOT ) ) {
+	if (g_gamestate.integer == GS_WARMUP_COUNTDOWN) {
+		return;
+	}
+	if(!ent || !ent->client) {
 		return;
 	}
 
-	// If requesting stats for self, its easy.
-	if ( trap_Argc() < 2 ) {
-		if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR ) {
-			CP( va( "%s %s\n", cmd, G_createStats( ent ) ) );
-			// Specs default to players they are chasing
-		} else if ( ent->client->sess.spectatorState == SPECTATOR_FOLLOW ) {
-			CP( va( "%s %s\n", cmd, G_createStats( g_entities + ent->client->sess.spectatorClient ) ) );
+	// White list approach makes more sense.
+	if ( meansOfDeath == MOD_LUGER				// handgun
+		|| meansOfDeath == MOD_COLT				// handgun
+		|| meansOfDeath == MOD_KNIFE_STEALTH	// knife -- can be done :)
+		|| meansOfDeath == MOD_KNIFETHROW		// Kill & a knive throw etc
+		|| meansOfDeath == MOD_THOMPSON			// Thompson
+		|| meansOfDeath == MOD_MP40				// MP40
+		|| meansOfDeath == MOD_STEN				// STEN 
+		|| meansOfDeath == MOD_POISONED		// Poison & kill etc
+	) {	
+	
+		if((level.time - ent->client->lastKillTime) > 1000) {
+			ent->client->doublekill = 0;
+			ent->client->lastKillTime = level.time;
+			return;
 		} else {
-			CP( "print \"Info: ^7Type ^3\\wstats <player_id>^7 to see stats on an active player.\n\"" );
-			return;
+			ent->client->doublekill++;
+			ent->client->lastKillTime = level.time;
 		}
-	} else {
-		// Find the player to poll stats.
-		trap_Argv( 1, arg, sizeof( arg ) );
-		if ( ( pid = ClientNumberFromString( ent, arg ) ) == -1 ) {
-			return;
+
+		switch ( ent->client->doublekill ) {
+			// 2 kills
+			case 1: 				
+				if (n == 0) random = "doublekill.wav";
+				else if (n == 1) random = "doublekill2.wav";
+				else if (n == 2) random = "doublekill3.wav";
+				else random = "doublekill.wav";
+
+				APS(va("xmod/sound/game/sprees/doubleKills/%s", random));
+				AP(va("chat \"^3Double Kill! ^7%s\n\"", ent->client->pers.netname));
+			break;
+				// 3 kills
+			case 2:
+				APS("xmod/sound/game/sprees/doubleKills/tripplekill.wav");
+				AP(va("chat \"^3Tripple Kill! ^7%s\n\"", ent->client->pers.netname));
+			break;
+			// 4 kills
+			case 3: 
+				APS("xmod/sound/game/sprees/doubleKills/oneandonly.wav");
+				AP(va("chat \"^3Pure Ownage! ^7%s\n\"", ent->client->pers.netname));
+			break;
 		}
-		CP( va( "%s %s\n", cmd, G_createStats( g_entities + pid ) ) );
 	}
 }
 
-// Sends a player's stats to the requesting client.
-void G_clientStatsPrint( gentity_t *ent, int nType, qboolean toWindow ) {
-	int pid;
-	char *cmd = (toWindow) ? "cgs" : "cgsp"; 
-	char arg[MAX_TOKEN_CHARS];
+/*
+===========
+First headshots 
 
-	if ( !ent || ( ent->r.svFlags & SVF_BOT ) ) {
-		return;
-	}
+Prints who done first headshots when round starts.
+===========
+*/
+void stats_FirstHeadshot(gentity_t *attacker, gentity_t *targ) {
+	qboolean 	onSameTeam = OnSameTeam( targ, attacker);
 
-	// If requesting stats for self, its easy.
-	if ( trap_Argc() < 2 ) {
-		if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR ) {
-			CP( va( "%s %s\n", cmd, G_createClientStats( ent ) ) );
-			// Specs default to players they are chasing
-		} else if ( ent->client->sess.spectatorState == SPECTATOR_FOLLOW ) {
-			CP( va( "%s %s\n", cmd, G_createClientStats( g_entities + ent->client->sess.spectatorClient ) ) );
-		} else {
-			CP( "print \"Info: ^7Type ^3\\stats <player_id>^7 to see stats on an active player.\n\"" );
-			return;
-		}
-	} else {
-		// Find the player to poll stats.
-		trap_Argv( 1, arg, sizeof( arg ) );
-		if ( ( pid = ClientNumberFromString( ent, arg ) ) == -1 ) {
-			return;
-		}
-		CP( va( "%s %s\n", cmd, G_createClientStats( g_entities + pid ) ) );
-	}
-}
+	if (g_gamestate.integer == GS_PLAYING) {
 
-// Records accuracy, damage, and kill/death stats.
-void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod ) {
-	int dmg, ref;
-
-	// Keep track of only active player-to-player interactions in a real game
-	if ( !targ || !targ->client ||
-		 g_gamestate.integer != GS_PLAYING ||
-		 mod == MOD_ADMIN ||
-		 mod == MOD_SWITCHTEAM ||
-		 ( g_gametype.integer >= GT_WOLF && ( targ->client->ps.pm_flags & PMF_LIMBO ) ) ||
-		 ( g_gametype.integer < GT_WOLF && ( targ->s.eFlags == EF_DEAD || targ->client->ps.pm_type == PM_DEAD ) ) ) {
-		return;
-	}
-
-	// Special hack for intentional gibbage
-	if ( targ->health <= 0 && targ->client->ps.pm_type == PM_DEAD ) {
-		if ( mod < MOD_CROSS && attacker && attacker->client ) {
-			int x = attacker->client->sess.aWeaponStats[G_weapStatIndex_MOD( mod )].atts--;
-			if ( x < 1 ) {
-				attacker->client->sess.aWeaponStats[G_weapStatIndex_MOD( mod )].atts = 1;
-			}
-		}
-		return;
-	}
-
-	// Suicides only affect the player specifically
-	if ( targ == attacker || !attacker || !attacker->client || mod == MOD_SUICIDE || mod == MOD_SELFKILL ) {	
-		if ( !attacker || !attacker->client )
-		return;
-	}
-
-	// Telefrags only add 100 points.. not 100k!!
-	if ( mod == MOD_TELEFRAG ) {
-		dmg = 100;
-	} else { dmg = dmg_ref;}
-
-	// Player team stats (team kills)
-	if ( g_gametype.integer >= GT_WOLF && 
-		 targ->client->sess.sessionTeam == attacker->client->sess.sessionTeam ) {
-		attacker->client->sess.team_damage += dmg;
-		// Don't count self kill as team kill..because it ain't!
-		if ( targ->health <= 0 && !(mod == MOD_SUICIDE || mod == MOD_SELFKILL)) {
-			attacker->client->sess.team_kills++;
-			targ->client->sess.deaths++;	// Record death when TK occurs
-		}
-		return;
-	}
-
-	// General player stats
-	if ( mod != MOD_SYRINGE ) {
-		attacker->client->sess.damage_given += dmg;
-		targ->client->sess.damage_received += dmg;
-		if ( targ->health <= 0 ) {
-			attacker->client->sess.kills++;
-			targ->client->sess.deaths++;
-
-			// OSPx - Life(s) Kill peak
-			if (attacker->client->pers.life_kills > attacker->client->sess.killPeak)
-				attacker->client->sess.killPeak++;
-		}
-	}
-
-	// Player weapon stats
-	ref = G_weapStatIndex_MOD( mod );
-	if ( dmg > 0 ) {
-		attacker->client->sess.aWeaponStats[ref].hits++;
-	}
-	if ( targ->health <= 0 ) {
-		attacker->client->sess.aWeaponStats[ref].kills++;
-		targ->client->sess.aWeaponStats[ref].deaths++;
-	}
-}
-
-// Records weapon headshots
-void G_addStatsHeadShot( gentity_t *attacker, int mod ) {
-	if ( g_gamestate.integer != GS_PLAYING ) {
-		return;
-	}
-
-	if ( !attacker || !attacker->client ) {
-		return;
-	}
-	attacker->client->sess.aWeaponStats[G_weapStatIndex_MOD( mod )].headshots++;
-	// Store headshot in session as well for overall count
-	attacker->client->sess.headshots++;
-}
-
-// Resets player's current stats
-void G_deleteStats( int nClient ) {
-	gclient_t *cl = &level.clients[nClient];
-
-	cl->sess.damage_given = 0;
-	cl->sess.damage_received = 0;
-	cl->sess.deaths = 0;
-	cl->sess.rounds = 0;
-	cl->sess.kills = 0;
-	cl->sess.suicides = 0;
-	cl->sess.team_damage = 0;
-	cl->sess.team_kills = 0;
-	cl->sess.headshots = 0;
-	cl->sess.med_given = 0;
-	cl->sess.ammo_given = 0;
-	cl->sess.gibs = 0;
-	cl->sess.revives = 0;
-	cl->sess.acc_hits = 0;
-	cl->sess.acc_shots = 0;
-	cl->sess.killPeak = 0;
-
-	memset( &cl->sess.aWeaponStats, 0, sizeof( cl->sess.aWeaponStats ) );
-	trap_Cvar_Set( va( "wstats%i", nClient ), va( "%d", nClient ) );
-}
-
-// Parses weapon stat info for given ent
-//	---> The given string must be space delimited and contain only integers
-void G_parseStats( char *pszStatsInfo ) {
-	gclient_t *cl;
-	const char *tmp = pszStatsInfo;
-	unsigned int i, dwWeaponMask, dwClientID = atoi( pszStatsInfo );
-
-	if ( dwClientID < 0 || dwClientID > MAX_CLIENTS ) {
-		return;
-	}
-
-	cl = &level.clients[dwClientID];
-
-#define GETVAL( x ) if ( ( tmp = strchr( tmp, ' ' ) ) == NULL ) {return;} x = atoi( ++tmp );
-
-	GETVAL( cl->sess.rounds );
-	GETVAL( dwWeaponMask );
-	for ( i = WS_KNIFE; i < WS_MAX; i++ ) {
-		if ( dwWeaponMask & ( 1 << i ) ) {
-			GETVAL( cl->sess.aWeaponStats[i].hits );
-			GETVAL( cl->sess.aWeaponStats[i].atts );
-			GETVAL( cl->sess.aWeaponStats[i].kills );
-			GETVAL( cl->sess.aWeaponStats[i].deaths );
-			GETVAL( cl->sess.aWeaponStats[i].headshots );
-		}
-	}
-
-	GETVAL( cl->sess.damage_given );
-	GETVAL( cl->sess.damage_received );
-	GETVAL( cl->sess.team_damage );
-	GETVAL( cl->sess.deaths );
-	GETVAL( cl->sess.kills );
-	GETVAL( cl->sess.suicides );
-	GETVAL( cl->sess.team_kills );
-	GETVAL( cl->sess.headshots );
-	GETVAL( cl->sess.med_given );
-	GETVAL( cl->sess.ammo_given );
-	GETVAL( cl->sess.gibs );
-	GETVAL( cl->sess.revives );
-	GETVAL( cl->sess.acc_shots );
-	GETVAL( cl->sess.acc_hits );
-	GETVAL( cl->sess.killPeak );
-}
-
-// These map to WS_* weapon indexes
-// OSPx: In other words...min shots before it qualifies for top-bottom check..
-const int cQualifyingShots[WS_MAX] = {
-	20,     // Knife
-	14,     // Luger
-	14,     // Colt
-	32,     // MP40
-	30,     // Thompson
-	32,     // STEN
-	30,     // FG42 (rapid sniper mode)
-	3,      // PF
-	100,    // Flamer
-	5,      // Grenade
-	5,      // Mortar (Was I on drugs or am I missing something?)
-	5,      // Dynamite
-	3,      // Airstrike
-	3,      // Artillery
-	5,      // Syringe
-	3,      // Smoke (Completelly useless..or maybe for "AS cannister kill" when blocking it?)
-	50,     // MG42
-	10,     // Rifle (sniper/mauser aka scopped-unscopped)
-	100		// Venom
-};
-
-// ************** TOPSHOTS/BOTTOMSHOTS
-//
-// Gives back overall or specific weapon rankings
-int QDECL SortStats( const void *a, const void *b ) {
-	gclient_t   *ca, *cb;
-	float accA, accB;
-
-	ca = &level.clients[*(int *)a];
-	cb = &level.clients[*(int *)b];
-
-	// then connecting clients
-	if ( ca->pers.connected == CON_CONNECTING ) {
-		return( 1 );
-	}
-	if ( cb->pers.connected == CON_CONNECTING ) {
-		return( -1 );
-	}
-
-	if ( ca->sess.sessionTeam == TEAM_SPECTATOR ) {
-		return( 1 );
-	}
-	if ( cb->sess.sessionTeam == TEAM_SPECTATOR ) {
-		return( -1 );
-	}
-
-	if ( ( ca->sess.aWeaponStats[iWeap].atts ) < cQualifyingShots[iWeap] ) {
-		return( 1 );
-	}
-	if ( ( cb->sess.aWeaponStats[iWeap].atts ) < cQualifyingShots[iWeap] ) {
-		return( -1 );
-	}
-
-	accA = (float)( ca->sess.aWeaponStats[iWeap].hits * 100.0 ) / (float)( ca->sess.aWeaponStats[iWeap].atts );
-	accB = (float)( cb->sess.aWeaponStats[iWeap].hits * 100.0 ) / (float)( cb->sess.aWeaponStats[iWeap].atts );
-
-	// then sort by accuracy
-	if ( accA > accB ) {
-		return( -1 );
-	}
-	return( 1 );
-}
-
-// Shows the most accurate players for each weapon to the requesting client
-void G_weaponStatsLeaders_cmd( gentity_t* ent, qboolean doTop, qboolean doWindow ) {
-	int i, iWeap, shots, wBestAcc, cClients, cPlaces;
-	int aClients[MAX_CLIENTS];
-	float acc;
-	char z[MAX_STRING_CHARS];
-	const gclient_t* cl;
-
-	z[0] = 0;
-	for ( iWeap = WS_KNIFE; iWeap < WS_MAX; iWeap++ ) {
-		wBestAcc = ( doTop ) ? 0 : 99999;
-		cClients = 0;
-		cPlaces = 0;
-
-		// suckfest - needs two passes, in case there are ties
-		for ( i = 0; i < level.numConnectedClients; i++ ) {
-			cl = &level.clients[level.sortedClients[i]];
-
-			if ( cl->sess.sessionTeam == TEAM_SPECTATOR ) {
-				continue;
+		if ( !firstheadshot &&
+			targ &&
+			targ->client &&
+			attacker &&
+			attacker->client &&
+			attacker->s.number != ENTITYNUM_NONE &&
+			attacker->s.number != ENTITYNUM_WORLD &&
+			attacker != targ &&
+			g_gamestate.integer == GS_PLAYING &&
+			!onSameTeam )
+		{
+			if (g_showFirstHeadshot.integer) {
+				AP(va("chat \"%s ^7blew out %s^7's brains with the ^3FIRST HEAD SHOT^7!\"", attacker->client->pers.netname, targ->client->pers.netname));
+				APS("xmod/sound/game/events/headshot.wav");	
 			}
 
-			shots = cl->sess.aWeaponStats[iWeap].atts;
-			if ( shots >= cQualifyingShots[iWeap] ) {
-				acc = (float)( ( cl->sess.aWeaponStats[iWeap].hits ) * 100.0 ) / (float)shots;
-				aClients[cClients++] = level.sortedClients[i];
-				if ( ( ( doTop ) ? acc : (float)wBestAcc ) > ( ( doTop ) ? wBestAcc : acc ) ) {
-					wBestAcc = (int)acc;
-					cPlaces++;
-				}
-			}
+			// Global Stats
+			Q_strncpyz(level.firstHeadshotAttacker, attacker->client->sess.guid, sizeof(level.firstHeadshotAttacker));
+			Q_strncpyz(level.firstHeadshotVictim, targ->client->sess.guid, sizeof(level.firstHeadshotVictim));
+
+			// Mark it
+			firstheadshot = qtrue;
 		}
-
-		if ( !doTop && cPlaces < 2 ) {
-			continue;
-		}
-
-		for ( i = 0; i < cClients; i++ ) {
-			cl = &level.clients[ aClients[i] ];
-			acc = (float)( cl->sess.aWeaponStats[iWeap].hits * 100.0 ) / (float)( cl->sess.aWeaponStats[iWeap].atts );
-
-			if ( ( ( doTop ) ? acc : (float)wBestAcc + 0.999 ) >= ( ( doTop ) ? wBestAcc : acc ) ) {
-				Q_strcat( z, sizeof( z ), va( " %d %d %d %d %d %d", iWeap + 1, aClients[i],
-											  cl->sess.aWeaponStats[iWeap].hits,
-											  cl->sess.aWeaponStats[iWeap].atts,
-											  cl->sess.aWeaponStats[iWeap].kills,
-											  cl->sess.aWeaponStats[iWeap].deaths ) );
-			}
-		}
-	}
-	CP( va( "%sbstats%s %s 0", ( ( doWindow ) ? "w" : "" ), ( ( doTop ) ? "" : "b" ), z ) );	
-}
-
-// ************** STATSALL
-//
-// Shows all players' stats to the requesting client.
-void G_statsall_cmd( gentity_t *ent, unsigned int dwCommand, qboolean fDump ) {
-	int i;
-	gentity_t *player;
-
-	for ( i = 0; i < level.numConnectedClients; i++ ) {
-		player = &g_entities[level.sortedClients[i]];
-		if ( player->client->sess.sessionTeam == TEAM_SPECTATOR ) {
-			continue;
-		}
-		CP( va( "ws %s\n", G_createStats( player ) ) );
 	}
 }
 
+/*
+===========
+First blood 
 
-// Shows best/worst accuracy for all weapons, or sorted
-// accuracies for a single weapon.
-void G_weaponRankings_cmd( gentity_t *ent, unsigned int dwCommand, qboolean state ) {
-	gclient_t *cl;
-	int c = 0, i, shots, wBestAcc;
-	char z[MAX_STRING_CHARS];
+Prints who draw first blood when round starts.
+NOTE: Atm it's only a print..once I'm not lazy I'll set it in a way it can decide winner once timelimit hits on 
+	  specific maps (like depot, destuction) - so first blood decides who won.
+===========
+*/
+void stats_FirstBlood(gentity_t *self, gentity_t *attacker) {
+	qboolean 	onSameTeam = OnSameTeam( self, attacker); 
 
-	if ( trap_Argc() < 2 ) {
-		G_weaponStatsLeaders_cmd( ent, state, qfalse );
+	if (g_gamestate.integer == GS_PLAYING) {
+
+		if (!firstblood &&
+			self &&
+			self->client &&
+			attacker &&
+			attacker->client &&
+			attacker->s.number != ENTITYNUM_NONE &&
+			attacker->s.number != ENTITYNUM_WORLD &&
+			attacker != self &&
+			g_gamestate.integer == GS_PLAYING &&
+			!onSameTeam)
+		{	
+			if (g_showFirstBlood.integer) {
+				AP(va("chat \"%s ^7drew ^1FIRST BLOOD ^7from ^7%s^1!\"", attacker->client->pers.netname, self->client->pers.netname));
+				APS("xmod/sound/game/events/firstblood.wav");				
+			}
+
+			// Global Stats
+			Q_strncpyz(level.firstBloodAttacker, attacker->client->sess.guid, sizeof(level.firstBloodAttacker));
+			Q_strncpyz(level.firstBloodVictim, self->client->sess.guid, sizeof(level.firstBloodVictim));
+
+			// Mark it
+			firstblood = qtrue;
+		}
+	}
+}
+
+/*
+===========
+Last Blood
+
+Prints in console at the end of the round
+===========
+*/
+void stats_LastBloodMessage(qboolean fOut)
+{
+	if (g_showLastBlood.integer)
+	{
+		if (Q_stricmp(level.lastKiller, ""))
+		{
+			if (!fOut)
+			{
+				if (Q_stricmp(level.lastVictim, ""))
+					AP(va("print \"%s ^7drew ^1Last Blood^7 from %s^7!\n\"", level.lastKiller, level.lastVictim));
+				else
+					AP(va("print \"%s ^7drew the ^1Last Blood^7!\n\"", level.lastKiller));
+			}
+			else {
+				if (Q_stricmp(level.lastVictim, ""))
+					AP(va("print \"\n^1Last Blood^7: %s ^7rocked %s^7's world!\n\n\"", level.lastKiller, level.lastVictim));
+				else
+					AP(va("print \"\n^1Last Blood^7: %s ^7donated the Last Drop of Blood...\n\n\"", level.lastKiller));
+			}
+		}
+	}	
+}
+
+/*
+===========
+Killing sprees
+===========
+*/
+void stats_KillingSprees ( gentity_t *ent, int score ) {
+	int killRatio = ent->client->pers.stats.kills; 	
+	int snd_idx;
+	
+	if (!g_killingSprees.integer || g_gamestate.integer != GS_PLAYING) 
 		return;
+	
+	// if killer ratio is bellow 100 kills spam every 5th kill
+	if (killRatio <= 100 && killRatio >= 5 && (killRatio % 5) == 0 ) 	{	
+		snd_idx = (killRatio / 5) - 1;
+
+		AP(va("chat \"^4%s ^4(^7%dK %dhs^4): ^7%s\n\"", 
+			killingSprees[snd_idx <= 20 ? snd_idx : 19].msg, killRatio, ent->client->pers.stats.headshots, ent->client->pers.netname));
+
+		APS(va("xmod/sound/game/sprees/Sprees/%s", killingSprees[snd_idx < 20 ? snd_idx : 19].snd));
+	}	
+	// Anything above 100 gets spammed each 10th time..
+	else if ( killRatio > 100 && killRatio >= 10 && (killRatio % 10) == 0 ) {
+		snd_idx = (killRatio / 10) - 1;
+
+		AP(va("chat \"^4HOLY SHIT ^4(^7%dK %dhs^4): ^7%s\n\"", killRatio, ent->client->pers.stats.headshots, ent->client->pers.netname));		
+		APS("xmod/sound/game/sprees/Sprees/holyshit_alt.wav");
 	}
 
-	wBestAcc = ( state ) ? 0 : 99999;
+	// could be done some other way but anyway...do the count... :)
+	ent->client->ps.persistant[PERS_SCORE] += score;
+	if (g_gametype.integer >= GT_TEAM)			
+		level.teamScores[ ent->client->ps.persistant[PERS_TEAM] ] += score;
 
-	// Find the weapon
-	trap_Argv( 1, z, sizeof( z ) );
-	if ( ( iWeap = atoi( z ) ) == 0 || iWeap < WS_KNIFE || iWeap >= WS_MAX ) {
-		for (iWeap = WS_VENOM; iWeap >= WS_KNIFE; iWeap--) {
-			if ( !Q_stricmp( z, aWeaponInfo[iWeap].pszCode ) ) {
-				break;
-			}
-		}
-	}
-
-	if ( iWeap < WS_KNIFE ) {		
-		CP( va( "print \"\n^3Info: %s\n\n\"",   
-			(state ? 
-				"^7 Shows BEST player for each weapon. Add ^3<weapon_ID>^7 to show all stats for a weapon " : 
-				"^7 Shows WORST player for each weapon. Add ^3<weapon_ID>^7 to show all stats for a weapon" ) 
-		));
-
-		Q_strncpyz( z, "^3Available weapon codes:^7\n", sizeof( z ) );
-		for ( i = WS_KNIFE; i < WS_MAX; i++ ) {
-			Q_strcat( z, sizeof( z ), va( "  %s - %s\n", aWeaponInfo[i].pszCode, aWeaponInfo[i].pszName ) );
-		}
-		CP( va( "print \"%s\"", z ) );
-		return;
-	}
-
-	memcpy( &level.sortedStats, &level.sortedClients, sizeof( level.sortedStats ) );
-	qsort( level.sortedStats, level.numConnectedClients, sizeof( level.sortedStats[0] ), SortStats );
-
-	z[0] = 0;
-	for ( i = 0; i < level.numConnectedClients; i++ ) {
-		cl = &level.clients[level.sortedStats[i]];
-
-		if ( cl->sess.sessionTeam == TEAM_SPECTATOR ) {
-			continue;
-		}
-
-		shots = cl->sess.aWeaponStats[iWeap].atts;
-		if ( shots >= cQualifyingShots[iWeap] ) {
-			float acc = (float)( cl->sess.aWeaponStats[iWeap].hits * 100.0 ) / (float)shots;
-
-			c++;
-			wBestAcc = ( ( ( state ) ? acc : wBestAcc ) > ( ( state ) ? wBestAcc : acc ) ) ? (int)acc : wBestAcc;
-			Q_strcat( z, sizeof( z ), va( " %d %d %d %d %d", level.sortedStats[i],
-										  cl->sess.aWeaponStats[iWeap].hits,
-										  shots,
-										  cl->sess.aWeaponStats[iWeap].kills,
-										  cl->sess.aWeaponStats[iWeap].deaths ) );
-		}
-	}
-	CP( va( "astats%s %d %d %d%s", ( ( state ) ? "" : "b" ), c, iWeap, wBestAcc, z ) );
+	CalculateRanks(); 
 }
 
-// Prints current player match info.
-void G_printMatchInfo(gentity_t *ent, qboolean time) {
+/*
+===========
+Death spree
+===========
+*/
+void stats_DeathSpree ( gentity_t *ent ) {	
+	int deaths = ent->client->pers.spreeDeaths; 
+	int n = rand() % 2; 
+	char *snd="", *spree="";	
+
+	if (!g_deathSprees.integer || deaths <= 0 || g_gamestate.integer != GS_PLAYING)
+		return;
+
+	if( deaths == 9 ) { 
+		if (n == 0) { spree=va("(^710 Dth^0)"); snd = "dSpree1.wav"; }
+		else { spree=va("(^710 Dth^0)"); snd = "dSpree1_alt.wav"; }		
+	} else if( deaths == 14 ) { 
+		if (n == 0) { spree=va("(^715 Dth^0)"); snd = "dSpree2.wav"; }
+		else { spree=va("(^715 Dth^0)"); snd = "dSpree2_alt.wav"; }		
+	} else if( deaths == 19 ) { 
+		if (n == 0) { spree=va("(^720 Dth^0)"); snd = "dSpree3.wav"; }
+		else { spree=va("(^720 Dth^0)"); snd = "dSpree3_alt.wav";  }		
+	} else if( deaths == 24 ) { 
+		if (n == 0) { spree=va("(^725 Dth^0)"); snd = "dSpree4.wav"; }
+		else { spree=va("(^725 Dth^0)"); snd = "dSpree4_alt.wav"; }		
+	}
+
+	// Has to be offset by 1 as count comes late..
+	if (deaths == 9 || deaths == 14 || deaths == 19 || deaths == 24) {
+		AP(va("chat \"^0DEATHSPREE! %s: ^7%s\n\"", spree, ent->client->pers.netname));
+		
+		APS(va("xmod/sound/game/sprees/deathSpree/%s", snd));
+	}
+} 
+
+/*
+===========
+Killer spree
+
+Almost identical to Killing sprees, just uses different colors and female sounds.
+===========
+*/
+void stats_KillerSpree(gentity_t *ent, int score) {
+	int killRatio=ent->client->pers.lifeKills;
+	int snd_idx;
+
+	if(!g_killerSpree.integer || g_gamestate.integer != GS_PLAYING)
+		return;
+
+	if(!ent || !ent->client) 
+		return;	
+
+	// if killer ratio is bellow 50 kills spam every 5th kill
+	if (killRatio <= 50 && killRatio >= 5 && (killRatio % 5) == 0 ) 	{	
+		snd_idx = (killRatio / 5) - 1;
+
+		AP(va("chat \"^2%s ^2(^7%dk^2): ^7%s\n\"", 
+			killerSprees[snd_idx <= 11 ? snd_idx : 10].msg, killRatio, ent->client->pers.netname));
+				
+		APS(va("xmod/sound/game/sprees/killerSprees/%s", killerSprees[snd_idx < 11 ? snd_idx : 10].snd));
+	}
+
+	// Anything above 50 gets spammed each 10th time..
+	else if ( killRatio > 50 && killRatio >= 10 && (killRatio % 10) == 0 ) {
+		snd_idx = (killRatio / 10) - 1;
+
+		AP(va("chat \"^2%s ^2(^7%dk^2): ^7%s\n\"", 
+			killerSprees[snd_idx <= 11 ? snd_idx : 10].msg, killRatio, ent->client->pers.netname));
+
+		APS(va("xmod/sound/game/sprees/killerSprees/%s", killerSprees[snd_idx < 11 ? snd_idx : 10].snd ));
+	}
+
+	// could be done some other way but anyway...do the count... :)
+	ent->client->ps.persistant[PERS_SCORE] += score;
+	if (g_gametype.integer >= GT_TEAM)			
+		level.teamScores[ ent->client->ps.persistant[PERS_TEAM] ] += score;
+
+	CalculateRanks(); 	
+}
+
+/*
+===========
+EOM (End of Match) stats
+===========
+*/
+void stats_MatchInfo(void) {
 	int i, j, cnt, eff;
 	float tot_acc = 0.00f;
 	int tot_kills, tot_deaths, tot_gp, tot_hs, tot_sui, tot_tk, tot_dg, tot_dr, tot_td, tot_hits, tot_shots;
 	gclient_t *cl;
 	char *ref;
 	char n1[MAX_NETNAME];
-	
-	CP(va("sc \"\nMod: %s \n^7Server: %s %s\n\n\"",
-		GAMEVERSION, sv_hostname.string, ( time ? va("\n^7Time: ^3%s", getTime()) : "" ) ));
+	char n2[MAX_NETNAME];
+
+	AP(va("print \"\nMod: %s \n^7Server: %s  \n^7Time: %s\n\n\"",
+		GAMEVERSION, sv_hostname.string, getTime(qfalse)));
 
 	cnt = 0;
 	for (i = TEAM_RED; i <= TEAM_BLUE; i++) {
@@ -600,10 +352,10 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 		tot_shots = 0;
 		tot_acc = 0;
 
-			CP(va("sc \"%s ^7Team\n"
-			"^7----------------------------------------------------------------------"
-			"\nPlayer          Kll Dth Sui TK ^2Eff Accrcy   HS    ^5DG    DR   TD  ^3Score\n"
-			"^7----------------------------------------------------------------------\n\"", (i == TEAM_RED) ? "^1Axis" : "^4Allied"));
+		AP(va("print \"%s ^7Team\n"
+			"^7-----------------------------------------------------------------------"
+			"\nPlayer            ^3K   ^7D  /K  TK  ^5Eff   Acc   ^2HS   DG    DR    TD  ^7Score\n"
+			"^7-----------------------------------------------------------------------\n\"", (i == TEAM_RED) ? "^1Axis" : "^4Allied"));
 
 		for (j = 0; j < level.numPlayingClients; j++) {
 			cl = level.clients + level.sortedClients[j];
@@ -611,50 +363,46 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 			if (cl->pers.connected != CON_CONNECTED || cl->sess.sessionTeam != i) {
 				continue;
 			}
-									
-			SanitizeString(cl->pers.netname, n1, qtrue);
-			Q_CleanStr(n1);						
+
+			// Bug fix - ^Pentagram always manages to break stats so it needs different approach. ^^
+			DecolorString(cl->pers.netname, n1);
+			SanitizeString(n1, n2, qfalse);
+			Q_CleanStr(n2);
+			n2[15] = 0;
 
 			ref = "^7";
-			tot_kills += cl->sess.kills;
-			tot_deaths += cl->sess.deaths;
-			tot_sui += cl->sess.suicides;
-			tot_tk += cl->sess.team_kills;
-			tot_hs += cl->sess.headshots;
-			tot_dg += cl->sess.damage_given;
-			tot_dr += cl->sess.damage_received;
-			tot_td += cl->sess.team_damage;
+			tot_kills += cl->pers.stats.kills;
+			tot_deaths += cl->pers.stats.deaths;
+			tot_sui += cl->pers.stats.suicides;
+			tot_tk += cl->pers.stats.teamKills;
+			tot_hs += cl->pers.stats.headshots;
+			tot_dg += cl->pers.stats.dmgGiv;
+			tot_dr += cl->pers.stats.dmgRec;
+			tot_td += cl->pers.stats.dmgTeam;
 			tot_gp += cl->ps.persistant[PERS_SCORE];
-			tot_hits += cl->sess.acc_hits;
-			tot_shots += cl->sess.acc_shots;
+			tot_hits += cl->pers.stats.shotsHit;
+			tot_shots += cl->pers.stats.shotsFired;
 
-			eff = (cl->sess.deaths + cl->sess.kills == 0) ? 0 : 100 * cl->sess.kills / (cl->sess.deaths + cl->sess.kills);
+			eff = (cl->pers.stats.deaths + cl->pers.stats.kills == 0) ? 0 : 100 * cl->pers.stats.kills / (cl->pers.stats.deaths + cl->pers.stats.kills);
 			if (eff < 0) {
 				eff = 0;
 			}
 
-			if (ent->client == cl ||
-				(ent->client->sess.sessionTeam == TEAM_SPECTATOR &&
-				ent->client->sess.spectatorState == SPECTATOR_FOLLOW &&
-				ent->client->sess.spectatorClient == level.sortedClients[j])) {
-				ref = "^7";
-			}
-
 			cnt++;
-			CP(va("sc \"%s%-15s%4d%4d%4d%3d%s^2%4d %6.2f%5d^5%6d%6d%5d^3%7d\n\"",
+			AP(va("print \"%s%-15s^3%4d^7%4d%4d%4d%s^5%4d %6.2f^2%4d%6d%6d%6d^7%7d\n\"",
 				ref,
-				n1,
-				cl->sess.kills,
-				cl->sess.deaths,
-				cl->sess.suicides,
-				cl->sess.team_kills,
+				n2,
+				cl->pers.stats.kills,
+				cl->pers.stats.deaths,
+				cl->pers.stats.suicides,
+				cl->pers.stats.teamKills,
 				ref,
 				eff,
-				((cl->sess.acc_shots == 0) ? 0.00 : ((float)cl->sess.acc_hits / (float)cl->sess.acc_shots) * 100.00f),
-				cl->sess.headshots,
-				cl->sess.damage_given,
-				cl->sess.damage_received,
-				cl->sess.team_damage,
+				((cl->pers.stats.shotsFired == 0) ? 0.00 : ((float)cl->pers.stats.shotsHit / (float)cl->pers.stats.shotsFired) * 100.00f),
+				cl->pers.stats.headshots,
+				cl->pers.stats.dmgGiv,
+				cl->pers.stats.dmgRec,
+				cl->pers.stats.dmgTeam,
 				cl->ps.persistant[PERS_SCORE]));
 		}
 
@@ -664,8 +412,8 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 		}
 		tot_acc = ((tot_shots == 0) ? 0.00 : ((float)tot_hits / (float)tot_shots) * 100.00f);
 
-		CP(va("sc \"^7----------------------------------------------------------------------\n"
-			"%-19s%4d%4d%4d%3d^2%4d %6.2f%5d^5%6d%6d%5d^3%7d\n\n\"",
+		AP(va("print \"^7-----------------------------------------------------------------------\n"
+			"%-19s^3%4d^7%4d%4d%4d^5%4d %6.2f^2%4d%6d%6d%6d^7%7d\n\n\"",
 			"^3Totals^7",
 			tot_kills,
 			tot_deaths,
@@ -679,5 +427,420 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 			tot_td,
 			tot_gp));
 	}
-	CP(va("sc \"%s\n\" 0", ((!cnt) ? "^3\nNo scores to report." : "")));
+	AP(va("print \"%s\n\" 0", ((!cnt) ? "^3\nNo scores to report." : "")));
 }
+
+/*
+===========
+Map Stats
+
+This will be bunch of bouncing code around but should be simple enough (hopefully).
+===========
+*/
+// Builds Message String
+char *mapStatsMsg(char *map, unsigned int score, char *player, char *date) {
+	if (g_mapStats.integer == 1)
+		return va("^1HALL OF FAME(^7%s^1) ^7>> Top Killer(^1%d^7): %s ^7/ Achieved: ^1%s^7\n\"",
+		map, score, player, ((date == NULL) ? "previous round" : date));
+	else if (g_mapStats.integer == 2)
+		return va("^1HALL OF FAME(^7%s^1) ^7>> Top Killing Spree(^1%d^7): %s ^7/ Achieved: ^1%s^7\n\"",
+		map, score, player, ((date == NULL) ? "previous round" : date));
+	else if (g_mapStats.integer == 3)
+		return va("^1HALL OF SHAME(^7%s^1) ^7>> Most Deaths(^1%d^7): %s ^7/ Achieved: ^1%s^7\n\"",
+		map, score, player, ((date == NULL) ? "previous round" : date));
+	else if (g_mapStats.integer == 4)
+		return va("^1HALL OF SHAME(^7%s^1) ^7>> Highest Death Spree(^1%d^7): %s ^7/ Achieved: ^1%s^7\n\"",
+		map, score, player, ((date == NULL) ? "previous round" : date));
+	else if (g_mapStats.integer == 5)
+		return va("^1HALL OF FAME(^7%s^1) ^7>> Most Revives(^1%d^7): %s ^7/ Achieved: ^1%s^7\n\"",
+		map, score, player, ((date == NULL) ? "previous round" : date));
+	else if (g_mapStats.integer == 6)
+		return va("^1HALL OF FAME(^7%s^1) ^7>> Most Headshots(^1%^7): %s ^7/ Achieved: ^1%s^7\n\"",
+		map, score, player, ((date == NULL) ? "previous round" : date));
+	else
+		return NULL;
+}
+
+// Write stats (unconditional)
+void add_MapStats(char *file) {
+	fileHandle_t statsFile;
+	char *entry;
+
+	entry = va("%d\\%s\\%s\\null", level.topScore, parseNames(level.topOwner), getTime(qfalse));
+
+	// Re-create new file (overwrites old one)
+	trap_FS_FOpenFile(file, &statsFile, FS_WRITE);
+	trap_FS_Write(entry, strlen(entry), statsFile);
+	trap_FS_FCloseFile(statsFile);
+}
+
+// Set cvar
+void set_mapStats(char *map, unsigned int score, char *player, char *date) {
+	if (!level.mapStatsPrinted)
+		AP(va("chat \"%s\n\"", mapStatsMsg(map, score, player, date)));
+}
+
+// Check stats
+void handle_MapStats(char *map, char *suffix) {
+	fileHandle_t	statsFile;
+	char	filename[255], data[512];
+	int		file;
+	char	*token[512] = { NULL };
+
+	Com_sprintf(filename, 255, "%s%s_%s", STSPTH, map, suffix);
+	file = trap_FS_FOpenFile(filename, &statsFile, FS_READ);
+
+	// Check|Write
+	if (file > 0)
+	{
+		// read the existing data
+		trap_FS_Read(data, file, statsFile);
+		trap_FS_FCloseFile(statsFile);
+
+		// score\\name\\date
+		Q_Tokenize(data, token, "\\");
+
+		// New record!
+		if (token[0] && atoi(token[0]) < level.topScore)
+		{
+			add_MapStats(filename);
+			set_mapStats(map, level.topScore, level.topOwner, NULL);
+
+			if (g_mapStatsNotify.integer)
+				AP(va("print \"^1New Map Record! ^7Be it good or bad, %s ^7has the stuff Legends are made of^1!\n\"",
+				level.topOwner));
+		}
+		else
+		{
+			set_mapStats(map, atoi(token[0]), token[1], token[2]);
+		}
+	}
+	else
+	{
+		// Close the pointer..
+		trap_FS_FCloseFile(statsFile);
+
+		// Create it if there's an entry for it..
+		if (level.topScore && level.topOwner)
+		{
+			add_MapStats(filename);
+			set_mapStats(map, level.topScore, level.topOwner, NULL);
+
+			if (g_mapStatsNotify.integer)
+				AP(va("print \"^1New Map Record! ^7Be it good or bad, %s ^7has the stuff Legends are made of^1!\n\"",
+				level.topOwner));
+		}
+	}
+}
+
+// Writes stats during game
+void write_MapStats(gentity_t *ent, unsigned int score, int type) {
+	// FCFS method!
+	if (g_mapStats.integer &&
+		score > level.topScore &&
+		g_gamestate.integer == GS_PLAYING &&
+		type == g_mapStats.integer)
+	{
+		Q_strncpyz(level.topOwner, "", sizeof(level.topOwner));
+		strcat(level.topOwner, ent->client->pers.netname);
+		level.topScore = score;
+	}
+}
+
+// Front end for mapStats handling..
+void stats_MapStats(void) {
+	char mapName[64];
+	char *suffix = "killer";
+
+	if (!g_mapStats.integer)
+		return;
+
+	trap_Cvar_VariableStringBuffer("mapname", mapName, sizeof(mapName));
+
+	// NOTE: Add more if desired/needed and simply patch/add the storing call in appropriate places..
+	switch (g_mapStats.integer) {
+		// Top Killer (most overall kills)
+	case 1:
+		suffix = "killer";
+		break;
+		// Top Killer Spree (most kills in a row)
+	case 2:
+		suffix = "killingSpree";
+		break;
+		// Top Victim (most overall deaths)
+	case 3:
+		suffix = "victim";
+		break;
+		// Top Death Spree (most deaths in a row)
+	case 4:
+		suffix = "deathSpree";
+		break;
+		// Top Medic (most revives)
+	case 5:
+		suffix = "revives";
+		break;
+		// Top Headshoter
+	case 6:
+		suffix = "headshots";
+		break;
+	}
+
+	handle_MapStats(mapName, suffix);
+	level.mapStatsPrinted = qtrue;
+}
+
+/*
+===========
+Round Stats
+
+Stats that are printed each round.
+'L0 - NOTE to readers: Don't get scared..my look complex at 1st glance but it's really simple.
+===========
+*/
+roundStruct roundStats[ROUND_LIMIT];
+
+// Process stats during match
+void write_RoundStats(char *player, unsigned int score, unsigned int stats) {
+
+	if (!g_roundStats.integer)
+		return;
+
+	if (Q_FindToken(g_excludedRoundStats.string, va("%d", stats)))
+		return;
+	
+	if (score && roundStats[stats].score <= score)
+	{
+		char *more = "";
+
+		// Adds comma if not a single entry
+		if (roundStats[stats].score == score && Q_stricmp(roundStats[stats].player, player) == 0)
+			more = va("%s^7, ", roundStats[stats].player);
+		
+		player = va("%s%s", more, player);
+		
+		Q_strncpyz ( roundStats[stats].player, player, sizeof( roundStats[stats].player ) );		 			
+		roundStats[stats].stats = stats;
+		roundStats[stats].score = score;
+	}
+}
+
+// Sort what's left before writting to file (efficency, killer ratio & accuracy)
+void sort_RoundStats( void ) {
+	int i;	
+
+	for (i = 0 ; i < g_maxclients.integer; i++) 
+	{
+		int shots = level.clients[i].pers.stats.shotsFired;
+		int hits = level.clients[i].pers.stats.shotsHit;
+		int kills = level.clients[i].pers.stats.kills;
+		int deaths = level.clients[i].pers.stats.deaths;
+		float kr = 0.00f;
+		float eff = 0.00f;
+		float acc = 0.00f;
+		float topKr = 0.00f;
+		float topEff = 0.00f;
+		float topAcc = 0.00f;
+
+		// Sort stuff
+		eff = ( deaths + kills == 0 ) ? 0 : 100 * kills / ( deaths + kills );
+		if ( eff < 0 ) { eff = 0; }			
+		kr = (float)kills / (!deaths ? 1 : (float)deaths);
+		if(shots > 49) acc = ((float)hits / (float)shots) * 100.0f;
+
+		//
+		// Store stuff
+		//
+		if (eff && eff > topEff) 
+		{
+			if (!Q_FindToken(g_excludedRoundStats.string, va("%d", ROUND_EFF)))
+			{
+				roundStats[ROUND_EFF].stats = ROUND_EFF;
+				Q_strncpyz ( roundStats[ROUND_EFF].player, level.clients[i].pers.netname, sizeof( roundStats[ROUND_EFF].player ) );
+				Q_strncpyz ( roundStats[ROUND_EFF].out, va("%2.2f", eff), sizeof( roundStats[ROUND_EFF].out ) );
+			}
+			topEff = eff;
+		} 
+
+		if (kr && kr > topKr) 
+		{
+			if (!Q_FindToken(g_excludedRoundStats.string, va("%d", ROUND_KR)))
+			{
+				roundStats[ROUND_KR].stats = ROUND_KR;
+				Q_strncpyz ( roundStats[ROUND_KR].player, level.clients[i].pers.netname, sizeof( roundStats[ROUND_KR].player ) );	
+				Q_strncpyz ( roundStats[ROUND_KR].out, va("%2.2f", kr), sizeof( roundStats[ROUND_KR].out ) );					
+			}
+			topKr = kr;
+		} 
+
+		if (acc && acc > topAcc) 
+		{
+			if (!Q_FindToken(g_excludedRoundStats.string, va("%d", ROUND_ACC)))
+			{
+				roundStats[ROUND_ACC].stats = ROUND_ACC;
+				Q_strncpyz ( roundStats[ROUND_ACC].player, level.clients[i].pers.netname, sizeof( roundStats[ROUND_ACC].player ) );	
+				Q_strncpyz ( roundStats[ROUND_ACC].out, va("%2.2f (%d/%d)", acc, hits, shots), sizeof( roundStats[ROUND_ACC].out ) );
+			}
+			topAcc = acc;
+		} 
+	}
+
+	return;
+}
+
+// Write (to file) stats
+void add_RoundStats( void ) {
+	FILE	*stats;	
+	int i;
+
+	sort_RoundStats();
+
+	// Unload stats	
+	stats = fopen("roundStats.txt","w+");
+	if (roundStats != NULL)
+		for ( i = 0; i < ROUND_LIMIT; i++ )
+		{		
+			char *sorted="";
+			
+			if (roundStats[i].stats)
+			{
+				if (roundStats[i].stats == ROUND_ACC || roundStats[i].stats == ROUND_EFF || roundStats[i].stats == ROUND_KR)													
+					sorted = va("%d %s %s", roundStats[i].stats, roundStats[i].out, parseNames(roundStats[i].player));
+				else
+					sorted = va("%d %d %s", roundStats[i].stats, roundStats[i].score, parseNames(roundStats[i].player));
+			}
+
+			if (roundStats[i].stats/* && (roundStats[i].score > 0 || !Q_stricmp(roundStats[i].out, "0"))*/)
+				fputs( va( "%s\n", sorted ), stats );
+		}
+	fclose( stats );
+}
+
+// Read stats
+void read_RoundStats( void ) {
+	FILE	*statsFile;
+	char	data[1024];
+	char	*score;
+	unsigned int	stats;
+	char	players[1024];
+	char	arg1[1024];
+	char	arg2[1024];	
+	char	scores[1024];
+	char	type[1024];
+	char	alt[1024];
+
+	statsFile = fopen("roundStats.txt","a+");
+	while ( fgets(data, 1024, statsFile) != NULL )
+	{	
+		ParseStr(data, type, arg1);
+		stats = atoi(type);
+		ParseStr(arg1, scores, players);	
+		score = scores;	
+		
+		// Offset: Have to account for hits/shots
+		if (stats == ROUND_ACC)
+		{
+			ParseStr(arg1, scores, arg2);	
+			ParseStr(arg2, players, alt);	
+
+			score = va("%s %s", scores, players);
+			Q_strncpyz ( players, alt, sizeof( players ) );
+		}	
+		
+		roundStats[stats].stats = stats;		
+		Q_strncpyz ( roundStats[stats].out, score, sizeof( roundStats[stats].out ) );
+		Q_strncpyz ( roundStats[stats].player, players, sizeof( roundStats[stats].player ) );
+	}			
+	fclose(statsFile);
+}
+
+// Compute warmup time
+void sortWarmupTime( int start, int inBetween )
+{
+	if ( roundStats != NULL )
+	{
+		unsigned int i;
+		unsigned int k = 0;
+		unsigned int v = 0;
+		unsigned int countDown = 7100; // To match countdown() in g_main.c
+		unsigned int gracetime = 3000; // Just to make sure..
+
+		for(i = 0; i < ROUND_LIMIT; i++)
+			if (roundStats[i].stats != 0)
+				k++;
+
+		v = ((countDown + start + gracetime) + (k * inBetween)) / 1000;
+
+		// Sorts warmup to match stats..
+		trap_Cvar_Set("g_warmup", va("%d", ((v > 20) ? v : 20)));
+	}
+}
+
+// Check if there's any entry at all..
+qboolean RoundStatsAreEmpty(void) {
+	int i;
+	qboolean empty = qtrue;
+
+	for (i = 0; i < ROUND_LIMIT; i++)
+	{
+		if (roundStats[i].stats)
+			empty = qfalse;
+	}
+	return empty;
+}
+
+// Front end
+void stats_RoundStats(void) {
+	int statsStartup = 4000;
+	int statsTime = 3600;
+
+	if (level.statsNum == 0)
+	{
+		read_RoundStats();
+		sortWarmupTime(statsStartup, statsTime);
+	}
+	else if (level.statsNum == 1)
+	{
+		if (!RoundStatsAreEmpty())
+		{
+			AP(va("cp \"^2%s\n\"2", rSM[0].reward));
+			APS(va("%s", rSM[0].snd));
+		}
+		else
+		{
+			AP("cp \"^2No stats for previous round^7!\n\"2");
+		}
+
+
+		level.statsStarted = qtrue;
+	}
+	else if (level.statsNum < ROUND_LIMIT)
+	{
+		int i;
+		for (i = 0; i < ROUND_LIMIT; i++)
+		{
+			if (i >= level.statsNum)
+			{
+				if (roundStats[level.statsNum].stats)
+				{
+					char *score;
+					score = va("%s", roundStats[level.statsNum].out);
+
+					AP(va("cp \"^2%s: ^7%s\n^7%s \n\"2", 
+						rSM[level.statsNum - 1].reward, score, roundStats[level.statsNum].player));
+					APS(va("%s", rSM[level.statsNum - 1].snd));
+				}
+				else
+				{
+					level.statsNum++;
+				}
+			}
+		}
+	}
+
+	level.statsPrint = level.time + (!level.statsStarted ? statsStartup : statsTime);
+
+	// Push it forward
+	level.statsNum++;
+}
+
+

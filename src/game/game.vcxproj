@@ -243,6 +243,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
     </ClCompile>
+    <ClCompile Include="bg_lib.c" />
     <ClCompile Include="bg_misc.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
@@ -265,7 +266,7 @@
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
     </ClCompile>
     <ClCompile Include="g_admin.c" />
-    <ClCompile Include="g_admin_cmds.c" />
+    <ClCompile Include="g_admin_system.c" />
     <ClCompile Include="g_alarm.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
@@ -276,6 +277,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
     </ClCompile>
+    <ClCompile Include="g_antiwarp.c" />
     <ClCompile Include="g_bot.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
@@ -297,10 +299,12 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
     </ClCompile>
-    <ClCompile Include="g_config.c" />
-    <ClCompile Include="g_files.c" />
-    <ClCompile Include="g_funcs.h" />
     <ClCompile Include="g_geoip.c" />
+    <ClCompile Include="g_hacks.c" />
+    <ClCompile Include="g_http.c" />
+    <ClCompile Include="g_http_cmds.c" />
+    <ClCompile Include="g_http_func.c" />
+    <ClCompile Include="g_http_stats.c" />
     <ClCompile Include="g_items.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
@@ -366,6 +370,7 @@
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
     </ClCompile>
     <ClCompile Include="g_stats.c" />
+    <ClCompile Include="g_stats_global.c" />
     <ClCompile Include="g_svcmds.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
@@ -386,6 +391,7 @@
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
     </ClCompile>
+    <ClCompile Include="g_threads.c" />
     <ClCompile Include="g_tramcar.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</BrowseInformation>
@@ -446,11 +452,12 @@
     <ClInclude Include="bg_local.h" />
     <ClInclude Include="bg_public.h" />
     <ClInclude Include="botlib.h" />
-    <ClInclude Include="g_admin.h" />
-    <ClInclude Include="g_func_decs.h" />
+    <ClInclude Include="g_http.h" />
     <ClInclude Include="g_local.h" />
     <ClInclude Include="g_public.h" />
+    <ClInclude Include="g_stats.h" />
     <ClInclude Include="g_team.h" />
+    <ClInclude Include="g_threads.h" />
     <ClInclude Include="q_shared.h" />
     <ClInclude Include="surfaceflags.h" />
   </ItemGroup>

@@ -1583,6 +1583,7 @@ void Fire_Lead( gentity_t *ent, gentity_t *activator, float spread, int damage )
 	VectorMA( end, r, right, end );
 	VectorMA( end, u, up, end );
 
+	// L0 - Antilag (Restored it back in to cope with mg42 bug)
 	G_HistoricalTrace( ent, &tr, muzzle, NULL, NULL, end, ent->s.number, MASK_SHOT );
 
 	if ( g_gametype.integer == GT_SINGLE_PLAYER ) {
@@ -1644,6 +1645,10 @@ void Fire_Lead( gentity_t *ent, gentity_t *activator, float spread, int damage )
 
 //	mg42_muzzleflash (ent);
 //	G_AddEvent( ent, EV_FIRE_WEAPON_MG42, 0 );
+	// L0 - Global Stats - MG42
+	if (ent && ent->client) {
+		globalStats_weaponShots(ent, 48);
+	}
 }
 
 

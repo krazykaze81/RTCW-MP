@@ -101,15 +101,13 @@ void G_StoreTrail(gentity_t *ent) {
 	if (ent->r.svFlags & SVF_BOT) {
 		// bots move only once per frame
 		newtime = level.time;
-	}
-	else {
+	} else {
 		// calculate the actual server time
 		// (we set level.frameStartTime every G_RunFrame)
 		newtime = level.previousTime + trap_Milliseconds() - level.frameStartTime;
 		if (newtime > level.time) {
 			newtime = level.time;
-		}
-		else if (newtime <= level.previousTime) {
+		} else if ( newtime <= level.previousTime ) {
 			newtime = level.previousTime + 1;
 		}
 	}
@@ -166,7 +164,8 @@ void G_TimeShiftClient(gentity_t *ent, int time) {
 		if (j < 0) {
 			j = NUM_CLIENT_TRAILS - 1;
 		}
-	} while (j != ent->client->trailHead);
+	}
+	while ( j != ent->client->trailHead );
 
 	// if we got past the first iteration above, we've sandwiched (or wrapped)
 	if (j != k) {
@@ -201,8 +200,7 @@ void G_TimeShiftClient(gentity_t *ent, int time) {
 
 			// this will recalculate absmin and absmax
 			trap_LinkEntity(ent);
-		}
-		else {
+		} else {
 			// we wrapped, so grab the earliest
 			VectorCopy(ent->client->trail[k].currentOrigin, ent->r.currentOrigin);
 			VectorCopy(ent->client->trail[k].mins, ent->r.mins);

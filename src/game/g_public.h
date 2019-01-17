@@ -61,6 +61,9 @@ If you have questions concerning this license or the applicable additional terms
 #define SVF_NOTSINGLECLIENT     0x00002000  // send entity to everyone but one client
 											// (entityShared_t->singleClient)
 
+// L0 - smoke
+#define SVF_SMOKEGRENADE		0x00004000	// so we can mark that something is a smoke grenade and not an airstrike
+// end
 //===============================================================
 
 

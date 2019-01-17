@@ -508,11 +508,20 @@ PM_CheckJump
 =============
 */
 static qboolean PM_CheckJump( void ) {
+// L0 - Bunny Jump
+#ifdef GAMEDLL
+	extern vmCvar_t g_bunnyJump;
+	int bunny = g_bunnyJump.integer;
+#else
+	int bunny = 0;
+#endif
 	// JPW NERVE -- jumping in multiplayer uses and requires sprint juice (to prevent turbo skating, sprint + jumps)
 	if ( pm->gametype != GT_SINGLE_PLAYER ) {
-		// don't allow jump accel
-		if ( pm->cmd.serverTime - pm->ps->jumpTime < 850 ) {
-			return qfalse;
+		// L0 - bunny jump
+		if (!bunny) {
+			 // changed from 850 to 500 - let's see how it goes :)
+			if (pm->cmd.serverTime - pm->ps->jumpTime < 850) 
+				return qfalse;
 		}
 
 		// don't allow if player tired
@@ -1207,7 +1216,7 @@ static void PM_CrashLand( void ) {
 		// done
 */
 
-		if ( delta > 77 ) {
+		if ( delta > 77 ) { // xMod changes this to 84?
 			PM_AddEvent( EV_FALL_NDIE );
 		}
 		//else if (delta > 67)
@@ -1236,7 +1245,7 @@ static void PM_CrashLand( void ) {
 			if ( pm->ps->stats[STAT_HEALTH] > 0 ) {
 				PM_AddEvent( EV_FALL_DMG_10 );
 			}
-		} else if ( delta > 7 )   {
+		} else if ( delta > 7 )   { // xMod and this to 20?
 			PM_AddEvent( EV_FALL_SHORT );
 		} else
 		{
@@ -2379,6 +2388,11 @@ Generates weapon events and modifes the weapon counter
 #define VENOM_LOWER     WEAP_ATTACK_LASTSHOT
 
 //#define DO_WEAPON_DBG 1
+// L0 - for 
+#ifdef GAMEDLL
+void trap_SendServerCommand( int clientNum, const char *text );
+void ClientUserinfoChanged ( int clientNum ) ;
+#endif
 
 static void PM_Weapon( void ) {
 	int addTime = 0;         // TTimo: init
@@ -2407,6 +2421,21 @@ static void PM_Weapon( void ) {
 		return;
 	}
 
+	// L0 - Spies // xMod for experimental mode
+	/*if((pm->ps->isSpy) && (pm->ps->weapon != WP_KNIFE && pm->ps->weapon != WP_KNIFE2 && pm->ps->weapon != WP_SNIPERRIFLE && pm->ps->weapon != WP_SMOKE_GRENADE && 
+		pm->ps->weapon != WP_STEN )){
+		if(pm->cmd.buttons & BUTTON_ATTACK){
+			if(!( (pm->ps->eFlags & EF_ZOOMING) && (pm->ps->stats[STAT_KEYS] & (1 << INV_BINOCS))) ) {			
+				pm->ps->isSpy = qfalse;
+				pm->ps->weaponTime = 500;
+#ifdef GAMEDLL
+				trap_SendServerCommand(pm->ps->clientNum, "cp \"Yor cover is blown^1!\"1");
+				ClientUserinfoChanged(pm->ps->clientNum);
+#endif
+				return;
+			}
+		}
+	} */
 	// special mounted mg42 handling
 	if ( pm->ps->persistant[PERS_HWEAPON_USE] ) {
 		if ( pm->cmd.buttons & BUTTON_ATTACK ) {
@@ -2681,9 +2710,22 @@ static void PM_Weapon( void ) {
 			}
 		}
 		if ( pm->ps->weapon == WP_SMOKE_GRENADE ) {
-			if ( pm->cmd.serverTime - pm->ps->classWeaponTime < ( pm->ltChargeTime * 0.5f ) ) {
-				return;
+// L0 - Smoke // xMod for experimental mode
+#ifdef GAMEDLL
+			extern vmCvar_t g_smokeGrenades;
+			int smokeGrenades = g_smokeGrenades.integer;
+#else
+			int smokeGrenades = 0;
+#endif
+			if ((smokeGrenades) && (pm->ps->selectedSmoke))
+			{
+				if (pm->cmd.serverTime - pm->ps->classWeaponTime < (pm->ltChargeTime*0.25f))
+					return;
 			}
+			else
+// end
+			if (pm->cmd.serverTime - pm->ps->classWeaponTime < (pm->ltChargeTime*0.5f))
+				return;
 		}
 	}
 	// jpw
@@ -2724,6 +2766,13 @@ static void PM_Weapon( void ) {
 	if ( pm->waterlevel == 3 ) {
 		if ( pm->ps->weapon != WP_KNIFE &&
 			 pm->ps->weapon != WP_KNIFE2 &&
+/*// L0 - New ones // xMod experimental mode
+			pm->ps->weapon != WP_LUGER &&
+            pm->ps->weapon != WP_COLT &&
+            pm->ps->weapon != WP_MEDIC_SYRINGE &&
+			pm->ps->weapon != WP_MEDKIT &&
+			pm->ps->weapon != WP_AMMO &&
+// End*/
 			 pm->ps->weapon != WP_GRENADE_LAUNCHER &&
 			 pm->ps->weapon != WP_GRENADE_PINEAPPLE &&
 			 pm->ps->weapon != WP_DYNAMITE &&
@@ -3748,14 +3797,29 @@ void PM_Sprint( void ) {
 			pm->ps->sprintTime += 10;
 		} else {
 			if ( pm->gametype != GT_SINGLE_PLAYER ) {
-				pm->ps->sprintTime += 500 * pml.frametime;        // JPW NERVE adjusted for framerate independence
-				if ( pm->ps->sprintTime > 5000 ) {
-					pm->ps->sprintTime += 500 * pml.frametime;    // JPW NERVE adjusted for framerate independence
+// L0 - Stamina boost // xMod experimental mode
+				extern vmCvar_t	g_staminaBoost;
+
+				if(g_staminaBoost.integer > 0) {
+					if(pm->ps->pm_flags & PMF_DUCKED) {  
+						pm->ps->sprintTime += 3000*pml.frametime;					
+				}
+
+				// we still need this for when we are standing	
+				pm->ps->sprintTime += 500*pml.frametime;	
+
+				if (pm->ps->sprintTime > 5000)
+					pm->ps->sprintTime += 500*pml.frametime;
+				
+				} else {
+					pm->ps->sprintTime += 500*pml.frametime;		// JPW NERVE adjusted for framerate independence
+					if (pm->ps->sprintTime > 5000)
+						pm->ps->sprintTime += 500*pml.frametime;	// JPW NERVE adjusted for framerate independence
 				}
 			} else {
 				pm->ps->sprintTime += 5;
 			}
-			// jpw
+// L0 end
 		}
 #endif // GAMEDLL
 		if ( pm->ps->sprintTime > 20000 ) {
@@ -4054,7 +4118,7 @@ void PmoveSingle( pmove_t *pmove ) {
 		}
 // -OSPx
 		// snap some parts of playerstate to save network bandwidth
-		trap_SnapVector( pm->ps->velocity );
+		//trap_SnapVector( pm->ps->velocity ); // xMod does not have this
 //		SnapVector( pm->ps->velocity );
 
 		// Ridah
