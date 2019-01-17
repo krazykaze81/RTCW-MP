@@ -999,7 +999,7 @@ static void CG_Smoker( centity_t *cent ) {
 	// origin2 = normal to emit particles along
 
 // L0 - NQ smoke
-	CG_RenderSmokeGrenadeSmoke(cent, 0);
+//	CG_RenderSmokeGrenadeSmoke(cent, 0);
 // End
 	if ( cg.time - cent->highlightTime > cent->currentState.constantLight ) {
 		// FIXME: make this framerate independant?
@@ -1039,9 +1039,9 @@ static void CG_Missile( centity_t *cent ) {
 	// calculate the axis
 	VectorCopy( s1->angles, cent->lerpAngles );
 // L0 - NQ smoke
-	if (s1->weapon == WP_SMOKE_GRENADE || s1->weapon == WP_ROCKET_LAUNCHER) {
+/*	if (s1->weapon == WP_SMOKE_GRENADE || s1->weapon == WP_ROCKET_LAUNCHER) {
 		CG_RenderSmokeGrenadeSmoke(cent, weapon);
-	}
+	}*/
 // End
 
 	// add trails

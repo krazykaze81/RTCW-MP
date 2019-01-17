@@ -232,9 +232,9 @@ void globalStats_playerTimers(gclient_t *client) {
 	client->pers.playerClass[cClass].time++;
 
 	// Adds to Spy counter
-	if (client->ps.isSpy && client->ps.stats[STAT_HEALTH] > 0) {
+	/*if (client->ps.isSpy && client->ps.stats[STAT_HEALTH] > 0) {
 		client->pers.playerClass[4].time++;
-	}
+	}*/
 }
 
 /*

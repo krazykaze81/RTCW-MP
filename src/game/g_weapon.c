@@ -1923,7 +1923,7 @@ L0 - Smoke "think" function
 
 ET port
 ==============
-*/
+
 #define SMOKEBOMB_GROWTIME 1000
 #define SMOKEBOMB_SMOKETIME 15000
 #define SMOKEBOMB_POSTSMOKETIME 2000
@@ -1956,7 +1956,7 @@ void weapon_smokeGrenade(gentity_t *ent)
 		G_FreeEntity(ent);
 	}
 }
-
+*/
 /*
 ======================================================================
 
@@ -2057,7 +2057,7 @@ gentity_t *weapon_grenadelauncher_fire (gentity_t *ent, int grenType) {
 			m->s.otherEntityNum2 = 0;
 		
 // L0 - Smoke 
-		if (m->r.svFlags & SVF_SMOKEGRENADE) {
+		/*if (m->r.svFlags & SVF_SMOKEGRENADE) {
 			m->nextthink = level.time + 1000;
 			m->think = weapon_smokeGrenade;
 		} else { 
@@ -2067,7 +2067,7 @@ gentity_t *weapon_grenadelauncher_fire (gentity_t *ent, int grenType) {
 			te = G_TempEntity( m->s.pos.trBase, EV_GLOBAL_SOUND );
 			te->s.eventParm = G_SoundIndex( "sound/multiplayer/airstrike_01.wav");
 			te->r.svFlags |= SVF_BROADCAST | SVF_USE_CURRENT_ORIGIN;
-		}
+		}*/
 // L0 - end
 	}
 	// jpw
@@ -2595,18 +2595,18 @@ void FireWeapon( gentity_t *ent ) {
 		break;
 	case WP_SMOKE_GRENADE:
 // L0 - smoke
-		if (g_smokeGrenades.integer && ent->client->ps.selectedSmoke)
-		{
-			if (level.time - ent->client->ps.classWeaponTime >= g_LTChargeTime.integer*0.25f)
-			{
-				if (level.time - ent->client->ps.classWeaponTime > g_LTChargeTime.integer)
-					ent->client->ps.classWeaponTime = level.time - g_LTChargeTime.integer;
-				ent->client->ps.classWeaponTime += g_LTChargeTime.integer*0.25;
+		//if (g_smokeGrenades.integer && ent->client->ps.selectedSmoke)
+		//{
+		//	if (level.time - ent->client->ps.classWeaponTime >= g_LTChargeTime.integer*0.25f)
+		//	{
+		//		if (level.time - ent->client->ps.classWeaponTime > g_LTChargeTime.integer)
+		//			ent->client->ps.classWeaponTime = level.time - g_LTChargeTime.integer;
+		//		ent->client->ps.classWeaponTime += g_LTChargeTime.integer*0.25;
 
-				weapon_grenadelauncher_fire(ent, WP_SMOKE_GRENADE);
-			}
-			break;
-		} 
+		//		weapon_grenadelauncher_fire(ent, WP_SMOKE_GRENADE);
+		//	}
+		//	break;
+		//} 
 // end
 
 		if (level.time - ent->client->ps.classWeaponTime >= g_LTChargeTime.integer*0.5f) 

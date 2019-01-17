@@ -743,7 +743,7 @@ Forces a client's skin (for Wolfenstein teamplay)
 ===========
 */
 // L0 - Spies, sort player's class
-char *spyType( int type ) 
+/*char *spyType( int type ) 
 {
 	if (type == 0)
 		return "soldier";
@@ -753,20 +753,20 @@ char *spyType( int type )
 		return "engineer";
 	else
 		return "lieutenant";
-}
+}*/
 
 #define MULTIPLAYER_ALLIEDMODEL	"multi"
 #define MULTIPLAYER_AXISMODEL	"multi_axis"
 
-// L0 - modified for spies
+
 void SetWolfSkin( gclient_t *client, char *model ) {
 
 	switch( client->sess.sessionTeam ) {
 		case TEAM_RED:		
-			Q_strcat( model, MAX_QPATH, (!client->ps.isSpy ? "red" : "blue") );		
+			Q_strcat( model, MAX_QPATH, "red" );
 			break;
 		case TEAM_BLUE:		
-			Q_strcat( model, MAX_QPATH, (!client->ps.isSpy ? "blue" : "red") );
+			Q_strcat( model, MAX_QPATH, "blue" );
 			break;
 		default:
 			Q_strcat( model, MAX_QPATH, "red" );
@@ -775,19 +775,19 @@ void SetWolfSkin( gclient_t *client, char *model ) {
 
 	switch ( client->sess.playerType ) {
 		case PC_SOLDIER:
-			Q_strcat( model, MAX_QPATH, (!client->ps.isSpy ? "soldier" : spyType(client->ps.spyType)) );
+			Q_strcat( model, MAX_QPATH, "soldier" );
 			break;
 		case PC_MEDIC:
-			Q_strcat( model, MAX_QPATH, (!client->ps.isSpy ? "medic" : spyType(client->ps.spyType)) );
+			Q_strcat( model, MAX_QPATH, "medic" );
 			break;
 		case PC_ENGINEER:
-			Q_strcat( model, MAX_QPATH, (!client->ps.isSpy ? "engineer" : spyType(client->ps.spyType)) );
+			Q_strcat( model, MAX_QPATH, "engineer" );
 			break;
 		case PC_LT:
-			Q_strcat( model, MAX_QPATH, (!client->ps.isSpy ? "lieutenant" : spyType(client->ps.spyType)) );
+			Q_strcat( model, MAX_QPATH, "lieutenant" );
 			break;
 		default:
-			Q_strcat( model, MAX_QPATH, (!client->ps.isSpy ? "soldier" : spyType(client->ps.spyType)));
+			Q_strcat( model, MAX_QPATH, "soldier" );
 			break;
 	}
 
@@ -1668,11 +1668,11 @@ void ClientUserinfoChanged( int clientNum ) {
 		// To communicate it to cgame
 		client->ps.stats[ STAT_PLAYER_CLASS ] = client->sess.playerType;
 
-		// L0 - Modified for spies
-		if ( client->sess.sessionTeam == TEAM_BLUE )
-			Q_strncpyz( model, (!client->ps.isSpy ? MULTIPLAYER_ALLIEDMODEL : MULTIPLAYER_AXISMODEL) , MAX_QPATH );
-		else
-			Q_strncpyz( model, (!client->ps.isSpy ? MULTIPLAYER_AXISMODEL : MULTIPLAYER_ALLIEDMODEL), MAX_QPATH );
+		if ( client->sess.sessionTeam == TEAM_BLUE ) {
+			Q_strncpyz( model, MULTIPLAYER_ALLIEDMODEL, MAX_QPATH );
+		} else {
+			Q_strncpyz( model, MULTIPLAYER_AXISMODEL, MAX_QPATH );
+		}
 
 		Q_strcat(model, MAX_QPATH, "/");
 
@@ -2053,12 +2053,12 @@ void ClientBegin( int clientNum ) {
 	// Global Stats
 	client->pers.statsTimers.time = 0;
 
-	// Spies
+	/*// Spies
 	if ( client->ps.isSpy )
 	{
 		client->ps.isSpy = qfalse;
 		ClientUserinfoChanged(client->ps.clientNum);
-	} 
+	} */
 // End
 
 	// locate ent at a spawn point
@@ -2297,7 +2297,7 @@ void ClientSpawn(gentity_t *ent, qboolean revived) {
 	ent->flags = 0;
 
 	// L0 - New stuff
-	ent->thrownSmoke = 0;		// Smoke
+	//ent->thrownSmoke = 0;		// Smoke
 	ent->client->ps.eFlags &= ~EF_POISONED; // Poison
 	ent->lastPoisonTime = 0;				// Poison
 	// L0 - mapstats / Store Life kills Peak for map stats if enabled

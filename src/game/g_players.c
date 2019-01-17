@@ -201,7 +201,7 @@ void Cmd_Smoke_f( gentity_t *ent )
 		return;
 	}
 
-	if (!g_smokeGrenades.integer)	
+	/*if (!g_smokeGrenades.integer)	
 	{
 		trap_SendServerCommand(ent-g_entities, va("print \"Smoke grenades are disabled on this server.\n\""));
 		return;
@@ -211,10 +211,10 @@ void Cmd_Smoke_f( gentity_t *ent )
 	{
 		trap_SendServerCommand(ent-g_entities, va("cp \"You have used all the Smoke supplies^3!\n\" 1"));
 		return;
-	}
+	}*/
 
-	client->ps.selectedSmoke = !client->ps.selectedSmoke;
-	strcat(message, va("%s", (client->ps.selectedSmoke ? "^2enabled" : "^1disabled")));
+	//client->ps.selectedSmoke = !client->ps.selectedSmoke;
+	//strcat(message, va("%s", (client->ps.selectedSmoke ? "^2enabled" : "^1disabled")));
 
 	trap_SendServerCommand(ent-g_entities, va("popin \"%s^7!\n\" 1", message));
 }
@@ -542,8 +542,8 @@ void Cmd_Spy( gentity_t *ent ) {
     if(ent->client->ps.weapon == WP_SNIPERRIFLE)
         return;
 
-	if (ent->client->ps.isSpy)
-		return;
+	/*if (ent->client->ps.isSpy)
+		return;*/
 
 	if (ent->client->ps.stats[STAT_PLAYER_CLASS] == PC_MEDIC)
 		charge = g_medicChargeTime.integer * 0.75;
@@ -567,8 +567,8 @@ void Cmd_Spy( gentity_t *ent ) {
 	CP(va("cp \"You are now disguised as a %s^3!\n\"2", label));
 
 	ent->client->ps.classWeaponTime = level.time;
-	ent->client->ps.isSpy = qtrue;
-	ent->client->ps.spyType = target->client->ps.stats[STAT_PLAYER_CLASS];
+	/*ent->client->ps.isSpy = qtrue;
+	ent->client->ps.spyType = target->client->ps.stats[STAT_PLAYER_CLASS];*/
 	ClientUserinfoChanged(ent->client->ps.clientNum);
 
 	limbo(target, qtrue);
@@ -578,7 +578,7 @@ void Cmd_Spy( gentity_t *ent ) {
 =========
 Report spies
 =========
-*/
+
 void checkSpies( gentity_t *ent ) {
 	gentity_t *target;
 	trace_t tr;
@@ -625,7 +625,7 @@ void checkSpies( gentity_t *ent ) {
 	else
 		CP("cp \"^3ENEMY SPY!\n\"1");
 }
-
+*/
 /*
 =================
 Stats command

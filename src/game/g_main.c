@@ -267,8 +267,8 @@ vmCvar_t	g_dropAmmo;				// The number of ammo packs leut drops when going to lim
 vmCvar_t	g_throwKnives;			// 0 = disabled, anything else is the value of knives player gets, alt -1 = unlimited.
 vmCvar_t	g_knifeDamage;			// Damage a throwing knive does
 vmCvar_t	g_knifeDamageRand;		// If enabled, it will randomize knife Damage for perc set..
-vmCvar_t	g_smokeGrenades;		// Smoke Grenades for Leut
-vmCvar_t	g_smokeGrenadesLmt;		// Smoke Grenades limit per life
+//vmCvar_t	g_smokeGrenades;		// Smoke Grenades for Leut
+//vmCvar_t	g_smokeGrenadesLmt;		// Smoke Grenades limit per life
 vmCvar_t	g_axisSpawnProtectionTime;		// How long Axis player is invulrable when (s)he spawns.
 vmCvar_t	g_alliedSpawnProtectionTime;	// How long Allied player is invulrable when (s)he spawns.
 vmCvar_t	g_disableInv;			// Disables (re)spawn/revive protection crap when one starts to shot..
@@ -284,8 +284,8 @@ vmCvar_t	g_fastStabSound;		// 0 = off, 1 = (OSP's) goat sound, 2 = humiliation s
 vmCvar_t	g_dropObj;				// Drop Objective
 vmCvar_t	g_panzerArc;			// Account for gravity when shooting with PF
 vmCvar_t	g_LTinfoMsg;			// Shows how much ammo client player is pointing at has
-vmCvar_t	g_enableSpies;			// If enabled, client can become a spy
-vmCvar_t	g_reportSpies;			// Reports (center prints to a player) that player is a spy
+//vmCvar_t	g_enableSpies;			// If enabled, client can become a spy
+//vmCvar_t	g_reportSpies;			// Reports (center prints to a player) that player is a spy
 vmCvar_t	g_axisASdelay;			// Limit for Axis Air strikes
 vmCvar_t	g_axisASdelayFFE;		// Limit for Allied Air strikes
 vmCvar_t	g_alliedASdelay;		// Limit for Axis Air strikes (Firing for effect)
@@ -500,7 +500,7 @@ cvarTable_t		gameCvarTable[] = {
 	// L0 - New stuff
 
 	// Admins	
-	{ &a1_pass, "a1_pass", "none", CVAR_ARCHIVE, 0, qfalse },
+	{ &a1_pass, "a1_pass", "Admin", CVAR_ARCHIVE, 0, qfalse },
 	{ &a2_pass, "a2_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a3_pass, "a3_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a4_pass, "a4_pass", "none", CVAR_ARCHIVE, 0, qfalse },
@@ -596,8 +596,8 @@ cvarTable_t		gameCvarTable[] = {
 	{ &g_throwKnives, "g_throwKnives", "0", CVAR_ARCHIVE, 0, qfalse },
 	{ &g_knifeDamage, "g_knifeDamage", "20", CVAR_ARCHIVE, 0, qfalse },
 	{ &g_knifeDamageRand, "g_knifeDamageRand", "10", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_smokeGrenades, "g_smokeGrenades", "0", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_smokeGrenadesLmt, "g_smokeGrenadesLmt", "4", CVAR_ARCHIVE | CVAR_LATCH, 0, qfalse },
+	/*{ &g_smokeGrenades, "g_smokeGrenades", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_smokeGrenadesLmt, "g_smokeGrenadesLmt", "4", CVAR_ARCHIVE | CVAR_LATCH, 0, qfalse },*/
 	{ &g_axisSpawnProtectionTime, "g_axisSpawnProtectionTime", "3000", CVAR_ARCHIVE, 0, qfalse },
 	{ &g_alliedSpawnProtectionTime, "g_alliedSpawnProtectionTime", "3000", CVAR_ARCHIVE, 0, qfalse },
 	{ &g_disableInv, "g_disableInv", "0", CVAR_ARCHIVE | CVAR_LATCH, 0, qfalse },
@@ -613,8 +613,8 @@ cvarTable_t		gameCvarTable[] = {
 	{ &g_dropObj, "g_dropObj", "0", CVAR_ARCHIVE, 0, qfalse },
 	{ &g_panzerArc, "g_panzerArc", "0", CVAR_ARCHIVE | CVAR_LATCH, 0, qfalse },
 	{ &g_LTinfoMsg, "g_LTinfoMsg", "0", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_enableSpies, "g_enableSpies", "0", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_reportSpies, "g_reportSpies", "0", CVAR_ARCHIVE, 0, qfalse },
+	/*{ &g_enableSpies, "g_enableSpies", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_reportSpies, "g_reportSpies", "0", CVAR_ARCHIVE, 0, qfalse },*/
 	{ &g_axisASdelay, "g_axisASdelay", "0", CVAR_ARCHIVE, 0, qfalse },
 	{ &g_axisASdelayFFE, "g_axisASdelayFFE", "0", CVAR_ARCHIVE, 0, qfalse },
 	{ &g_alliedASdelay, "g_alliedASdelay", "0", CVAR_ARCHIVE, 0, qfalse },

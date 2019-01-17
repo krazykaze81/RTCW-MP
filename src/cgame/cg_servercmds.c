@@ -847,7 +847,7 @@ static void CG_MapRestart( void ) {
 	}
 
 	// L0 - NQ smoke
-	InitSmokeSprites();
+	//InitSmokeSprites();
 
 	// Ridah, trails
 //	CG_ClearTrails ();

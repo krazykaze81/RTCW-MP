@@ -2711,7 +2711,7 @@ static void PM_Weapon( void ) {
 		}
 		if ( pm->ps->weapon == WP_SMOKE_GRENADE ) {
 // L0 - Smoke // xMod for experimental mode
-#ifdef GAMEDLL
+/*#ifdef GAMEDLL
 			extern vmCvar_t g_smokeGrenades;
 			int smokeGrenades = g_smokeGrenades.integer;
 #else
@@ -2723,7 +2723,7 @@ static void PM_Weapon( void ) {
 					return;
 			}
 			else
-// end
+// end*/
 			if (pm->cmd.serverTime - pm->ps->classWeaponTime < (pm->ltChargeTime*0.5f))
 				return;
 		}

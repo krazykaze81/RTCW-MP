@@ -1255,12 +1255,6 @@ typedef struct {
 	vec4_t xhairColor;
 	vec4_t xhairColorAlt;
 
-	// Reinforcements 
-	vec4_t reinforcementColor;
-
-	// Draw names on hud
-	qboolean	renderingFreeCam;
-	specName_t	specOnScreenNames[MAX_CLIENTS];
 
 	// Announcer
 	int		centerPrintAnnouncerTime;
@@ -1270,8 +1264,13 @@ typedef struct {
 	vec3_t	centerPrintAnnouncerColor;
 	int		centerPrintAnnouncerMode;
 
-	// Auto Actions
-	qboolean	latchAutoActions;
+	// Draw names on hud
+	qboolean	renderingFreeCam;
+	specName_t	specOnScreenNames[MAX_CLIENTS];
+
+	// Reinforcements 
+	vec4_t reinforcementColor;
+
 	// Time Counter
 	int timein;
 	int timeCounter;
@@ -1302,6 +1301,8 @@ typedef struct {
 	char popinPrint[1024];
 	int popinPrintLines;
 	qboolean popinBlink;
+	// Auto Actions
+	qboolean	latchAutoActions;
 	// Tournament
 	int tourTotalTeam[TEAM_NUM_TEAMS];
 	cg_tournamentInfo_t tournamentInfo;
@@ -1311,7 +1312,7 @@ typedef struct {
 	pmoveExt_t pmext;
 	
 	// OSP ET stuff
-	/*
+	
 	qboolean fResize;                                   // MV window "resize" status
 	qboolean fSelect;                                   // MV window "select" status
 	qboolean fKeyPressed[256];                          // Key status to get around console issues
@@ -1322,7 +1323,7 @@ typedef struct {
 	int ccMenuType;
 	int ccSelectedLayer;
 	int ccSelectedObjective;
-	int ccSelectedTeam;                     // ( 1 = ALLIES, 0 = AXIS )
+	//int ccSelectedTeam;                     // ( 1 = ALLIES, 0 = AXIS )
 	int ccSelectedWeaponNumber;
 	int ccSelectedClass;
 	int ccSelectedWeapon;
@@ -1348,7 +1349,7 @@ typedef struct {
 	int spechelpWindow;
 	int thirdpersonUpdate;
 	qboolean showStats;
-	cg_string_t aStringPool[MAX_STRINGS];
+	//cg_string_t aStringPool[MAX_STRINGS];
 	int aReinfOffset[TEAM_NUM_TEAMS];                   // Team reinforcement offsets
 	int cursorUpdate;                                   // Timeout for mouse pointer view
 	fileHandle_t dumpStatsFile;                         // File to dump stats
@@ -1357,7 +1358,7 @@ typedef struct {
 	int game_versioninfo;                               // game base version
 	gameStats_t gamestats;
 	topshotStats_t topshots;
-	*/
+
 /*
 	cg_window_t         *motdWindow;
 	cg_window_t         *msgWstatsWindow;
@@ -2336,6 +2337,7 @@ extern vmCvar_t int_ui_blackout;
 //
 const char *CG_ConfigString( int index );
 const char *CG_Argv( int arg );
+char *CG_generateFilename(void);
 
 float CG_Cvar_Get( const char *cvar );
 
@@ -2362,7 +2364,6 @@ qboolean CG_GetWeaponTag( int clientNum, char *tagname, orientation_t * or );
 
 qboolean CG_CheckCenterView();
 // OSPx
-char *CG_generateFilename( void );
 void CG_printConsoleString(char *str);
 // -OSPx
 //
@@ -2374,10 +2375,10 @@ void CG_TestModelNextFrame_f( void );
 void CG_TestModelPrevFrame_f( void );
 void CG_TestModelNextSkin_f( void );
 void CG_TestModelPrevSkin_f( void );
-void CG_ZoomDown_f( void );
+//void CG_ZoomDown_f( void );
 void CG_ZoomIn_f( void );
 void CG_ZoomOut_f( void );
-void CG_ZoomUp_f( void );
+//void CG_ZoomUp_f( void );
 // OSPx - FOV zoom effect
 void CG_zoomViewSet_f(void);
 void CG_zoomViewRevert_f(void);
@@ -2396,10 +2397,10 @@ void CG_DrawPic( float x, float y, float width, float height, qhandle_t hShader 
 void CG_DrawRotatedPic( float x, float y, float width, float height, qhandle_t hShader, float angle );      // NERVE - SMF
 void CG_FilledBar( float x, float y, float w, float h, float *startColor, float *endColor, const float *bgColor, float frac, int flags );
 // JOSEPH 10-26-99
-void CG_DrawStretchPic( float x, float y, float width, float height, qhandle_t hShader );
+//void CG_DrawStretchPic( float x, float y, float width, float height, qhandle_t hShader );
 // END JOSEPH
-void CG_DrawString( float x, float y, const char *string,
-					float charWidth, float charHeight, const float *modulate );
+//void CG_DrawString( float x, float y, const char *string,
+//					float charWidth, float charHeight, const float *modulate );
 
 
 void CG_DrawStringExt( int x, int y, const char *string, const float *setColor,
@@ -2761,9 +2762,9 @@ void CG_Spotlight( centity_t *cent, float *color, vec3_t start, vec3_t dir, int 
 void CG_RumbleEfx( float pitch, float yaw );
 
 // L0 - NQ smoke 
-void InitSmokeSprites(void);
+/*void InitSmokeSprites(void);
 void CG_RenderSmokeGrenadeSmoke(centity_t *cent, const weaponInfo_t *weapon);
-void CG_AddSmokeSprites(void);
+void CG_AddSmokeSprites(void);*/
 // End
 //
 // cg_snapshot.c
@@ -2805,6 +2806,7 @@ qboolean CG_ConsoleCommand( void );
 void CG_InitConsoleCommands( void );
 void CG_ScoresUp_f(void);
 // OSPx
+extern const char *aMonths[12];
 void CG_autoRecord_f( void );
 void CG_autoScreenShot_f( void );
 void CG_dumpStats_f( void );

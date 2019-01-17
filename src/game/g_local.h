@@ -768,7 +768,7 @@ struct gclient_s {
 
 	// L0 - New stuff
 	int			doublekill;		// (stats) Double+ Kills
-	int			infoTime;		// LT/spies Info
+	//int			infoTime;		// LT/spies Info
 
 	// Anti Warp
 	int lastCmdRealTime;
@@ -1651,8 +1651,8 @@ extern vmCvar_t		g_dropAmmo;
 extern vmCvar_t		g_throwKnives;
 extern vmCvar_t		g_knifeDamage;
 extern vmCvar_t		g_knifeDamageRand;
-extern vmCvar_t		g_smokeGrenades;
-extern vmCvar_t		g_smokeGrenadesLmt;
+//extern vmCvar_t		g_smokeGrenades;
+//extern vmCvar_t		g_smokeGrenadesLmt;
 extern vmCvar_t		g_axisSpawnProtectionTime;
 extern vmCvar_t		g_alliedSpawnProtectionTime;
 extern vmCvar_t		g_disableInv;
@@ -1668,8 +1668,8 @@ extern vmCvar_t		g_fastStabSound;
 extern vmCvar_t		g_dropObj;
 extern vmCvar_t		g_panzerArc;
 extern vmCvar_t		g_LTinfoMsg;
-extern vmCvar_t		g_enableSpies;
-extern vmCvar_t		g_reportSpies;
+//extern vmCvar_t		g_enableSpies;
+//extern vmCvar_t		g_reportSpies;
 extern vmCvar_t		g_axisASdelay;
 extern vmCvar_t		g_axisASdelayFFE;
 extern vmCvar_t		g_alliedASdelay;
@@ -1739,7 +1739,7 @@ extern vmCvar_t		g_excludedRoundStats;
 // NOTE!!! If any vote flags are added, MAKE SURE to update the voteFlags struct in bg_misc.c w/appropriate info,
 //         menudef.h for the mask and g_main.c for vote_allow_* flag updates
 //
-extern vmCvar_t vote_allow_comp;
+/*extern vmCvar_t vote_allow_comp;
 extern vmCvar_t vote_allow_gametype;
 extern vmCvar_t vote_allow_kick;
 extern vmCvar_t vote_allow_map;
@@ -1761,7 +1761,7 @@ extern vmCvar_t vote_percent;
 extern vmCvar_t z_serverflags;
 extern vmCvar_t g_letterbox;
 extern vmCvar_t bot_enable;
-extern vmCvar_t g_debugSkills;
+extern vmCvar_t g_debugSkills;*/
 
 
 void    trap_Printf( const char *fmt );
@@ -2088,14 +2088,14 @@ void G_parseTourneyInfo(qboolean refresh);
 qboolean G_cmdDebounce(gentity_t *ent, const char *pszCommandName);
 void Cmd_ThrowKnives( gentity_t *ent );
 void Cmd_Smoke_f( gentity_t *ent );
-void weapon_smokeGrenade(gentity_t *ent);
+//void weapon_smokeGrenade(gentity_t *ent);
 void Cmd_Pmsg( gentity_t *ent );
 void Cmd_Time_f( gentity_t *ent );
 void Cmd_Drag( gentity_t *ent);
 void Cmd_Push(gentity_t* ent);
 void Cmd_DropObj(gentity_t *self);
-void Cmd_Spy( gentity_t *ent );
-void checkSpies( gentity_t *ent );
+//void Cmd_Spy( gentity_t *ent );
+//void checkSpies( gentity_t *ent );
 void Cmd_Stats_f(gentity_t *ent);
 void Cmd_hitsounds(gentity_t *ent);
 void Cmd_GiveAmmo(gentity_t* ent);
@@ -2238,7 +2238,7 @@ void G_updateSpecLock( int nTeam, qboolean fLock );*/ // xMod why is this missin
 ///////////////////////
 // g_vote.c
 //
-int  G_voteCmdCheck( gentity_t *ent, char *arg, char *arg2, qboolean fRefereeCmd );
+/*int  G_voteCmdCheck( gentity_t *ent, char *arg, char *arg2, qboolean fRefereeCmd );
 void G_voteFlags( void );
 void G_voteHelp( gentity_t *ent, qboolean fShowVote );
 void G_playersMessage( gentity_t *ent );
@@ -2266,7 +2266,7 @@ int G_Unreferee_v( gentity_t *ent, unsigned int dwVoteIndex, char *arg, char *ar
 int G_AntiLag_v( gentity_t *ent, unsigned int dwVoteIndex, char *arg, char *arg2, qboolean fRefereeCmd );
 int G_BalancedTeams_v( gentity_t *ent, unsigned int dwVoteIndex, char *arg, char *arg2, qboolean fRefereeCmd );
 void G_ResetMarkers( gentity_t* ent );
-
+*/
 
 //
 // g_geoip.c

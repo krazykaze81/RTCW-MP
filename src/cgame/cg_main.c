@@ -1820,7 +1820,7 @@ static void CG_RegisterGraphics( void ) {
 	CG_LoadingString( " - game media done" );
 
 	// L0 - NQ smoke
-	InitSmokeSprites();
+	//InitSmokeSprites();
 }
 
 /*
@@ -2579,7 +2579,7 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 	trap_GetGameState( &cgs.gameState );
 
 	// L0 - NQ smoke
-	InitSmokeSprites();
+	//InitSmokeSprites();
 	// check version
 	s = CG_ConfigString( CS_GAME_VERSION );
 	if ( strcmp( s, GAME_VERSION ) ) {

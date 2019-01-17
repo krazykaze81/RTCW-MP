@@ -563,11 +563,11 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	// End
 
 	// L0 - spies
-	if ( self->client->ps.isSpy )
+	/*if ( self->client->ps.isSpy )
 	{
 		self->client->ps.isSpy = qfalse;
 		ClientUserinfoChanged(self->client->ps.clientNum);
-	} 
+	} */
 
 // JPW NERVE -- if player is holding ticking grenade, drop it
 	if (g_gametype.integer != GT_SINGLE_PLAYER)
