@@ -135,7 +135,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #ifdef WIN32
 
-//#define MAC_STATIC
+#define MAC_STATIC
 
 #undef QDECL
 #define QDECL   __cdecl
