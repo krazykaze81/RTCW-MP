@@ -1186,16 +1186,16 @@ READY / NOTREADY
 void Cmd_ready(gentity_t *ent, qboolean state) {
 	char *status[2] = { "NOT READY", "READY" };
 
-	if (!g_doWarmup.integer) { // this should be a 1 if g_tournamentMode.integer > TOURNY_NONE
+	if (!g_doWarmup.integer) {
 		return;
 	}
 
 	// Just swallow it...
-		if ( g_gamestate.integer == GS_PLAYING || g_gamestate.integer == GS_INTERMISSION ) { //if (g_gamestate.integer == GS_PLAYING) {		
+	if (g_gamestate.integer == GS_PLAYING) {		
 		return;
 	}
 
-	if (!G_cmdDebounce(ent, status[state])) return; // see what this does
+	if (!G_cmdDebounce(ent, status[state])) return;
 
 	if (!state && g_gamestate.integer == GS_WARMUP_COUNTDOWN) {
 		CP("print \"Countdown started, ^3notready^7 ignored.\n\"");
