@@ -549,7 +549,7 @@ cvarTable_t		gameCvarTable[] = {
 
 	// Modes
 	{ &g_deathMatch, "g_deathMatch", "0", CVAR_ARCHIVE | CVAR_LATCH | CVAR_SERVERINFO, 0, qtrue },
-	{ &g_tournamentMode, "g_tournamentMode", "0", CVAR_ARCHIVE | CVAR_LATCH | CVAR_SERVERINFO, 0, qtrue },
+	{ &g_tournamentMode, "g_tournamentMode", "1", CVAR_ARCHIVE | CVAR_LATCH | CVAR_SERVERINFO, 0, qtrue }, // set to 1 for OSP-like mode
 
 	// Tournament
 	{ &team_nocontrols, "team_nocontrols", "1", CVAR_ARCHIVE, 0, qfalse },

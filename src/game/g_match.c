@@ -61,6 +61,40 @@ int FlagBalance( void ) {
 }
 
 /*
+=================
+Pause countdown
+=================
+
+void PauseHandle( void ) {
+
+	if (level.paused == !PAUSE_NONE) {
+		// TODO: Add auto timeout..		
+		if (level.paused != PAUSE_UNPAUSING) {
+			if (!g_duelAutoPause.integer)
+				AP( va("cp \"Call a vote to resume the match.\n Timeouts remaining: ^1A^7(%i)/^4A^7(%i)\n\"",
+					g_pauseLimit.integer - level.axisTimeouts, g_pauseLimit.integer - level.alliedTimeouts));
+			else 
+				AP("cp \"Match will resume once teams are even!\n\"");
+		} else {
+			level.paused = PAUSE_UNPAUSING;
+			AP( "print \"Prepare to fight!\n\"" );				
+			APS("sound/scenaric/prepare.wav");
+		}
+	}
+	
+	if (level.paused == PAUSE_UNPAUSING) {	
+		CountDown(qfalse);	
+	}
+}
+
+// So it can be called from elsewhere..
+void resetPause( void ) {
+	trap_SetConfigstring( CS_SCREENFADE, va( "0 %i 150", level.time + 250 ) );
+	trap_SetConfigstring( CS_LEVEL_START_TIME, va( "%i", level.startTime + level.timeDelta ) );
+	trap_SetConfigstring( CS_PAUSED, va( "%i", PAUSE_NONE ));				
+	level.paused = PAUSE_NONE;
+}*/
+/*
 ================
 Selected weapon
 ================
