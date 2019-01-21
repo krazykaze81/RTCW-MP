@@ -75,6 +75,7 @@ Global
 		{64DCBC13-78A6-43E9-931D-B63FBB0421C7}.Release|Win32.ActiveCfg = Release|Win32
 		{64DCBC13-78A6-43E9-931D-B63FBB0421C7}.Release|Win32.Build.0 = Release|Win32
 		{3ACD01D0-DCF1-46A5-A477-7E8524032A02}.Debug Dedicated|Win32.ActiveCfg = Debug Dedicated|Win32
+		{3ACD01D0-DCF1-46A5-A477-7E8524032A02}.Debug Dedicated|Win32.Build.0 = Debug Dedicated|Win32
 		{3ACD01D0-DCF1-46A5-A477-7E8524032A02}.Debug|Win32.ActiveCfg = Debug|Win32
 		{3ACD01D0-DCF1-46A5-A477-7E8524032A02}.Debug|Win32.Build.0 = Debug|Win32
 		{3ACD01D0-DCF1-46A5-A477-7E8524032A02}.Release Dedicated|Win32.ActiveCfg = Release Dedicated|Win32

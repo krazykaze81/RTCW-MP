@@ -1323,7 +1323,6 @@ typedef struct {
 	int ccMenuType;
 	int ccSelectedLayer;
 	int ccSelectedObjective;
-	//int ccSelectedTeam;                     // ( 1 = ALLIES, 0 = AXIS )
 	int ccSelectedWeaponNumber;
 	int ccSelectedClass;
 	int ccSelectedWeapon;
@@ -2013,10 +2012,6 @@ typedef struct {
 	int noChat;
 	int noVoice;
 	qboolean freezeDemo;
-
-// L0
-	tournamentMode_t tournamentMode;
-	customGameType_t coustomGameType;
 	
 	// OSP
 	int aviDemoRate;                                    // Demo playback recording
@@ -2029,9 +2024,9 @@ typedef struct {
 // OSPx
 	// Reinforcements
 	int aReinfOffset[TEAM_NUM_TEAMS];
-	int ccSelectedTeam;					// Reinforcements offset
+	//int ccSelectedTeam;					// Reinforcements offset
 	int fixedphysics;	// Fixed pshysics
-	int pauseState;		// Pause
+	//int pauseState;		// Pause
 	int readyState;		// Ready
 
 
@@ -2050,17 +2045,21 @@ typedef struct {
 	int dumpStatsTime;	
 // -OSPx
 
-	int game_versioninfo;                               // game base version
-	qboolean fResize;                                   // MV window "resize" status
-	qboolean fSelect;                                   // MV window "select" status
-	qboolean fKeyPressed[256];                          // Key status to get around console issues
-	int timescaleUpdate;                                // Timescale display for demo playback
-	int ccCurrentCamObjective;
-	int ccPortalAngles;
-	int ccWeaponShots;
-	int ccWeaponHits;
-	int ccPortalEnt;
-	int ccPortalPos;
+	//int game_versioninfo;                               // game base version
+	//qboolean fResize;                                   // MV window "resize" status
+	//qboolean fSelect;                                   // MV window "select" status
+	//qboolean fKeyPressed[256];                          // Key status to get around console issues
+	//int timescaleUpdate;                                // Timescale display for demo playback
+	//int ccCurrentCamObjective;
+	//int ccPortalAngles;
+	//int ccWeaponShots;
+	//int ccWeaponHits;
+	//int ccPortalEnt;
+	//int ccPortalPos;
+
+	// L0
+	tournamentMode_t tournamentMode;
+	customGameType_t coustomGameType;
 } cgs_t;
 
 //==============================================================================
