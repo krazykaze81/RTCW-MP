@@ -299,7 +299,6 @@
     </ClCompile>
     <ClCompile Include="g_config.c" />
     <ClCompile Include="g_files.c" />
-    <ClCompile Include="g_funcs.h" />
     <ClCompile Include="g_geoip.c" />
     <ClCompile Include="g_items.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Disabled</Optimization>
@@ -447,7 +446,6 @@
     <ClInclude Include="bg_public.h" />
     <ClInclude Include="botlib.h" />
     <ClInclude Include="g_admin.h" />
-    <ClInclude Include="g_func_decs.h" />
     <ClInclude Include="g_local.h" />
     <ClInclude Include="g_public.h" />
     <ClInclude Include="g_team.h" />
