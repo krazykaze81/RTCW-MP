@@ -195,9 +195,9 @@ vmCvar_t	g_maxVotes;				// Max votes user can call per round
 vmCvar_t	g_voteDelay;			// Time that has to pass before another vote can be called
 vmCvar_t	IP_handling;			// If enabled it checks for IP bans and tempbans..
 vmCvar_t	bannedMSG;				// Message that will be printed to banned users.
-vmCvar_t	g_censorWords;			// Censored words
-vmCvar_t	g_disallowedNames;		// Disallowed names
-vmCvar_t	g_noHardcodedCensor;	// Don't use hardcoded censor..
+//vmCvar_t	g_censorWords;			// Censored words
+//vmCvar_t	g_disallowedNames;		// Disallowed names
+//vmCvar_t	g_noHardcodedCensor;	// Don't use hardcoded censor..
 vmCvar_t	g_shortcuts;			// Enable shortcuts
 vmCvar_t	g_fixedphysics;			// Tries to keep things more fair..
 vmCvar_t	g_autoSwap;				// Auto swaps teams 
@@ -524,9 +524,9 @@ cvarTable_t		gameCvarTable[] = {
 	{ &g_voteDelay, "g_voteDelay", "0", CVAR_ARCHIVE, 0, qfalse },
 	{ &IP_handling, "IP_handling", "0", CVAR_ARCHIVE, 0, qfalse },
 	{ &bannedMSG, "bannedMSG", "^7You are ^1Banned ^7from this server^1!", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_censorWords, "g_censorWords", "fuuck", 0 },
-	{ &g_disallowedNames, "g_disallowedNames", "nazi, admin, console", 0 },
-	{ &g_noHardcodedCensor, "g_noHardcodedCensor", "0", CVAR_ARCHIVE, 0, qfalse },
+	//{ &g_censorWords, "g_censorWords", "fuuck", 0 },
+	//{ &g_disallowedNames, "g_disallowedNames", "nazi, admin, console", 0 },
+	//{ &g_noHardcodedCensor, "g_noHardcodedCensor", "0", CVAR_ARCHIVE, 0, qfalse },
 	{ &g_shortcuts, "g_shortcuts", "0", 0 },
 	{ &g_fixedphysics, "g_fixedphysics", "1", CVAR_ARCHIVE | CVAR_SERVERINFO },
 	{ &g_autoSwap, "g_autoSwap", "0", CVAR_ARCHIVE, 0, qtrue },
@@ -549,7 +549,7 @@ cvarTable_t		gameCvarTable[] = {
 
 	// Modes
 	{ &g_deathMatch, "g_deathMatch", "0", CVAR_ARCHIVE | CVAR_LATCH | CVAR_SERVERINFO, 0, qtrue },
-	{ &g_tournamentMode, "g_tournamentMode", "0", CVAR_ARCHIVE | CVAR_LATCH | CVAR_SERVERINFO, 0, qtrue },
+	{ &g_tournamentMode, "g_tournamentMode", "1", CVAR_ARCHIVE | CVAR_LATCH | CVAR_SERVERINFO, 0, qtrue }, // set to 1 for comp mode
 
 	// Tournament
 	{ &team_nocontrols, "team_nocontrols", "1", CVAR_ARCHIVE, 0, qfalse },
@@ -3122,7 +3122,7 @@ void CheckReloadStatus(void) {
 ==================
 L0 - Censored
 ==================
-*/
+
 void InitCensorStructure( void )
 {
 	int i;
@@ -3152,7 +3152,7 @@ void InitCensorNamesStructure( void )
 	if ( g_disallowedNames.string[0] != '\0' )
 		censorNamesDictionary.num_nulled_words++;
 }
-
+*/
 /*
 ==================
 L0 - MOTD's
@@ -3261,7 +3261,7 @@ void CheckCvars( void ) {
 	}
 
 	// L0 - censored
-	if ( g_censorWords.modificationCount != g_censorWords_lastMod ) {
+	/*if ( g_censorWords.modificationCount != g_censorWords_lastMod ) {
 		g_censorWords_lastMod = g_censorWords.modificationCount;
 		InitCensorStructure();
 	}
@@ -3269,7 +3269,7 @@ void CheckCvars( void ) {
 	if ( g_disallowedNames.modificationCount != g_disallowedNames_lastMod ) {
 		g_disallowedNames_lastMod = g_disallowedNames.modificationCount;
 		InitCensorNamesStructure();
-	}
+	}*/
 	// L0 - end
 }
 
