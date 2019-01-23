@@ -1788,16 +1788,13 @@ void G_TimeShiftAllClients(int time, gentity_t *skip);
 void G_UnTimeShiftClient(gentity_t *ent);
 void G_UnTimeShiftAllClients(gentity_t *skip);
 void G_HistoricalTrace( gentity_t* ent, trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask );
-void G_LogTeamKill(     gentity_t* ent, weapon_t weap );
-void G_LogDeath(        gentity_t* ent, weapon_t weap );
-void G_LogKill(         gentity_t* ent, weapon_t weap );
-void G_LogRegionHit(    gentity_t* ent, hitRegion_t hr );
+//void G_LogTeamKill(     gentity_t* ent, weapon_t weap );
+//void G_LogDeath(        gentity_t* ent, weapon_t weap );
+//void G_LogKill(         gentity_t* ent, weapon_t weap );
+//void G_LogRegionHit(    gentity_t* ent, hitRegion_t hr );
 //void G_SetPlayerRank(	gentity_t* ent );
 //void G_AddExperience(	gentity_t* ent, float exp );
 
-// Match settings
-#define PAUSE_NONE      0x00    // Match is NOT paused.
-#define PAUSE_UNPAUSING 0x01    // Pause is about to expire
 // HRESULTS
 #define G_OK            0
 #define G_INVALID       -1
@@ -1805,11 +1802,6 @@ void G_LogRegionHit(    gentity_t* ent, hitRegion_t hr );
 #define AP( x ) trap_SendServerCommand( -1, x )                 // Print to all
 #define CP( x ) trap_SendServerCommand( ent - g_entities, x )     // Print to an ent
 #define CPx( x, y ) trap_SendServerCommand( x, y )              // Print to id = x
-
-#define PAUSE_NONE      0x00    // Match is NOT paused.
-#define PAUSE_UNPAUSING 0x01    // Pause is about to expire
-
-#define ZSF_COMP        0x01    // Have comp settings loaded for current gametype?
 
 #define HELP_COLUMNS    4
 
