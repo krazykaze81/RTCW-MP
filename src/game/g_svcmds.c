@@ -271,6 +271,11 @@ static void AddIP( char *str ) {
 
 	UpdateIPBans();
 }
+
+void AddIPBan(const char *str) {
+	AddIP(&ipFilters, str);
+}
+
 /*
 =================
 AddMaxLivesGUID
@@ -561,7 +566,7 @@ NERVE - SMF - this has three behaviors
 - if in tournament mode, go back to waitingForPlayers mode
 - if in stopwatch mode, reset back to first round
 ============
-*/
+
 void Svcmd_ResetMatch_f() {
 	if ( g_gametype.integer == GT_WOLF_STOPWATCH ) {
 		trap_Cvar_Set( "g_currentRound", "0" );
@@ -583,7 +588,7 @@ void Svcmd_ResetMatch_f() {
 		return;
 	}
 }
-
+*/
 /*
 ============
 Svcmd_SwapTeams_f
@@ -609,6 +614,51 @@ void Svcmd_SwapTeams_f() {
 	trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
 }
 
+
+/*
+==================
+Svcmd_ResetMatch_f
+
+OSP - multiuse now for both map restarts and total match resets
+==================
+*/
+void Svcmd_ResetMatch_f(qboolean fDoReset, qboolean fDoRestart) {
+	int i;
+
+	for (i = 0; i < level.numConnectedClients; i++) {
+		g_entities[level.sortedClients[i]].client->pers.ready = 0;
+	}
+
+	if (fDoReset) {
+		G_resetRoundState();
+		G_resetModeState();
+	}
+
+	if (fDoRestart) {
+		trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", ((g_gamestate.integer != GS_PLAYING) ? GS_RESET : GS_WARMUP)));
+	}
+}
+
+/*
+====================
+Svcmd_ShuffleTeams_f
+
+OSP - randomly places players on teams
+====================
+*/
+void Svcmd_ShuffleTeams_f(void) {
+	G_resetRoundState();
+	G_shuffleTeams();
+
+	if ((g_gamestate.integer == GS_INITIALIZE) ||
+		(g_gamestate.integer == GS_WARMUP) ||
+		(g_gamestate.integer == GS_RESET)) {
+		return;
+	}
+
+	G_resetModeState();
+	Svcmd_ResetMatch_f(qfalse, qtrue);
+}
 
 
 char    *ConcatArgs( int start );
@@ -672,7 +722,7 @@ qboolean    ConsoleCommand( void ) {
 	}
 
 	if ( Q_stricmp( cmd, "reset_match" ) == 0 ) {
-		Svcmd_ResetMatch_f();
+		Svcmd_ResetMatch_f(qtrue, qtrue);
 		return qtrue;
 	}
 
@@ -681,6 +731,21 @@ qboolean    ConsoleCommand( void ) {
 		return qtrue;
 	}
 	// -NERVE - SMF
+
+	if (Q_stricmp(cmd, "shuffle_teams") == 0) {
+		Svcmd_ShuffleTeams_f();
+		return qtrue;
+	}
+
+	if (Q_stricmp(cmd, "makeReferee") == 0) {
+		G_MakeReferee();
+		return qtrue;
+	}
+
+	if (Q_stricmp(cmd, "removeReferee") == 0) {
+		G_RemoveReferee();
+		return qtrue;
+	}
 
 	if ( g_dedicated.integer ) {
 		if ( Q_stricmp( cmd, "say" ) == 0 ) {

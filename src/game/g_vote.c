@@ -54,20 +54,20 @@ static const char *gameNames[] = {
 	"Stopwatch",
 	"Capture The Flag"
 };
-// FIXME - MOVE THIS OUT..
-void G_refPrintf(gentity_t* ent, const char *fmt, ...) {
-	va_list argptr;
-	char text[1024];
-
-	va_start(argptr, fmt);
-	Q_vsnprintf(text, sizeof(text), fmt, argptr);
-	va_end(argptr);
-
-	if (ent == NULL) {
-		trap_Printf(text);
-	}
-	else { CP(va("cp \"%s\n\"", text)); }
-}
+//// FIXME - MOVE THIS OUT..
+//void G_refPrintf(gentity_t* ent, const char *fmt, ...) {
+//	va_list argptr;
+//	char text[1024];
+//
+//	va_start(argptr, fmt);
+//	Q_vsnprintf(text, sizeof(text), fmt, argptr);
+//	va_end(argptr);
+//
+//	if (ent == NULL) {
+//		trap_Printf(text);
+//	}
+//	else { CP(va("cp \"%s\n\"", text)); }
+//}
 
 //
 // Update info:

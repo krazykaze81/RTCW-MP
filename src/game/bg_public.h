@@ -33,6 +33,8 @@ If you have questions concerning this license or the applicable additional terms
  *
 */
 
+#include "../../MAIN/ui_mp/menudef.h" // For vote options
+
 // because games can change separately from the main system version, we need a
 // second version that must match between game and cgame
 
@@ -191,6 +193,7 @@ extern const unsigned int aReinfSeeds[MAX_REINFSEEDS];
 #define CS_READY				38		// Ready
 #define CS_PAUSED				39		// Pause
 #define CS_VERSIONINFO          40      // Versioning info for demo playback compatibility
+#define CS_SERVERTOGGLES        41      // Shows current enable/disabled settings (for voting UI)
 // -OSPx
 
 #define CS_MODELS               64
@@ -1831,6 +1834,14 @@ typedef enum extWeaponStats_s
 } extWeaponStats_t;
 
 // Voting
+typedef struct {
+	const char  *pszCvar;
+	int flag;
+} voteType_t;
+
+extern const voteType_t voteToggles[];
+extern int numVotesAvailable;
+
 #define VOTING_DISABLED     ( ( 1 << numVotesAvailable ) - 1 )
 
 typedef struct {
@@ -1842,13 +1853,7 @@ typedef struct {
 extern const weap_ws_t aWeaponInfo[WS_MAX];
 // -OSP
 
-typedef struct {
-	const char  *pszCvar;
-	int flag;
-} voteType_t;
 
-extern const voteType_t voteToggles[];
-extern int numVotesAvailable;
 //
 // bg_stats.c
 //
