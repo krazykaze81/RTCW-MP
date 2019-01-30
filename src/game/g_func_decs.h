@@ -16,7 +16,7 @@ along with Wolf ET Source Code.  If not, see <http://www.gnu.org/licenses/>.
 In addition, the Wolf: ET Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the Wolf ET Source Code.  If not, please request a copy in writing from id Software at the address below.
 If you have questions concerning this license or the applicable additional terms, you may contact in writing id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 ===========================================================================
-*/
+
 
 #include "q_shared.h";
 #include "g_local.h";
@@ -1334,3 +1334,5 @@ extern animation_t * BG_AnimationForString(char * string, animModelInfo_t * anim
 extern void QDECL BG_AnimParseError(const char * msg, ...);
 extern long BG_StringHashValue_Lwr(const char * fname);
 extern long BG_StringHashValue(const char * fname);
+
+*/

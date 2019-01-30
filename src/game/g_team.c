@@ -1896,3 +1896,10 @@ void G_setClientSpeclock(gentity_t *ent) {
 	}
 }
 
+// Returns player's "real" team.
+int G_teamID(gentity_t *ent) {
+	//if (ent->client->sess.coach_team) {
+	//	return(ent->client->sess.coach_team);
+	//}
+	return(ent->client->sess.sessionTeam);
+}

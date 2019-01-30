@@ -33,6 +33,86 @@ Created: 5 May/14
 */
 #include "g_local.h"
 
+
+
+//
+// Update info:
+//	1. Add line to aCommandInfo w/appropriate info
+//	2. Add implementation for specific command (see an existing command for an example)
+//
+
+/* Code from ET
+typedef struct {
+	char *pszCommandName;
+	qboolean fAnytime;
+	qboolean fValue;
+	void(*pCommand)(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
+	const char *pszHelpInfo;
+} cmd_reference_t;
+
+// VC optimizes for dup strings :)
+static const cmd_reference_t aCommandInfo[] = {
+	{ "+stats",          qtrue,  qtrue,  NULL, ":^7 HUD overlay showing current weapon stats info" },
+	{ "+topshots",       qtrue,  qtrue,  NULL, ":^7 HUD overlay showing current top accuracies of all players" },
+	{ "?",       qtrue,  qtrue,  G_commands_cmd, ":^7 Gives a list of OSP-specific commands" },
+	{ "autorecord",      qtrue,  qtrue,  NULL, ":^7 Creates a demo with a consistent naming scheme" },
+	{ "autoscreenshot",  qtrue,  qtrue,  NULL, ":^7 Creates a screenshot with a consistent naming scheme" },
+	{ "bottomshots", qtrue,  qfalse, G_weaponRankings_cmd, ":^7 Shows WORST player for each weapon. Add ^3<weapon_ID>^7 to show all stats for a weapon" },
+	//	{ "callvote",		qtrue,	qfalse,	Cmd_CallVote_f, " <params>:^7 Calls a vote" },
+		{ "callvote",        qtrue,  qfalse, (void(*) (gentity_t *, unsigned int, qboolean))Cmd_CallVote_f, " <params>:^7 Calls a vote" },
+		//	{ "captains",		qtrue,	qtrue,	NULL, ":^7 Shows team captains" },
+		//	{ "coach",			qtrue,	qtrue,	NULL, ":^7 Accepts coach invitation/restarts coach view" },
+		//	{ "coachdecline",	qtrue,	qtrue,	NULL, ":^7 Declines coach invitation or resigns coach status" },
+		//	{ "coachinvite",	qtrue,	qtrue,	NULL, " <player_ID>:^7 Invites a player to coach team" },
+		//	{ "coachkick",		qtrue,	qtrue,	NULL, " <player_ID>:^7 Kicks active coach from team" },
+			{ "commands",        qtrue,  qtrue,  G_commands_cmd, ":^7 Gives a list of OSP-specific commands" },
+			{ "currenttime", qtrue,  qtrue,  NULL, ":^7 Displays current local time" },
+			{ "follow",          qfalse, qtrue,  Cmd_Follow_f, " <player_ID|allies|axis>:^7 Spectates a particular player or team" },
+			//	{ "invite",			qtrue,	qtrue,	NULL, " <player_ID>:^7 Invites a player to join a team" },
+				{ "lock",            qtrue,  qtrue,  G_lock_cmd, ":^7 Locks a player's team to prevent others from joining" },
+				{ "notready",        qtrue,  qfalse, G_ready_cmd, ":^7 Sets your status to ^5not ready^7 to start a match" },
+				{ "pause",           qfalse, qtrue,  G_pause_cmd, ":^7 Allows a team to pause a match" },
+				{ "players",     qtrue,  qtrue,  G_players_cmd, ":^7 Lists all active players and their IDs/information" },
+				{ "ready",           qtrue,  qtrue,  G_ready_cmd, ":^7 Sets your status to ^5ready^7 to start a match" },
+				{ "readyteam",       qfalse, qtrue,  G_teamready_cmd, ":^7 Sets an entire team's status to ^5ready^7 to start a match" },
+				{ "ref",         qtrue,  qtrue,  G_ref_cmd, " <password>:^7 Become a referee (admin access)" },
+				//	{ "remove",			qtrue,	qtrue,	NULL, " <player_ID>:^7 Removes a player from the team" },
+				//	{ "resign",			qtrue,	qtrue,	NULL, " [player_ID]:^7 Resigns captainship.  Can optionally be given to another teammate" },
+					{ "say_teamnl",      qtrue,  qtrue,  G_say_teamnl_cmd, "<msg>:^7 Sends a team chat without location info" },
+					{ "scores",          qtrue,  qtrue,  G_scores_cmd, ":^7 Displays current match stat info" },
+					{ "specinvite",      qtrue,  qtrue,  G_specinvite_cmd, ":^7 Invites a player to spectate a speclock'ed team" },
+					{ "speclock",        qtrue,  qtrue,  G_speclock_cmd, ":^7 Locks a player's team from spectators" },
+					//	{ "speconly",		qtrue,	qtrue,	NULL, ":^7 Toggles option to stay as a spectator in 1v1" },
+						{ "specunlock",      qtrue,  qfalse, G_speclock_cmd, ":^7 Unlocks a player's team from spectators" },
+						{ "statsall",        qtrue,  qfalse, G_statsall_cmd, ":^7 Shows weapon accuracy stats for all players" },
+						{ "statsdump",       qtrue,  qtrue,  NULL, ":^7 Shows player stats + match info saved locally to a file" },
+						{ "team",            qtrue,  qtrue,  Cmd_Team_f, " <b|r|s|none>:^7 Joins a team (b = allies, r = axis, s = spectator)" },
+						//	{ "setclass",		qtrue,	qtrue,	Cmd_SetClass_f, " <classnum>:^7 Selects a class" },
+						//	{ "setweapons",		qtrue,	qtrue,	Cmd_SetWeapons_f, " <weapon|weapon2>:^7 Selects your weapon loadout" },
+							{ "timein",          qfalse, qfalse, G_pause_cmd, ":^7 Unpauses a match (if initiated by the issuing team)" },
+							{ "timeout",     qfalse, qtrue,  G_pause_cmd, ":^7 Allows a team to pause a match" },
+							{ "topshots",        qtrue,  qtrue,  G_weaponRankings_cmd, ":^7 Shows BEST player for each weapon. Add ^3<weapon_ID>^7 to show all stats for a weapon" },
+							{ "unlock",          qtrue,  qfalse, G_lock_cmd, ":^7 Unlocks a player's team, allowing others to join" },
+							{ "unpause",     qfalse, qfalse, G_pause_cmd, ":^7 Unpauses a match (if initiated by the issuing team)" },
+							{ "unready",     qtrue,  qfalse, G_ready_cmd, ":^7 Sets your status to ^5not ready^7 to start a match" },
+							{ "weaponstats", qtrue,  qfalse, G_weaponStats_cmd, " [player_ID]:^7 Shows weapon accuracy stats for a player" },
+							//	{ "viewcam",		qfalse,	qtrue,	NULL, ":^7 Switches to cinematic camera mode" },
+							//	{ "vc_follow",		qfalse,	qtrue,	NULL, " [player_ID]:^7 Puts viewcam in follow mode.  Can optionally to follow a specific player" },
+							//	{ "vc_free",		qfalse,	qtrue,	NULL, ":^7 Toggle viewcam between manual/automatic change" },
+							//	{ "vc_view",		qfalse,	qtrue,	NULL, ":^7 Toggle ViewCam between static/dynamic views" },
+							//	{ "viewadd",		qfalse,	qtrue,	NULL, " <player_ID>:^7 Adds a player to multi-screen view" },
+							//	{ "viewall",		qfalse,	qtrue,	NULL, ":^7 Adds all active players to a multi-screen view" },
+							//	{ "viewallies",		qfalse,	qtrue,	NULL, ": ^7 Views entire allies/axis team" },
+							//	{ "viewaxis",		qfalse,	qtrue,	NULL, ": ^7 Views entire allies/axis team" },
+							//	{ "viewcyclenext",	qfalse,	qtrue,	NULL, ":^7 Cycles through players in current view" },
+							//	{ "viewfollow",		qfalse,	qtrue,	NULL, ":^7 Follows current highlighted view" },
+							//	{ "viewnext",		qfalse,	qtrue,	NULL, ":^7 Moves through active screen in a multi-screen display" },
+							//	{ "viewnone",		qfalse,	qtrue,	NULL, ":^7 Disables multiview mode and goes back to spectator mode" },
+							//	{ "viewremove",		qfalse,	qtrue,	NULL, " [player_ID]:^7 Removes current selected or specific player from multi-screen view" },
+								{ 0,                qfalse, qtrue,  NULL, 0 }
+};
+*/
+
 // ************** PLAYERS
 //
 // Show client info
@@ -600,6 +680,112 @@ void pCmd_pauseHandle(gentity_t *ent, qboolean dPause) {
 /*------------------------------------------------------------------------------*/
 
 /*
+// OSP-specific Commands
+qboolean G_commandCheck(gentity_t *ent, char *cmd, qboolean fDoAnytime) {
+	unsigned int i, cCommands = sizeof(pCmd_reference_t) / sizeof(pCmd_reference_t[0]);
+	const pCmd_reference_t *pCR;
+
+	for (i = 0; i < cCommands; i++) {
+		pCR = &pCmd_reference_t[i];
+		if (NULL != pCR->pCommand && pCR->fAnytime == fDoAnytime && 0 == Q_stricmp(cmd, pCR->pszCommandName)) {
+			if (!G_commandHelp(ent, cmd, i)) {
+				pCR->pCommand(ent, i, pCR->fValue);
+			}
+			return(qtrue);
+		}
+	}
+
+	return(G_smvCommands(ent, cmd));
+}
+
+
+// Prints specific command help info.
+qboolean G_commandHelp(gentity_t *ent, char *pszCommand, unsigned int dwCommand) {
+	char arg[MAX_TOKEN_CHARS];
+
+	if (!ent) {
+		return(qfalse);
+	}
+	trap_Argv(1, arg, sizeof(arg));
+	if (!Q_stricmp(arg, "?")) {
+		CP(va("print \"\n^3%s%s\n\n\"", pszCommand, aCommandInfo[dwCommand].pszHelpInfo));
+		return(qtrue);
+	}
+
+	return(qfalse);
+}
+
+// ************** COMMANDS / ?
+//
+// Lists server commands.
+void G_commands_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue) {
+	int i, rows, num_cmds = sizeof(aCommandInfo) / sizeof(aCommandInfo[0]) - 1;
+
+	rows = num_cmds / HELP_COLUMNS;
+	if (num_cmds % HELP_COLUMNS) {
+		rows++;
+	}
+	if (rows < 0) {
+		return;
+	}
+
+	CP("cpm \"^5\nAvailable OSP Game-Commands:\n----------------------------\n\"");
+	for (i = 0; i < rows; i++) {
+		if (i + rows * 3 + 1 <= num_cmds) {
+			CP(va("print \"^3%-17s%-17s%-17s%-17s\n\"", aCommandInfo[i].pszCommandName,
+				aCommandInfo[i + rows].pszCommandName,
+				aCommandInfo[i + rows * 2].pszCommandName,
+				aCommandInfo[i + rows * 3].pszCommandName));
+		}
+		else if (i + rows * 2 + 1 <= num_cmds) {
+			CP(va("print \"^3%-17s%-17s%-17s\n\"", aCommandInfo[i].pszCommandName,
+				aCommandInfo[i + rows].pszCommandName,
+				aCommandInfo[i + rows * 2].pszCommandName));
+		}
+		else if (i + rows + 1 <= num_cmds) {
+			CP(va("print \"^3%-17s%-17s\n\"", aCommandInfo[i].pszCommandName, aCommandInfo[i + rows].pszCommandName));
+		}
+		else {
+			CP(va("print \"^3%-17s\n\"", aCommandInfo[i].pszCommandName));
+		}
+	}
+
+	CP("cpm \"\nType: ^3\\command_name ?^7 for more information\n\"");
+}
+*/
+
+char *lock_status[2] = { "unlock", "lock" };
+
+// ************** LOCK / UNLOCK
+//
+// Locks/unlocks a player's team.
+void pCmd_Lock(gentity_t *ent, unsigned int dwCommand, qboolean fLock) {
+	int tteam;
+
+	/*if (team_nocontrols.integer) {
+		G_noTeamControls(ent); return;
+	}
+	if (!G_cmdDebounce(ent, pCmd[dwCommand].command)) {
+		return;
+	}*/
+
+	tteam = G_teamID(ent);
+	if (tteam == TEAM_RED || tteam == TEAM_BLUE) {
+		if (teamInfo[tteam].team_lock == fLock) {
+			CP(va("print \"^3Your team is already %sed!\n\"", lock_status[fLock]));
+		}
+		else {
+			char *info = va("\"The %s team is now %sed!\n\"", aTeams[tteam], lock_status[fLock]);
+
+			teamInfo[tteam].team_lock = fLock;
+			AP(va("print %s", info));
+			AP(va("cp %s", info));
+		}
+	}
+	else { CP(va("print \"Spectators can't %s a team!\n\"", lock_status[fLock])); }
+}
+
+/*
 ===========
 Player's structure
 ===========
@@ -629,6 +815,8 @@ static const pCmd_reference_t pCmd[] = {					// Properties..
 	{ "timeout",			pCmd_pauseHandle,	qtrue,		qtrue,	qfalse, qtrue },
 	{ "unpause",			pCmd_pauseHandle,	qfalse,		qtrue,	qfalse,	qtrue },
 	{ "timein",				pCmd_pauseHandle,	qfalse,		qtrue,	qfalse, qtrue },
+	{ "lock",				pCmd_Lock,			qtrue,		qtrue,	qfalse, qtrue },
+	{ "unlock",				pCmd_Lock,			qfalse,		qtrue,	qfalse, qtrue },
 	{ 0,					NULL,				qfalse,		qtrue,	qtrue,	qtrue }
 };
 
@@ -665,3 +853,4 @@ qboolean playerCommandsExt(gentity_t *ent, char *cmd) {
 	}
 	return wasUsed;
 }
+
