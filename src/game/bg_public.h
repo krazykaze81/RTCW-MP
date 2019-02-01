@@ -118,6 +118,10 @@ typedef enum {
 #define REINF_REDDELT   2       // Axis shift offset
 extern const unsigned int aReinfSeeds[MAX_REINFSEEDS];
 
+typedef enum popupMessageType_e {
+	PM_MESSAGE
+} popupMessageType_t;
+
 // -OSPx
 // RF
 #define MAX_TAGCONNECTS     32

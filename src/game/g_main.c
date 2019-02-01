@@ -366,6 +366,7 @@ cvarTable_t gameCvarTable[] = {
 	{&g_dbgRevive, "g_dbgRevive", "0", 0, 0, qfalse},
 
 // OSPx
+	{ &refereePassword, "refereePassword", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a1_pass, "a1_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a2_pass, "a2_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a3_pass, "a3_pass", "none", CVAR_ARCHIVE, 0, qfalse },

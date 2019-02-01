@@ -132,7 +132,7 @@ void G_refHelp_cmd(gentity_t *ent) {
 
 
 // Request for ref status or lists ref commands.
-void G_ref_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue) {
+void G_ref_cmd(gentity_t *ent, qboolean fValue) { //unsigned int dwCommand,
 	char arg[MAX_TOKEN_CHARS];
 
 

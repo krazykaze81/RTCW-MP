@@ -668,7 +668,12 @@ void SetTeam(gentity_t *ent, char *s, qboolean forced) {
 	specClient = 0;
 
 	// OSPx - New way of handling..
+	oldTeam = client->sess.sessionTeam; // RtcwPro added oldTeam initialization
 	G_TeamDataForString(s, client - level.clients, &team, &specState, &specClient);
+
+	if (team == oldTeam && team != TEAM_SPECTATOR) {
+		return qfalse;
+	}
 
 	// OSPx - No joining during countdown with tourny (g_doWarmup/ready) turned on
 	if (g_doWarmup.integer && g_gamestate.integer == GS_WARMUP_COUNTDOWN) {
@@ -693,7 +698,7 @@ void SetTeam(gentity_t *ent, char *s, qboolean forced) {
 		}
 
 		// NERVE - SMF
-		if (g_noTeamSwitching.integer && team != ent->client->sess.sessionTeam && g_gamestate.integer == GS_PLAYING) {
+		if (oldTeam != TEAM_SPECTATOR && g_noTeamSwitching.integer && team != ent->client->sess.sessionTeam && g_gamestate.integer == GS_PLAYING) { // RtcwPro added oldteam check
 			CPx(clientNum, "cp \"You cannot switch during a match, please wait until the round ends.\n\"");
 			return; // ignore the request
 		}

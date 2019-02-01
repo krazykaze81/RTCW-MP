@@ -754,12 +754,11 @@ void G_commands_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue) {
 }
 */
 
-char *lock_status[2] = { "unlock", "lock" };
-
 // ************** LOCK / UNLOCK
 //
 // Locks/unlocks a player's team.
-void pCmd_Lock(gentity_t *ent, unsigned int dwCommand, qboolean fLock) {
+void pCmd_Lock(gentity_t *ent, qboolean fLock) { //unsigned int dwCommand,
+	char *lock_status[2] = { "unlock", "lock" };
 	int tteam;
 
 	/*if (team_nocontrols.integer) {
@@ -817,6 +816,7 @@ static const pCmd_reference_t pCmd[] = {					// Properties..
 	{ "timein",				pCmd_pauseHandle,	qfalse,		qtrue,	qfalse, qtrue },
 	{ "lock",				pCmd_Lock,			qtrue,		qtrue,	qfalse, qtrue },
 	{ "unlock",				pCmd_Lock,			qfalse,		qtrue,	qfalse, qtrue },
+	{ "ref",				G_ref_cmd,			qtrue,		qtrue,	qfalse, qtrue },
 	{ 0,					NULL,				qfalse,		qtrue,	qtrue,	qtrue }
 };
 

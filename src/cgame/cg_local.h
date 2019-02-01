@@ -3015,6 +3015,22 @@ void CG_mvZoomBinoc(float x, float y, float w, float h);
 void CG_mvZoomSniper(float x, float y, float w, float h);
 */
 
+//
+// cg_popupmessages.c
+//
+
+//void CG_InitPM(void);
+//void CG_InitPMGraphics(void);
+//void CG_UpdatePMLists(void);
+//void CG_AddPMItem(popupMessageType_t type, const char* message, qhandle_t shader);
+////void CG_AddPMItemBig(popupMessageBigType_t type, const char* message, qhandle_t shader);
+//void CG_DrawPMItems(void);
+//void CG_DrawPMItemsBig(void);
+//const char* CG_GetPMItemText(centity_t* cent);
+//void CG_PlayPMItemSound(centity_t *cent);
+//qhandle_t CG_GetPMItemIcon(centity_t* cent);
+//void CG_DrawKeyHint(rectDef_t* rect, const char* binding);
+
 // cg_window.c
 qboolean CG_addString(cg_window_t *w, char *buf);
 //void CG_createDemoHelpWindow(void);
