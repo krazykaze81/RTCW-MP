@@ -409,7 +409,27 @@ cvarTable_t gameCvarTable[] = {
 	{ &match_timeoutcount, "match_timeoutcount", "3", 0, 0, qfalse, qtrue },
 
 	{ &z_serverflags, "z_serverflags", "0", 0, 0, qfalse, qfalse },
-	{ &sv_hostname, "sv_hostname", "", CVAR_SERVERINFO, 0, qfalse }
+	{ &sv_hostname, "sv_hostname", "", CVAR_SERVERINFO, 0, qfalse },
+
+	{ &vote_allow_comp, "vote_allow_comp", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_gametype,     "vote_allow_gametype", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_kick,         "vote_allow_kick", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_map,          "vote_allow_map", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_matchreset,   "vote_allow_matchreset", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_mutespecs,    "vote_allow_mutespecs", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_nextmap,      "vote_allow_nextmap", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_pub,          "vote_allow_pub", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_referee,      "vote_allow_referee", "0", 0, 0, qfalse, qfalse },
+	{ &vote_allow_shuffleteamsxp,   "vote_allow_shuffleteamsxp", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_swapteams,    "vote_allow_swapteams", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_friendlyfire, "vote_allow_friendlyfire", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_timelimit,    "vote_allow_timelimit", "0", 0, 0, qfalse, qfalse },
+	{ &vote_allow_warmupdamage, "vote_allow_warmupdamage", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_antilag,      "vote_allow_antilag", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_balancedteams,"vote_allow_balancedteams", "1", 0, 0, qfalse, qfalse },
+	{ &vote_allow_muting,       "vote_allow_muting", "1", 0, 0, qfalse, qfalse },
+	{ &vote_limit,      "vote_limit", "5", 0, 0, qfalse, qfalse },
+	{ &vote_percent,    "vote_percent", "51", 0, 0, qfalse, qfalse } // set to 51 percent
 // -OSPx
 };
 

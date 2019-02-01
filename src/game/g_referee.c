@@ -108,11 +108,11 @@ void G_refHelp_cmd(gentity_t *ent) {
 
 		G_voteHelp(ent, qfalse);
 
-		CP("print \"\n^5allready         putallies^7 <pid>  ^5speclock          warmup\n\"");
+		/*CP("print \"\n^5allready         putallies^7 <pid>  ^5speclock          warmup\n\"");
 		CP("print \"^5lock             putaxis^7 <pid>    ^5specunlock        warn ^7<pid>\n\"");
 		CP("print \"^5help             remove           unlock            mute ^7<pid>\n\"");
-		CP("print \"^5pause            restart          unpause           unmute ^7<pid>\n\"");
-
+		CP("print \"^5pause            maprestart          unpause           unmute ^7<pid>\n\"");
+		*/
 		CP("print \"Usage: ^3\\ref <cmd> [params]\n\n\"");
 
 		// Help for the console
@@ -144,7 +144,7 @@ void G_ref_cmd(gentity_t *ent, qboolean fValue) { //unsigned int dwCommand,
 
 		memcpy(&votedata, &level.voteInfo, sizeof(voteInfo_t));
 
-		if (Cmd_CallVote_f(ent, 0, qtrue)) {
+		if (Cmd_CallVote_f(ent, qtrue)) {
 			memcpy(&level.voteInfo, &votedata, sizeof(voteInfo_t));
 			return;
 		}
@@ -639,5 +639,6 @@ void G_refPrintf(gentity_t* ent, const char *fmt, ...) {
 	if (ent == NULL) {
 		trap_Printf(text);
 	}
-	else { CP(va("cpm \"%s\n\"", text)); }
+	//else { CP(va("cpm \"%s\n\"", text)); }
+	else { CP(va("print \"%s\n\"", text)); }
 }

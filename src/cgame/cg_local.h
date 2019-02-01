@@ -806,6 +806,7 @@ typedef struct {
 	int weapHeat;
 	int weaponState;
 	int weaponState_last;
+	int refStatus;						// RtcwPro refStatus added
 	// -OSP
 
 } clientInfo_t;

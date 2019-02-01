@@ -957,6 +957,7 @@ qboolean G_CallSpawn( gentity_t *ent );
 //
 // g_cmds.c
 //
+void G_SayTo(gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message, qboolean localize); // JPW NERVE removed static declaration so it would link
 void Cmd_Score_f( gentity_t *ent );
 void StopFollowing( gentity_t *ent );
 //void BroadcastTeamChange( gclient_t *client, int oldTeam );
@@ -968,12 +969,12 @@ int ClientNumberFromString(gentity_t *to, char *s);
 int ClientNumberFromNameMatch(char *name, int *matches);
 char *ConcatArgs(int start);
 void G_SayTo(gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message, qboolean localize); // JPW NERVE removed static declaration so it would link
-//qboolean Cmd_CallVote_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
+qboolean Cmd_CallVote_f(gentity_t *ent, qboolean fValue); // unsigned int dwCommand
 void Cmd_Follow_f(gentity_t *ent); // , unsigned int dwCommand, qboolean fValue);
 void Cmd_Say_f(gentity_t *ent, int mode, qboolean arg0);
 void Cmd_Team_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
-void Cmd_SetWeapons_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
-void Cmd_SetClass_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
+//void Cmd_SetWeapons_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
+//void Cmd_SetClass_f(gentity_t *ent); //, unsigned int dwCommand, qboolean fValue);
 
 ///////////////////////
 // g_cmds_ext.c
@@ -1202,17 +1203,6 @@ void FireWeapon( gentity_t *ent );
 void MoveClientToIntermission( gentity_t *client );
 void G_SetStats( gentity_t *ent );
 void DeathmatchScoreboardMessage( gentity_t *client );
-
-//
-// g_cmds.c
-//
-void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message, qboolean localize ); // JPW NERVE removed static declaration so it would link
-//qboolean Cmd_CallVote_f(gentity_t *ent); // , unsigned int dwCommand, qboolean fValue );
-//void Cmd_Follow_f(gentity_t *ent); // , unsigned int dwCommand, qboolean fValue );
-//void Cmd_Say_f( gentity_t *ent; //, int mode, qboolean arg0 );
-//void Cmd_Team_f( gentity_t *ent; //, unsigned int dwCommand, qboolean fValue );
-//void Cmd_SetWeapons_f( gentity_t *ent; //, unsigned int dwCommand, qboolean fValue );
-//void Cmd_SetClass_f( gentity_t *ent; //, unsigned int dwCommand, qboolean fValue );
 
 //
 // g_pweapon.c
