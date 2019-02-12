@@ -55,6 +55,7 @@ If you have questions concerning this license or the applicable additional terms
 #define ITEM_TEXTSTYLE_OUTLINED         4   // drop shadow ( need a color for this )
 #define ITEM_TEXTSTYLE_OUTLINESHADOWED  5   // drop shadow ( need a color for this )
 #define ITEM_TEXTSTYLE_SHADOWEDMORE     6   // drop shadow ( need a color for this )
+#define ITEM_TEXTSTYLE_UNDERLINED 		7	// line under the text
 
 #define WINDOW_BORDER_NONE          0       // no border
 #define WINDOW_BORDER_FULL          1       // full border based on border color ( single pixel )
@@ -68,6 +69,7 @@ If you have questions concerning this license or the applicable additional terms
 #define WINDOW_STYLE_SHADER         3       // gradient bar based on background color
 #define WINDOW_STYLE_TEAMCOLOR      4       // team color
 #define WINDOW_STYLE_CINEMATIC      5       // cinematic
+#define WINDOW_STYLE_TAG			6		// Pop-up HTML-like help tags
 
 #define MENU_TRUE           1       // uh.. true
 #define MENU_FALSE          0       // and false
