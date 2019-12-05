@@ -451,49 +451,106 @@ void SpectatorThink( gentity_t *ent, usercmd_t *ucmd ) {
 ClientInactivityTimer
 
 Returns qfalse if the client is dropped
+
+L0 - Patched for g_spectatorInactivity and added ability to move
+     clients to spectators rather than kick them..
+NOTE: Dead players aren't accounted any more either..
+NOTE 2: Spec's that spectate don't get kicked as they may be making a demo.
+      - This particular behaviour is controlled by g_spectatorAllowDemo cvar.
 =================
 */
 qboolean ClientInactivityTimer( gclient_t *client ) {
-	// OSPx - Inactivity Timer
-	if ((g_inactivity.integer == 0 && client->sess.sessionTeam != TEAM_SPECTATOR) || 
-		(g_spectatorInactivity.integer == 0 && client->sess.sessionTeam == TEAM_SPECTATOR)) {
 
+	if ((g_inactivity.integer <= 0 &&
+			(client->sess.sessionTeam == TEAM_RED || client->sess.sessionTeam == TEAM_BLUE)) ||
+		(g_spectatorInactivity.integer <= 0 && client->sess.sessionTeam == TEAM_SPECTATOR))
+	{
 		// give everyone some time, so if the operator sets g_inactivity during
 		// gameplay, everyone isn't kicked
 		client->inactivityTime = level.time + 60 * 1000;
 		client->inactivityWarning = qfalse;
-	}
-	else if (client->pers.cmd.forwardmove ||
-		client->pers.cmd.rightmove ||
+
+		return qtrue;
+	} 
+	else if ( client->pers.cmd.forwardmove || 
+		client->pers.cmd.rightmove || 
 		client->pers.cmd.upmove ||
 		(client->pers.cmd.wbuttons & WBUTTON_ATTACK2) ||
 		(client->pers.cmd.buttons & BUTTON_ATTACK) ||
 		(client->pers.cmd.wbuttons & WBUTTON_LEANLEFT) ||
-		(client->pers.cmd.wbuttons & WBUTTON_LEANRIGHT)
-		|| client->ps.pm_type == PM_DEAD) {
-
+		(client->pers.cmd.wbuttons & WBUTTON_LEANRIGHT) ||
+		client->ps.pm_type == PM_DEAD) 
+	{
+		client->inactivityTime = level.time +
+			((client->sess.sessionTeam == TEAM_RED || client->sess.sessionTeam == TEAM_BLUE) ?
+				g_inactivity.integer : g_spectatorInactivity.integer) * 1000;
 		client->inactivityWarning = qfalse;
-		client->inactivityTime = level.time + 1000 *
-			((client->sess.sessionTeam != TEAM_SPECTATOR) ?
-			g_inactivity.integer :
-			g_spectatorInactivity.integer);
 
-	}
-	else if (!client->pers.localClient) {
-		if (level.time > client->inactivityTime && client->inactivityWarning) {
-			client->inactivityWarning = qfalse;
-			client->inactivityTime = level.time + 60 * 1000;
-			trap_DropClient(client - level.clients, "Dropped due to inactivity");
-			return(qfalse);
+		return qtrue;
+	} 
+	else if ( !client->pers.localClient ) 
+	{
+		if ( level.time > client->inactivityTime && client->inactivityWarning) 
+		{	
+			// Playing client
+			if ((client->sess.sessionTeam == TEAM_RED || client->sess.sessionTeam == TEAM_BLUE) 
+				&& client->inactivityWarning)
+			{
+				if (g_inactivityToSpecs.integer ) 
+				{				
+					client->sess.sessionTeam = TEAM_SPECTATOR;
+					client->sess.spectatorState = SPECTATOR_FREE;
+					ClientUserinfoChanged( client - level.clients);	
+					ClientBegin( client - level.clients );				
+					AP(va("chat \"console: %s ^7was moved to Specators due inactivity.\n\"", client->pers.netname));
+					return qfalse;
+				} 
+				else 
+				{ 
+					trap_DropClient( client - level.clients, "^3Dropped due to inactivity" );
+					return qfalse;
+				}
+			} // Spectator && NOT admin
+			else if (client->sess.sessionTeam == TEAM_SPECTATOR && 
+					 client->sess.admin == USER_REGULAR	&&				     
+					 client->inactivityWarning)
+			{
+				if (g_spectatorInactivity.integer) 
+				{		
+					if (g_spectatorAllowDemo.integer && !(client->ps.pm_flags & PMF_FOLLOW))
+					{
+						trap_DropClient( client - level.clients, "^3Dropped due to inactivity" );
+						return qfalse;
+					}
+					else if (!g_spectatorAllowDemo.integer)
+					{
+						trap_DropClient( client - level.clients, "^3Dropped due to inactivity" );
+						return qfalse;
+					}
+				} 
+			}			
 		}
-
-		if (!client->inactivityWarning && level.time > client->inactivityTime - 10000) {
-			CPx(client - level.clients, "cp \"^310 seconds until inactivity drop!\n\"");
-			CPx(client - level.clients, "print \"^310 seconds until inactivity drop!\n\"");
-			G_Printf("10s inactivity warning issued to: %s\n", client->pers.netname);
+		else if ( !client->inactivityWarning && level.time > client->inactivityTime - 10 * 1000 ) 
+		{
+			if (client->sess.sessionTeam != TEAM_SPECTATOR)
+			{
+				if (g_inactivityToSpecs.integer) 
+					trap_SendServerCommand( client - level.clients, "cp \"^3Ten seconds until forcing you to spectators!\n\"2" );
+				else
+					trap_SendServerCommand( client - level.clients, "cp \"^3Ten seconds until inactivity drop!\n\"2" );	
+			}
+			else if (client->sess.admin == USER_REGULAR && 
+				g_spectatorInactivity.integer && 
+				client->sess.sessionTeam == TEAM_SPECTATOR ) 
+			{
+				if (g_spectatorAllowDemo.integer && !(client->ps.pm_flags & PMF_FOLLOW))
+					trap_SendServerCommand( client - level.clients, "cp \"^3You have Ten seconds to join before ^3being dropped due inactivity!\n\"2" );
+				else if (!g_spectatorAllowDemo.integer)
+					trap_SendServerCommand( client - level.clients, "cp \"^3You have Ten seconds to join before ^3being dropped due inactivity!\n\"2" );
+			}
 
 			client->inactivityWarning = qtrue;
-			client->inactivityTime = level.time + 10000;    // Just for safety
+			client->inactivityTime = level.time + 10 * 1000; // Just for safety
 		}
 	}
 	return qtrue;
@@ -921,6 +978,81 @@ void ClientThink_real( gentity_t *ent ) {
 		return;
 	}
 
+	// L0 - Draw hitboxes
+	if (g_drawHitboxes.integer) {
+		if ( client->sess.sessionTeam != TEAM_SPECTATOR ) {
+			gentity_t *bboxEnt;
+			gentity_t *tent;
+			gentity_t   *head;
+			vec3_t b1, b2;
+			orientation_t or;       // DHM - Nerve
+			VectorCopy( ent->r.currentOrigin, b1 );
+			VectorCopy( ent->r.currentOrigin, b2 );
+			VectorAdd( b1, ent->r.mins, b1 );
+			VectorAdd( b2, ent->r.maxs, b2 );
+			bboxEnt = G_TempEntity( b1, EV_RAILTRAIL );
+			VectorCopy( b2, bboxEnt->s.origin2 );
+			bboxEnt->s.dmgFlags = 1; // ("type")
+
+			head = G_Spawn();
+
+			if ( trap_GetTag( ent->s.number, "tag_head", &or ) ) {
+				G_SetOrigin( head, or.origin );
+			} else {
+				float height, dest;
+				vec3_t v, angles, forward, up, right;
+
+				G_SetOrigin( head, ent->r.currentOrigin );
+
+				if ( ent->client->ps.pm_flags & PMF_DUCKED ) {
+					height = ent->client->ps.crouchViewHeight - 12;
+				} else {
+					height = ent->client->ps.viewheight;
+				}
+				
+				VectorCopy( ent->client->ps.viewangles, angles );
+				if ( angles[PITCH] > 180 ) {
+					dest = ( -360 + angles[PITCH] ) * 0.75;
+				} else {
+					dest = angles[PITCH] * 0.75;
+				}
+				angles[PITCH] = dest;
+
+				AngleVectors( angles, forward, right, up );
+				VectorScale( forward, 5, v );
+				VectorMA( v, 18, up, v );
+
+				VectorAdd( v, head->r.currentOrigin, head->r.currentOrigin );
+				head->r.currentOrigin[2] += height / 2;				
+			}
+			
+			VectorCopy( head->r.currentOrigin, head->s.origin );
+			VectorCopy( ent->r.currentAngles, head->s.angles );
+			VectorCopy( head->s.angles, head->s.apos.trBase );
+			VectorCopy( head->s.angles, head->s.apos.trDelta );
+			
+			VectorSet (head->r.mins , -6, -6, -4);
+			VectorSet (head->r.maxs , 6, 6, 10);
+			//VectorSet (head->r.mins , -6, -6, -6);
+			//VectorSet (head->r.maxs , 6, 6, 6);
+			//VectorSet( head->r.mins, -6, -6, -2 ); // JPW NERVE changed this z from -12 to -6 for crouching, also removed standing offset
+			//VectorSet( head->r.maxs, 6, 6, 10 ); // changed this z from 0 to 6
+			head->clipmask = CONTENTS_SOLID;
+			head->r.contents = CONTENTS_SOLID;
+
+			trap_LinkEntity( head );
+
+			VectorCopy( head->r.currentOrigin, b1 );
+			VectorCopy( head->r.currentOrigin, b2 );
+			VectorAdd( b1, head->r.mins, b1 );
+			VectorAdd( b2, head->r.maxs, b2 );
+			tent = G_TempEntity( b1, EV_RAILTRAIL );
+			VectorCopy( b2, tent->s.origin2 );
+			tent->s.dmgFlags = 1;
+
+			G_FreeEntity( head );
+		}
+	} // L0 - Draw hitboxes end
 	if ( client->cameraPortal ) {
 		G_SetOrigin( client->cameraPortal, client->ps.origin );
 		trap_LinkEntity( client->cameraPortal );
@@ -1011,6 +1143,28 @@ void ClientThink_real( gentity_t *ent ) {
 		return;
 	}
 
+	// L0 - Pause
+	if ( ( client->ps.eFlags & EF_VIEWING_CAMERA ) || level.match_pause != PAUSE_NONE ) {
+		ucmd->buttons = 0;
+		ucmd->forwardmove = 0;
+		ucmd->rightmove = 0;
+		ucmd->upmove = 0;
+		ucmd->wbuttons = 0;
+
+		// freeze player (RELOAD_FAILED still allowed to move/look)
+		if ( level.match_pause != PAUSE_NONE ) {
+			client->ps.pm_type = PM_FREEZE;
+		} else if ( ( client->ps.eFlags & EF_VIEWING_CAMERA )) {
+			VectorClear( client->ps.velocity );
+			client->ps.pm_type = PM_FREEZE;
+		}
+	} else if ( client->noclip ) {
+		client->ps.pm_type = PM_NOCLIP;
+	} else if ( client->ps.stats[STAT_HEALTH] <= 0 ) {
+		client->ps.pm_type = PM_DEAD;
+	} else {
+		client->ps.pm_type = PM_NORMAL;
+	} // End
 	// JPW NERVE do some time-based muzzle flip -- this never gets touched in single player (see g_weapon.c)
 	// #define RIFLE_SHAKE_TIME 150 // JPW NERVE this one goes with the commented out old damped "realistic" behavior below
 	#define RIFLE_SHAKE_TIME 300 // per Id request, longer recoil time
@@ -1466,6 +1620,19 @@ void ClientThink_real( gentity_t *ent ) {
 
 /*
 ==================
+L0 - ClientThink_cmd
+
+ET->S4NDMoD port
+==================
+*/
+void ClientThink_cmd(gentity_t *ent, usercmd_t *cmd) {
+	ent->client->pers.oldcmd = ent->client->pers.cmd;
+	ent->client->pers.cmd = *cmd;
+	ClientThink_real(ent);
+}
+
+/*
+==================
 ClientThink
 
 A new command has arrived from the client
@@ -1473,22 +1640,38 @@ A new command has arrived from the client
 */
 void ClientThink( int clientNum ) {
 	gentity_t *ent;
+// L0 - Anti Warp port (Modified)
+	usercmd_t newcmd; 
 
 	ent = g_entities + clientNum;
-	ent->client->pers.oldcmd = ent->client->pers.cmd;
-	trap_GetUsercmd( clientNum, &ent->client->pers.cmd );
+	trap_GetUsercmd(clientNum, &newcmd);
+// - End
 
 	// mark the time we got info, so we can display the
 	// phone jack if they don't get any for a while
 	ent->client->lastCmdTime = level.time;
 
 	if ( !g_synchronousClients.integer ) {
-		ClientThink_real( ent );
+		// L0 - Anti Warp port
+		if (G_DoAntiwarp(ent)) {
+			// josh: use zinx antiwarp code
+			etpro_AddUsercmd(clientNum, &newcmd);
+			DoClientThinks(ent);
+		}
+		else {
+			ClientThink_cmd(ent, &newcmd);
+		} // -End
 	}
 }
 
 
 void G_RunClient( gentity_t *ent ) {
+	// L0 - Anti Warp port
+	if (G_DoAntiwarp(ent)) {
+		// josh: use zinx antiwarp code
+		DoClientThinks(ent);
+	}
+
 	if ( !g_synchronousClients.integer ) {
 		return;
 	}
@@ -1595,6 +1778,7 @@ void SpectatorClientEndFrame( gentity_t *ent ) {
 			if ( cl->pers.connected == CON_CONNECTED && cl->sess.sessionTeam != TEAM_SPECTATOR ) {
 				// DHM - Nerve :: carry flags over
 				int ping = ent->client->ps.ping;
+				int score = ent->client->ps.persistant[PERS_SCORE];
 				flags = ( cl->ps.eFlags & ~( EF_VOTED ) ) | ( ent->client->ps.eFlags & ( EF_VOTED ) );
 				// JPW NERVE -- limbo latch
 				if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->ps.pm_flags & PMF_LIMBO ) {
@@ -1620,6 +1804,7 @@ void SpectatorClientEndFrame( gentity_t *ent ) {
 				// DHM - Nerve :: carry flags over
 				ent->client->ps.eFlags = flags;
 				ent->client->ps.ping = ping;
+				ent->client->ps.persistant[PERS_SCORE] = score;
 				return;
 			} else {
 				// drop them to free spectators unless they are dedicated camera followers
@@ -1823,7 +2008,9 @@ void ClientEndFrame( gentity_t *ent ) {
 			if ( i == PW_FIRE ||             // these aren't dependant on level.time
 				 i == PW_ELECTRIC ||
 				 i == PW_BREATHER ||
-				 i == PW_NOFATIGUE ) {
+				 i == PW_NOFATIGUE ||
+				  ent->client->ps.powerups[i] == 0  // L0 - Pause dump
+				 ) {
 
 				continue;
 			}

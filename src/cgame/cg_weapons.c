@@ -4218,7 +4218,7 @@ CG_OutOfAmmoChange
 The current weapon has just run out of ammo
 ===================
 */
-void CG_OutOfAmmoChange( void ) {
+void CG_OutOfAmmoChange( qboolean allowforceswitch ) {
 	int i;
 	int bank, cycle;
 	int equiv = WP_NONE;
@@ -4557,7 +4557,14 @@ void CG_FireWeapon( centity_t *cent ) {
 			CG_MachineGunEjectBrass( cent );
 		}
 
+		if (cg_muzzleFlash.integer)
+		{
 		cent->muzzleFlashTime = cg.time;
+		}
+		else
+		{
+			cent->muzzleFlashTime = 0;
+		}
 
 		return;
 	}
@@ -4575,7 +4582,14 @@ void CG_FireWeapon( centity_t *cent ) {
 
 	// mark the entity as muzzle flashing, so when it is added it will
 	// append the flash to the weapon model
+	if (cg_muzzleFlash.integer)
+	{
 	cent->muzzleFlashTime = cg.time;
+	}
+	else
+	{
+		cent->muzzleFlashTime = 0;
+	}
 
 	// RF, kick angles
 	if ( ent->number == cg.snap->ps.clientNum ) {

@@ -30,7 +30,7 @@ OSPx - Port from ET
 ================================
 */
 
-#include "../game/q_shared.h"
+#include "q_shared.h"
 #include "bg_public.h"
 
 //	--> WP_* to WS_* conversion

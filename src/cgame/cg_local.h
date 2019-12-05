@@ -41,6 +41,7 @@ If you have questions concerning this license or the applicable additional terms
 #include "tr_types.h"
 #include "../game/bg_public.h"
 #include "cg_public.h"
+#include "../ui/keycodes.h"	// OSPx - Demo commands
 
 
 #define POWERUP_BLINKS      5
@@ -118,9 +119,8 @@ If you have questions concerning this license or the applicable additional terms
 #define CURSOR_OFFSETY  12
 
 // Demo controls
-#define DEMO_THIRDPERSONUPDATE  0
-#define DEMO_RANGEDELTA         6
-#define DEMO_ANGLEDELTA         4
+#define WID_DEMOCONTROLS	0x01    // Demo Controls
+#define WID_DEMOPOPUP		0x02	// Demo Pop ups
 
 // MV overlay
 #define MVINFO_TEXTSIZE     10
@@ -137,9 +137,8 @@ If you have questions concerning this license or the applicable additional terms
 #define WINDOW_FONTHEIGHT   8       // For non-true-type: height to scale from
 
 #define WID_NONE            0x00    // General window
-#define WID_STATS           0x01    // Stats (reusable due to scroll effect)
-#define WID_TOPSHOTS        0x02    // Top/Bottom-shots
-#define WID_CLIENTSTATS		0x03	// L0 - 1.0 stats
+#define WID_DEMOCONTROLS	0x01    // Demo Controls
+#define WID_DEMOPOPUP		0x02	// Demo Pop ups
 //#define WID_DEMOHELP		0x08	// Demo key control info
 //#define WID_SPECHELP		0x10	// MV spectator key control info
 
@@ -211,6 +210,22 @@ typedef enum {
 	SHOW_ON
 } showView_t;
 
+typedef struct {	
+	int fadeTime;
+	int show;
+	int requestTime;
+} demoControlInfo_t;
+
+typedef struct {
+	int fadeTime;
+	int show;
+	int requestTime;
+} demoPopupInfo_t;
+
+#define DEMO_THIRDPERSONUPDATE  0
+#define DEMO_RANGEDELTA         6
+#define DEMO_ANGLEDELTA         4
+
 typedef struct {
 	int pID;                    // Player ID
 	int classID;                // Player's current class
@@ -236,9 +251,11 @@ typedef struct {
 #define WINDOW_FONTWIDTH    8       // For non-true-type: width to scale from
 #define WINDOW_FONTHEIGHT   8       // For non-true-type: height to scale from
 
+
 #define WID_NONE            0x00    // General window
 #define WID_STATS           0x01    // Stats (reusable due to scroll effect)
 #define WID_TOPSHOTS        0x02    // Top/Bottom-shots
+#define WID_CLIENTSTATS		0x03	// L0 - 1.0 stats
 #define WID_MOTD            0x04    // MOTD
 //#define WID_DEMOHELP		0x08	// Demo key control info
 //#define WID_SPECHELP		0x10	// MV spectator key control info
@@ -1252,9 +1269,16 @@ typedef struct {
 	cg_window_t *topshotsWindow;
 	cg_window_t *windowCurrent;
 	cg_windowHandler_t winHandler;	
+	
 	cg_window_t *clientStatsWindow;
 	cg_window_t *msgClientStatsWindow;
 
+	cg_window_t *demoControlsWindow;
+	cg_window_t *demoPopupWindow;
+
+	// Demo
+	qboolean revertToDefaultKeys;
+	qboolean advertisementDone;
 	// Pop In prints
 	int popinPrintTime;
 	int popinPrintCharWidth;
@@ -1683,6 +1707,8 @@ typedef struct {
 	qhandle_t medalGauntlet;
 
 	// sounds
+	sfxHandle_t announceFight;
+	sfxHandle_t prepFight;
 	sfxHandle_t n_health;
 	sfxHandle_t noFireUnderwater;
 	sfxHandle_t snipersound;
@@ -1955,6 +1981,16 @@ typedef struct {
 	int complaintEndTime;       // DHM - Nerve
 	float smokeWindDir; // JPW NERVE for smoke puffs & wind (arty, airstrikes, bullet impacts)
 
+	// OSPx - Demo
+	demoControlInfo_t demoControlInfo;
+	demoPopupInfo_t demoPopUpInfo;
+	int thirdpersonUpdate;
+	qboolean showNormals;
+	qboolean wallhack;
+	int noChat;
+	int noVoice;
+	qboolean freezeDemo;
+	
 	// OSP
 	int aviDemoRate;                                    // Demo playback recording
 	int cursorUpdate;                                   // Timeout for mouse pointer view
@@ -1966,8 +2002,10 @@ typedef struct {
 // OSPx
 	// Reinforcements
 	int aReinfOffset[TEAM_NUM_TEAMS];
-
-	// Ready
+	int ccSelectedTeam;					// Reinforcements offset
+	int fixedphysics;	// Fixed pshysics
+	int pauseState;		// Pause
+	int pauseTime;   // pause time nihi added
 	int readyState;
 
 	// Pause
@@ -1990,7 +2028,6 @@ typedef struct {
 	qboolean fSelect;                                   // MV window "select" status
 	qboolean fKeyPressed[256];                          // Key status to get around console issues
 	int timescaleUpdate;                                // Timescale display for demo playback
-	int thirdpersonUpdate;
 	int ccCurrentCamObjective;
 	int ccPortalAngles;
 	int ccWeaponShots;
@@ -2199,6 +2236,7 @@ extern vmCvar_t cg_coloredCrosshairNames;
 extern vmCvar_t cg_drawWeaponIconFlash;
 extern vmCvar_t cg_printObjectiveInfo;
 extern vmCvar_t cg_muzzleFlash;
+extern vmCvar_t cg_hitsounds;
 extern vmCvar_t cg_complaintPopUp;
 extern vmCvar_t cg_drawReinforcementTime;
 extern vmCvar_t cg_reinforcementTimeColor;
@@ -2211,11 +2249,16 @@ extern vmCvar_t	vp_drawnames;
 extern vmCvar_t	cg_drawNames;
 extern vmCvar_t	cg_showFlags;
 extern vmCvar_t cg_announcer;
+extern vmCvar_t cg_drawPickupItems;
 extern vmCvar_t cg_autoAction;
+extern vmCvar_t cg_statsList;
 extern vmCvar_t cg_useScreenshotJPEG;
+extern vmCvar_t cg_chatAlpha;
+extern vmCvar_t cg_chatBackgroundColor;
+extern vmCvar_t cg_printObjectiveInfo;
 extern vmCvar_t cg_instantTapout;
 extern vmCvar_t cg_forceTapout;
-extern vmCvar_t cg_hitsounds;
+
 extern vmCvar_t cg_uinfo;
 
 extern vmCvar_t cf_wstats;
@@ -2239,6 +2282,12 @@ extern vmCvar_t demo_avifpsF4;
 extern vmCvar_t demo_avifpsF5;
 extern vmCvar_t demo_drawTimeScale;
 extern vmCvar_t demo_infoWindow;
+extern vmCvar_t demo_controlsWindow;
+extern vmCvar_t demo_popupWindow;
+extern vmCvar_t demo_notifyWindow;
+extern vmCvar_t demo_showTimein;
+extern vmCvar_t	demo_noAdvertisement;
+
 extern vmCvar_t mv_sensitivity;
 // engine mappings
 extern vmCvar_t int_cl_maxpackets;
@@ -2407,16 +2456,10 @@ void CG_Fade( int r, int g, int b, int a, float time );
 // - Reinforcement offset
 int CG_CalculateReinfTime(void);
 float CG_CalculateReinfTime_Float(void);
-// - Text
-int CG_Text_Width_Ext(const char *text, float scale, int limit, fontInfo_t* font);
-int CG_Text_Height_Ext(const char *text, float scale, int limit, fontInfo_t* font);
-void CG_Text_Paint_Ext(float x, float y, float scalex, float scaley, vec4_t color, const char *text, float adjust, int limit, int style, fontInfo_t* font);
+
 // PopIn
 void CG_PopinPrint(const char *str, int y, int charWidth, qboolean blink);
-// - Hud names
-void CG_Text_Paint_ext2(float x, float y, float scale, vec4_t color, const char *text, float adjust, int limit, int style);
-int CG_Text_Width_ext2(const char *text, float scale, int limit);
-int CG_Text_Height_ext2(const char *text, float scale, int limit);
+
 // - Announcer
 void CG_AddAnnouncer(char *text, sfxHandle_t sound, float scale, int duration, float r, float g, float b, int mode);
 void CG_DrawAnnouncer(void);
@@ -2534,7 +2577,7 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
 void CG_DrawWeaponSelect( void );
 void CG_DrawHoldableSelect( void );
 
-void CG_OutOfAmmoChange( void );
+void CG_OutOfAmmoChange( qboolean allowforceswitch );
 void CG_HoldableUsedupChange( void ); //----(SA)	added
 
 //----(SA) added to header to access from outside cg_weapons.c
@@ -2698,6 +2741,9 @@ void CG_LoadingString( const char *s );
 void CG_LoadingItem( int itemNum );
 void CG_LoadingClient( int clientNum );
 void CG_DrawInformation( void );
+void CG_DemoClick(int key);
+void CG_createControlsWindow(void);
+void CG_demoView(void);
 
 //
 // cg_scoreboard.c
@@ -2741,6 +2787,27 @@ void CG_Respawn( void );
 void CG_TransitionPlayerState( playerState_t *ps, playerState_t *ops );
 
 
+// cg_window.c
+void CG_createDemoPopUpWindow(char *str, int sec);
+qboolean CG_addString(cg_window_t *w, char *buf);
+//void CG_createDemoHelpWindow(void);
+//void CG_createSpecHelpWindow(void);
+void CG_createStatsWindow(void);
+void CG_createClientStatsWindow(void);
+void CG_createTopShotsWindow(void);
+/*void CG_createWstatsMsgWindow(void);
+void CG_createWtopshotsMsgWindow(void);
+void CG_createMOTDWindow(void);
+void CG_cursorUpdate(void);
+void CG_initStrings(void);*/
+void CG_printWindow(char *str);
+void CG_removeStrings(cg_window_t *w);
+cg_window_t *CG_windowAlloc(int fx, int startupLength);
+void CG_windowDraw(void);
+void CG_windowFree(cg_window_t *w);
+void CG_windowInit(void);
+void CG_windowNormalizeOnText(cg_window_t *w);
+void CG_createWstatsMsgWindow( void );
 //===============================================
 
 //
@@ -2967,6 +3034,7 @@ e_status trap_CIN_RunCinematic( int handle );
 void trap_CIN_DrawCinematic( int handle );
 void trap_CIN_SetExtents( int handle, int x, int y, int w, int h );
 
+int trap_RealTime(qtime_t *qtime);
 void trap_SnapVector( float *v );
 
 qboolean    trap_GetEntityToken( char *buffer, int bufferSize );
@@ -2982,6 +3050,34 @@ void        CG_StartCamera( const char *name, qboolean startBlack );
 int         CG_LoadCamera( const char *name );
 void        CG_FreeCamera( int camNum );
 //----(SA)	end
+
+// - Text
+int CG_Text_Width_Ext(const char *text, float scale, int limit, fontInfo_t* font);
+int CG_Text_Height_Ext(const char *text, float scale, int limit, fontInfo_t* font);
+void CG_Text_Paint_Ext(float x, float y, float scalex, float scaley, vec4_t color, const char *text, float adjust, int limit, int style, fontInfo_t* font);
+// - Hud names
+void CG_Text_Paint_ext2(float x, float y, float scale, vec4_t color, const char *text, float adjust, int limit, int style);
+int CG_Text_Width_ext2(const char *text, float scale, int limit);
+int CG_Text_Height_ext2(const char *text, float scale, int limit);
+// Pause
+void CG_ParsePause( const char *pState );
+// Ready
+void CG_ParseReady( const char *pState );
+void CG_DrawRect_FixedBorder( float x, float y, float width, float height, int border, const float *color );
+// OSP's Autoaction values
+#define AA_DEMORECORD   0x01
+#define AA_SCREENSHOT   0x02
+#define AA_STATSDUMP    0x04
+
+// Ready
+#define CREADY_NONE		0x00
+#define CREADY_AWAITING	0x01
+#define CREADY_PENDING	0x02
+
+// Macros
+#define Pri( x ) CG_Printf( "[cgnotify]%s", CG_LocalizeServerCommand( x ) )
+#define CPri( x ) CG_CenterPrint( CG_LocalizeServerCommand( x ), SCREEN_HEIGHT - ( SCREEN_HEIGHT * 0.2 ), SMALLCHAR_WIDTH );
+// -OSP
 
 // OSP
 /*#define Pri( x ) CG_Printf( "[cgnotify]%s", CG_LocalizeServerCommand( x ) )
@@ -3031,38 +3127,3 @@ void CG_mvZoomSniper(float x, float y, float w, float h);
 //void CG_PlayPMItemSound(centity_t *cent);
 //qhandle_t CG_GetPMItemIcon(centity_t* cent);
 //void CG_DrawKeyHint(rectDef_t* rect, const char* binding);
-
-// cg_window.c
-qboolean CG_addString(cg_window_t *w, char *buf);
-//void CG_createDemoHelpWindow(void);
-//void CG_createSpecHelpWindow(void);
-void CG_createStatsWindow(void);
-void CG_createClientStatsWindow(void);
-void CG_createTopShotsWindow(void);
-/*void CG_createWstatsMsgWindow(void);
-void CG_createWtopshotsMsgWindow(void);
-void CG_createMOTDWindow(void);
-void CG_cursorUpdate(void);
-void CG_initStrings(void);*/
-void CG_printWindow(char *str);
-void CG_removeStrings(cg_window_t *w);
-cg_window_t *CG_windowAlloc(int fx, int startupLength);
-void CG_windowDraw(void);
-void CG_windowFree(cg_window_t *w);
-void CG_windowInit(void);
-void CG_windowNormalizeOnText(cg_window_t *w);
-
-// OSP's Autoaction values
-#define AA_DEMORECORD   0x01
-#define AA_SCREENSHOT   0x02
-#define AA_STATSDUMP    0x04
-
-// Ready
-#define CREADY_NONE		0x00
-#define CREADY_AWAITING	0x01
-#define CREADY_PENDING	0x02
-
-// Macros
-#define Pri( x ) CG_Printf( "[cgnotify]%s", CG_LocalizeServerCommand( x ) )
-#define CPri( x ) CG_CenterPrint( CG_LocalizeServerCommand( x ), SCREEN_HEIGHT - ( SCREEN_HEIGHT * 0.2 ), SMALLCHAR_WIDTH );
-// -OSP

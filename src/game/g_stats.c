@@ -34,6 +34,16 @@ Created: 3 May / 2014
 #include "g_local.h"
 
 
+/*
+===========
+Set time so it's more accessible..
+===========
+*/
+extern int trap_RealTime ( qtime_t * qtime );
+const char *dMonths[12] = {
+"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+};
 int iWeap = WS_MAX;
 
 static const weap_ws_convert_t aWeapMOD[MOD_NUM_MODS] = {
@@ -237,13 +247,15 @@ void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod ) {
 	}
 
 	// Suicides only affect the player specifically
-	if ( targ == attacker || !attacker || !attacker->client || mod == MOD_SUICIDE || mod == MOD_SELFKILL ) {	
+	if ( targ == attacker || !attacker || !attacker->client || mod == MOD_SUICIDE ) {
 		if ( !attacker || !attacker->client )
 		return;
 	}
-
+	if ( mod == MOD_SUICIDE ) {
+		dmg = 0;
+	}
 	// Telefrags only add 100 points.. not 100k!!
-	if ( mod == MOD_TELEFRAG ) {
+	else if ( mod == MOD_TELEFRAG ) {
 		dmg = 100;
 	} else { dmg = dmg_ref;}
 
@@ -252,7 +264,7 @@ void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod ) {
 		 targ->client->sess.sessionTeam == attacker->client->sess.sessionTeam ) {
 		attacker->client->sess.team_damage += dmg;
 		// Don't count self kill as team kill..because it ain't!
-		if ( targ->health <= 0 && !(mod == MOD_SUICIDE || mod == MOD_SELFKILL)) {
+		if ( targ->health <= 0 && !(mod == MOD_SUICIDE || mod == MOD_SUICIDE)) {
 			attacker->client->sess.team_kills++;
 			targ->client->sess.deaths++;	// Record death when TK occurs
 		}
@@ -268,7 +280,7 @@ void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod ) {
 			targ->client->sess.deaths++;
 
 			// OSPx - Life(s) Kill peak
-			if (attacker->client->pers.life_kills > attacker->client->sess.killPeak)
+			if (attacker->client->pers.life_kills >= attacker->client->sess.killPeak)
 				attacker->client->sess.killPeak++;
 		}
 	}
@@ -570,16 +582,19 @@ void G_weaponRankings_cmd( gentity_t *ent, unsigned int dwCommand, qboolean stat
 }
 
 // Prints current player match info.
-void G_printMatchInfo(gentity_t *ent, qboolean time) {
+void G_printMatchInfo( gentity_t *ent ) {
 	int i, j, cnt, eff;
 	float tot_acc = 0.00f;
-	int tot_kills, tot_deaths, tot_gp, tot_hs, tot_sui, tot_tk, tot_dg, tot_dr, tot_td, tot_hits, tot_shots;
+	int tot_rev, tot_kills, tot_deaths, tot_gp, tot_hs, tot_sui, tot_tk, tot_dg, tot_dr, tot_td, tot_hits, tot_shots;
 	gclient_t *cl;
 	char *ref;
 	char n1[MAX_NETNAME];
+	char n2[MAX_NETNAME];
 	
-	CP(va("sc \"\nMod: %s \n^7Server: %s %s\n\n\"",
-		GAMEVERSION, sv_hostname.string, ( time ? va("\n^7Time: ^3%s", getTime()) : "" ) ));
+	qtime_t ct;
+	trap_RealTime(&ct);
+	CP(va("sc \"\nMod: %s \n^7Server: %s  \n^7Time: ^7%02d:%02d:%02d ^d(^7%02d %s %d^d)\n\n\"",
+			GAMEVERSION, sv_hostname.string, ct.tm_hour, ct.tm_min, ct.tm_sec, ct.tm_mday, dMonths[ct.tm_mon], 1900+ct.tm_year));
 
 	cnt = 0;
 	for (i = TEAM_RED; i <= TEAM_BLUE; i++) {
@@ -599,11 +614,12 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 		tot_hits = 0;
 		tot_shots = 0;
 		tot_acc = 0;
+		tot_rev = 0;
 
 			CP(va("sc \"%s ^7Team\n"
-			"^7----------------------------------------------------------------------"
-			"\nPlayer          Kll Dth Sui TK ^2Eff Accrcy   HS    ^5DG    DR   TD  ^3Score\n"
-			"^7----------------------------------------------------------------------\n\"", (i == TEAM_RED) ? "^1Axis" : "^4Allied"));
+			     "^7--------------------------------------------------------------------------"
+				 "\nPlayer          ^eKll ^7Dth Sui TK ^cEff ^7Accrcy   ^eHS    DG    DR   TD  Rev ^7Score\n"
+				 "^7--------------------------------------------------------------------------\n\"", (i == TEAM_RED) ? "^1Axis" : "^4Allied"  ));
 
 		for (j = 0; j < level.numPlayingClients; j++) {
 			cl = level.clients + level.sortedClients[j];
@@ -612,8 +628,10 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 				continue;
 			}
 									
-			SanitizeString(cl->pers.netname, n1, qtrue);
-			Q_CleanStr(n1);						
+			Q_decolorString(cl->pers.netname, n1);
+			SanitizeString(n1, n2, qfalse);
+			Q_CleanStr(n2);
+			n2[15] = 0;
 
 			ref = "^7";
 			tot_kills += cl->sess.kills;
@@ -627,6 +645,7 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 			tot_gp += cl->ps.persistant[PERS_SCORE];
 			tot_hits += cl->sess.acc_hits;
 			tot_shots += cl->sess.acc_shots;
+			tot_rev += cl->sess.revives;
 
 			eff = (cl->sess.deaths + cl->sess.kills == 0) ? 0 : 100 * cl->sess.kills / (cl->sess.deaths + cl->sess.kills);
 			if (eff < 0) {
@@ -641,9 +660,10 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 			}
 
 			cnt++;
-			CP(va("sc \"%s%-15s%4d%4d%4d%3d%s^2%4d %6.2f%5d^5%6d%6d%5d^3%7d\n\"",
+            CP( va( "sc \"%s%-15s^e%4d^7%4d%4d%3d%s^c%4d ^7%6.2f^e%5d%6d%6d%5d%3d^7%7d\n\"",
+//			CP( va( "sc \"%s%-15s^n%4d^7%4d%4d%3d%s^z%4d ^7%6.2f^n%5d%6d%6d%5d^7%7d\n\"",
 				ref,
-				n1,
+					n2,
 				cl->sess.kills,
 				cl->sess.deaths,
 				cl->sess.suicides,
@@ -655,6 +675,7 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 				cl->sess.damage_given,
 				cl->sess.damage_received,
 				cl->sess.team_damage,
+					cl->sess.revives,
 				cl->ps.persistant[PERS_SCORE]));
 		}
 
@@ -665,8 +686,8 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 		tot_acc = ((tot_shots == 0) ? 0.00 : ((float)tot_hits / (float)tot_shots) * 100.00f);
 
 		CP(va("sc \"^7----------------------------------------------------------------------\n"
-			"%-19s%4d%4d%4d%3d^2%4d %6.2f%5d^5%6d%6d%5d^3%7d\n\n\"",
-			"^3Totals^7",
+				"%-19s^e%4d^7%4d%4d%3d^c%4d ^7%6.2f^e%5d%6d%6d%5d%3d^7%7d\n\n\n\"",
+				"^eTotals^7",
 			tot_kills,
 			tot_deaths,
 			tot_sui,
@@ -677,7 +698,89 @@ void G_printMatchInfo(gentity_t *ent, qboolean time) {
 			tot_dg,
 			tot_dr,
 			tot_td,
+				tot_rev,
 			tot_gp));
 	}
-	CP(va("sc \"%s\n\" 0", ((!cnt) ? "^3\nNo scores to report." : "")));
+	CP( va( "sc \"%s\n\" 0", ( ( !cnt ) ? "^c\nNo scores to report." : "" ) ) );
 }
+
+/*
+// Dumps end-of-match info
+// L0 - FIXME!!!!!!!!!
+void G_matchInfoDump( unsigned int dwDumpType ) {
+	int i, ref;
+	gentity_t *ent;
+	gclient_t *cl;
+
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		ref = level.sortedClients[i];
+		ent = &g_entities[ref];
+		cl = ent->client;
+
+		if ( cl->pers.connected != CON_CONNECTED ) {
+			continue;
+		}
+
+		if ( dwDumpType == EOM_WEAPONSTATS ) {
+		// L0 - THIS NEEDS FINE TUNNING - TODO!
+			// If client wants to write stats to a file, don't auto send this stuff
+			if (!(cl->pers.clientFlags & CGF_STATSDUMP)) {
+				if ((cl->pers.autoaction & AA_STATSALL) //|| cl->pers.mvCount > 0)
+				{
+					G_statsall_cmd(ent, 0, qfalse);
+				}
+				else if (cl->sess.sessionTeam != TEAM_SPECTATOR) {
+					if (cl->pers.autoaction & AA_STATSTEAM) {
+						G_statsall_cmd(ent, cl->sess.sessionTeam, qfalse);
+					}
+					else { CP(va("ws %s\n", G_createStats(ent))); }
+
+				}
+				else if (cl->sess.spectatorState != SPECTATOR_FREE) {
+					int pid = cl->sess.spectatorClient;
+
+					if ((cl->pers.autoaction & AA_STATSTEAM)) {
+						G_statsall_cmd(ent, level.clients[pid].sess.sessionTeam, qfalse);
+					}
+					else { CP(va("ws %s\n", G_createStats(g_entities + pid))); }
+				}
+			}
+
+			// Log it
+			if ( cl->sess.sessionTeam != TEAM_SPECTATOR ) {
+				G_LogPrintf( "WeaponStats: %s\n", G_createStats( ent ) );
+			}
+
+		} else if ( dwDumpType == EOM_MATCHINFO ) {
+			// Don't dump score table for users with stats dump enabled
+			if ( !cl->pers.int_stats ) {
+				G_printMatchInfo( ent );
+			}
+
+			if ( g_gametype.integer == GT_WOLF_STOPWATCH ) {
+				if ( g_currentRound.integer == 1 ) {   // We've already missed the switch
+					CP( va( "print \">>> ^3Clock set to: %d:%02d\n\"",
+							g_nextTimeLimit.integer,
+							(int)( 60.0 * (float)( g_nextTimeLimit.value - g_nextTimeLimit.integer ) ) ) );
+				} else {
+					float val = (float)( ( level.timeCurrent - ( level.startTime + level.time - level.intermissiontime ) ) / 60000.0 );
+					if ( val < g_timelimit.value ) {
+						CP( va( "print \">>> ^3Objective reached at %d:%02d (original: %d:%02d)\n\"",
+								(int)val,
+								(int)( 60.0 * ( val - (int)val ) ),
+								g_timelimit.integer,
+								(int)( 60.0 * (float)( g_timelimit.value - g_timelimit.integer ) ) ) );
+					} else {
+						CP( va( "print \">>> ^3Objective NOT reached in time (%d:%02d)\n\"",
+								g_timelimit.integer,
+								(int)( 60.0 * (float)( g_timelimit.value - g_timelimit.integer ) ) ) );
+					}
+				}
+			}
+		}
+	}
+}
+*/
+/***********************************************************************************/
+/* ==================== END Stats code dump from OSP (ET port) ====================*/
+/***********************************************************************************/

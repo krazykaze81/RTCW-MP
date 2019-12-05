@@ -584,8 +584,7 @@ void CG_wStatsDown_f(void) {
 
 		if (cgs.gamestats.show == SHOW_SHUTDOWN && cg.time < cgs.gamestats.fadeTime) {
 			cgs.gamestats.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.gamestats.fadeTime;
-		}
-		else if (cgs.gamestats.show != SHOW_ON) {
+		} else if ( cgs.gamestats.show != SHOW_ON ) {
 			cgs.gamestats.fadeTime = cg.time + STATS_FADE_TIME;
 		}
 
@@ -604,8 +603,7 @@ void CG_wStatsUp_f(void) {
 		cgs.gamestats.show = SHOW_SHUTDOWN;
 		if (cg.time < cgs.gamestats.fadeTime) {
 			cgs.gamestats.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.gamestats.fadeTime;
-		}
-		else {
+		} else {
 			cgs.gamestats.fadeTime = cg.time + STATS_FADE_TIME;
 		}
 		CG_windowFree(cg.statsWindow);
@@ -630,8 +628,7 @@ void CG_StatsDown_f(void) {
 
 		if (cgs.clientGameStats.show == SHOW_SHUTDOWN && cg.time < cgs.clientGameStats.fadeTime) {
 			cgs.clientGameStats.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.clientGameStats.fadeTime;
-		}
-		else if (cgs.clientGameStats.show != SHOW_ON) {
+		} else if ( cgs.clientGameStats.show != SHOW_ON ) {
 			cgs.clientGameStats.fadeTime = cg.time + STATS_FADE_TIME;
 		}
 
@@ -650,8 +647,7 @@ void CG_StatsUp_f(void) {
 		cgs.clientGameStats.show = SHOW_SHUTDOWN;
 		if (cg.time < cgs.clientGameStats.fadeTime) {
 			cgs.clientGameStats.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.clientGameStats.fadeTime;
-		}
-		else {
+		} else {
 			cgs.clientGameStats.fadeTime = cg.time + STATS_FADE_TIME;
 		}
 		CG_windowFree(cg.clientStatsWindow);
@@ -664,8 +660,7 @@ void CG_topshotsDown_f(void) {
 	if (!cg.demoPlayback) {
 		if (cgs.topshots.show == SHOW_SHUTDOWN && cg.time < cgs.topshots.fadeTime) {
 			cgs.topshots.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.topshots.fadeTime;
-		}
-		else if (cgs.topshots.show != SHOW_ON) {
+		} else if ( cgs.topshots.show != SHOW_ON ) {
 			cgs.topshots.fadeTime = cg.time + STATS_FADE_TIME;
 		}
 
@@ -684,8 +679,7 @@ void CG_topshotsUp_f(void) {
 		cgs.topshots.show = SHOW_SHUTDOWN;
 		if (cg.time < cgs.topshots.fadeTime) {
 			cgs.topshots.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.topshots.fadeTime;
-		}
-		else {
+		} else {
 			cgs.topshots.fadeTime = cg.time + STATS_FADE_TIME;
 		}
 		CG_windowFree(cg.topshotsWindow);
@@ -761,13 +755,13 @@ static consoleCommand_t commands[] = {
 
 
 	// OSPx	
-	{ "+vstr", CG_vstrDown_f },
-	{ "-vstr", CG_vstrUp_f },
+	{ "statsdump", CG_dumpStats_f },
 	{ "+zoomView", CG_zoomViewSet_f },
 	{ "-zoomView", CG_zoomViewRevert_f },
+	{ "+vstr", CG_vstrDown_f },
+	{ "-vstr", CG_vstrUp_f },
 	{ "autoRecord", CG_autoRecord_f },
 	{ "autoScreenshot", CG_autoScreenShot_f },
-	{ "statsdump", CG_dumpStats_f },
 	{ "currentTime", CG_currentTime_f },
 	{ "time", CG_currentTime_f },
 	{ "+wstats", CG_wStatsDown_f },

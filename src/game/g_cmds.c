@@ -581,7 +581,8 @@ void Cmd_Kill_f( gentity_t *ent ) {
 	ent->flags &= ~FL_GODMODE;
 	ent->client->ps.stats[STAT_HEALTH] = ent->health = 0;
 	ent->client->ps.persistant[PERS_HWEAPON_USE] = 0; // TTimo - if using /kill while at MG42
-	player_die( ent, ent, ent, dmg, MOD_SUICIDE );
+	player_die (ent, ent, ent, ent->health, MOD_SUICIDE);	// L0 - Straight to limbo!
+	ent->client->sess.suicides++;							// L0 - Record it here..as it's easier..
 }
 
 /*
@@ -1029,7 +1030,11 @@ Cmd_FollowCycle_f
 void Cmd_FollowCycle_f( gentity_t *ent, int dir ) {
 	int clientnum;
 	int original;
-
+   // nihi added below
+	// L0 - Pause
+	if (level.match_pause != PAUSE_NONE)
+		return;
+//end
 	// if they are playing a tournement game, count as a loss
 	if ( g_gametype.integer == GT_TOURNAMENT && ent->client->sess.sessionTeam == TEAM_FREE ) {
 		ent->client->sess.losses++;
@@ -1041,6 +1046,17 @@ void Cmd_FollowCycle_f( gentity_t *ent, int dir ) {
 
 	if ( dir != 1 && dir != -1 ) {
 		G_Error( "Cmd_FollowCycle_f: bad dir %i", dir );
+	}
+    // nihi added below
+	// if dedicated follow client, just switch between the two auto clients
+	if (ent->client->sess.spectatorClient < 0) {
+		if (ent->client->sess.spectatorClient == -1) {
+			ent->client->sess.spectatorClient = -2;
+		} else if (ent->client->sess.spectatorClient == -2) {
+			ent->client->sess.spectatorClient = -1;
+		}
+		return;
+		//end
 	}
 
 	clientnum = ent->client->sess.spectatorClient;

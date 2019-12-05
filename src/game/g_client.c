@@ -1826,12 +1826,14 @@ void ClientBegin( int clientNum ) {
 
 	client->pers.complaintClient = -1;
 	client->pers.complaintEndTime = -1;
+	// locate ent at a spawn point
+	ClientSpawn( ent, qfalse );
 	// OSPx - Antilag
 	G_ResetTrail(ent);
 	ent->client->saved.leveltime = 0;
 
 	// locate ent at a spawn point
-	ClientSpawn( ent, qfalse );
+	//ClientSpawn( ent, qfalse );
 
 	// Xian -- Changed below for team independant maxlives
 
@@ -1850,7 +1852,8 @@ void ClientBegin( int clientNum ) {
 			ent->client->ps.persistant[PERS_RESPAWNS_LEFT] = -1;
 		}
 	}
-
+	// nihi commented below
+/*
 	// DHM - Nerve :: Start players in limbo mode if they change teams during the match
 	if ( g_gametype.integer >= GT_WOLF && client->sess.sessionTeam != TEAM_SPECTATOR
 		 && ( level.time - client->pers.connectTime ) > 60000 ) {
@@ -1865,7 +1868,7 @@ void ClientBegin( int clientNum ) {
 
 		limbo( ent, qfalse );
 	}
-
+*/
 	// Ridah, trigger a spawn event
 	// DHM - Nerve :: Only in single player
 	if ( g_gametype.integer == GT_SINGLE_PLAYER && !( ent->r.svFlags & SVF_CASTAI ) ) {
@@ -2063,6 +2066,9 @@ void ClientSpawn( gentity_t *ent, qboolean revived ) {
 
 	// OSPx
 	ent->client->pers.life_kills = 0;
+	ent->client->pers.life_acc_hits = 0;
+	ent->client->pers.life_acc_shots = 0;
+	ent->client->pers.life_headshots = 0;
 	// -OSPx
 	VectorCopy( playerMins, ent->r.mins );
 	VectorCopy( playerMaxs, ent->r.maxs );

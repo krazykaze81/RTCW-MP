@@ -824,6 +824,8 @@ static float CG_DrawTeamOverlay( float y ) {
 	for ( i = 0; i < numSortedTeamPlayers; i++ ) {
 		ci = cgs.clientinfo + sortedTeamPlayers[i];
 		if ( ci->infoValid && ci->team == cg.snap->ps.persistant[PERS_TEAM] ) {
+			// OSPx - Add * in front or revivable players..
+			char *isRevivable = "";
 
 			// NERVE - SMF
 			// determine class type
@@ -864,11 +866,14 @@ static float CG_DrawTeamOverlay( float y ) {
 				pcolor = damagecolor;
 			} else {
 				pcolor = deathcolor;
+				// OSPx - *
+				if (!(cg.snap->ps.pm_flags & PMF_LIMBO))
+					isRevivable = "*";
 			}
 			// jpw
 
 			CG_DrawStringExt( xx, y,
-							  ci->name, pcolor, qtrue, qfalse,
+							  va("%s%s", isRevivable, ci->name), pcolor, qtrue, qfalse,
 							  TINYCHAR_WIDTH, TINYCHAR_HEIGHT, TEAM_OVERLAY_MAXNAME_WIDTH );
 
 			if ( lwidth ) {
@@ -910,6 +915,28 @@ static float CG_DrawTeamOverlay( float y ) {
 }
 
 /*
+/*
+=================
+OSPx 
+
+Reinforcement Offset
+=================
+*/
+float CG_CalculateReinfTime_Float( void ) {
+	team_t team;
+	int dwDeployTime;
+	
+	team = cgs.clientinfo[cg.snap->ps.clientNum].team;
+
+	dwDeployTime = (team == TEAM_RED) ? cg_redlimbotime.integer : cg_bluelimbotime.integer;
+	//return (1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
+	return (1 + (dwDeployTime - ((cg.time) % dwDeployTime)) * 0.001f);    //nihi added -cg.pauseTime
+}
+
+int CG_CalculateReinfTime( void ) {
+	return((int)CG_CalculateReinfTime_Float());
+}
+/*
 ========================
 OSPx 
 Respawn Timer
@@ -938,14 +965,16 @@ static float CG_DrawRespawnTimer(float y) {
 
 	w = CG_DrawStrlen(str) * TINYCHAR_WIDTH;
 
-	x = 46 + 3;
-	y = 480 - 245;
+//	x = 46 + 6;
+	x = 46 + 40;
+//	y = 480 - 245;
+	y = 480 - 410;
 
 	if (cgs.gamestate != GS_PLAYING) {
-		CG_DrawStringExt((x + 4) - w, y, str, colorYellow, qtrue, qtrue, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
+		CG_DrawStringExt((x + 4) - w, y, str, colorYellow, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
 	}
 	else if (cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR){
-		CG_DrawStringExt(x - w, y, str, cg.reinforcementColor, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
+		CG_DrawStringExt(x - w, y, str, colorRed, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
 	}
 	return y += TINYCHAR_HEIGHT;
 }
@@ -1003,6 +1032,7 @@ static void CG_DrawTeamInfo( void ) {
 	vec4_t hcolor;
 	int chatHeight;
 	float alphapercent;
+	float chatAlpha = (float)cg_chatAlpha.value;
 
 #define CHATLOC_Y 385 // bottom end
 #define CHATLOC_X 0
@@ -1057,11 +1087,22 @@ static void CG_DrawTeamInfo( void ) {
 				hcolor[0] = 0;
 				hcolor[1] = 1;
 				hcolor[2] = 0;
+			}
 //			hcolor[3] = 0.33;
+
+// L0 - Wanted to do this for years..
+			if (chatAlpha > 1.0f) {
+				chatAlpha = 1.0f;
+			}
+			else if (chatAlpha < 0.f) {
+				chatAlpha = 0.f;
 			}
 
-			hcolor[3] = 0.33f * alphapercent;
-
+			if (!Q_stricmp(cg_chatBackgroundColor.string, ""))
+				hcolor[3] = chatAlpha * alphapercent;
+			else // Abuse this..
+				BG_setCrosshair(cg_chatBackgroundColor.string, hcolor, chatAlpha * alphapercent, "cg_chatBackgroundColor");
+// End
 			trap_R_SetColor( hcolor );
 			CG_DrawPic( CHATLOC_X, CHATLOC_Y - ( cgs.teamChatPos - i ) * TINYCHAR_HEIGHT, 640, TINYCHAR_HEIGHT, cgs.media.teamStatusBar );
 
@@ -1317,6 +1358,10 @@ static void CG_DrawLagometer( void ) {
 	float ax, ay, aw, ah, mid, range;
 	int color;
 	float vscale;
+	// OSPx - Bail out in demo..
+	if (cg.demoPlayback) {
+		return;
+	}
 
 	if ( !cg_lagometer.integer || cgs.localServer ) {
 //	if(0) {
@@ -2565,6 +2610,10 @@ static void CG_DrawSpectatorMessage( void ) {
 		return;
 	}
 
+	// OSPx - Never during demo..
+	if (cg.demoPlayback) {
+		return;
+	}
 	trap_Cvar_VariableStringBuffer( "ui_limboMode", buf, sizeof( buf ) );
 	if ( atoi( buf ) ) {
 		return;
@@ -2579,40 +2628,21 @@ static void CG_DrawSpectatorMessage( void ) {
 	if ( !Q_stricmp( str2, "???" ) ) {
 		str2 = "ESCAPE";
 	}
-	str = va( CG_TranslateString( "- Press ^n%s ^7to open Limbo Menu" ), str2 );
-	CG_DrawStringExt( x, y, str, color, qfalse, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
+	str = va( CG_TranslateString( "- Press %s to open Limbo Menu" ), str2 );
+	CG_DrawStringExt( x, y, str, color, qtrue, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
 	y += TINYCHAR_HEIGHT;
 
 	str2 = BindingFromName( "mp_QuickMessage" );
-	str = va( CG_TranslateString( "- Press ^n%s ^7to open quick message menu" ), str2 );
-	CG_DrawStringExt( x, y, str, color, qfalse, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
+	str = va( CG_TranslateString( "- Press %s to open quick message menu" ), str2 );
+	CG_DrawStringExt( x, y, str, color, qtrue, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
 	y += TINYCHAR_HEIGHT;
 
 	str2 = BindingFromName( "+attack" );
-	str = va( CG_TranslateString( "- Press ^n%s ^7to follow next player" ), str2 );
-	CG_DrawStringExt( x, y, str, color, qfalse, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
+	str = va( CG_TranslateString( "- Press %s to follow next player" ), str2 );
+	CG_DrawStringExt( x, y, str, color, qtrue, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
 	y += TINYCHAR_HEIGHT;
 }
-/*
-=================
-OSPx 
 
-Reinforcement Offset
-=================
-*/
-float CG_CalculateReinfTime_Float( void ) {
-	team_t team;
-	int dwDeployTime;
-	
-	team = cgs.clientinfo[cg.snap->ps.clientNum].team;
-
-	dwDeployTime = (team == TEAM_RED) ? cg_redlimbotime.integer : cg_bluelimbotime.integer;
-	return (1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
-}
-
-int CG_CalculateReinfTime( void ) {
-	return((int)CG_CalculateReinfTime_Float());
-}
 
 /*
 =================
@@ -2652,19 +2682,33 @@ static void CG_DrawLimboMessage( void ) {
 		CG_DrawSmallStringColor( INFOTEXT_STARTX, 86, str, color );
 	}
 
-	// JPW NERVE
+	/*
+	// original
 	if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
 		str = CG_TranslateString( "No more reinforcements this round." );
 	} else {
 		// OSPx - Reinforcement Offset
 		str = va(CG_TranslateString("Reinforcements deploy in %d seconds."), CG_CalculateReinfTime());
+	}*/
+	
+	// JPW NERVE
+	if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
+		str = CG_TranslateString( "No more reinforcements this round." );
+	} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
+		str = va( CG_TranslateString( "Reinforcements deploy in %d seconds." ),
+				  (int)( 1 + (float)( cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer ) ) * 0.001f ) );
+	} else {
+		str = va( CG_TranslateString( "Reinforcements deploy in %d seconds." ),
+				  (int)( 1 + (float)( cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer ) ) * 0.001f ) );
 	}
 
 	CG_DrawSmallStringColor( INFOTEXT_STARTX, 104, str, color );
 	// jpw
 
 	trap_R_SetColor( NULL );
+	
 }
+
 // -NERVE - SMF
 
 /*
@@ -2690,12 +2734,15 @@ static qboolean CG_DrawFollow( void ) {
 	if ( cg.snap->ps.pm_flags & PMF_LIMBO ) {
 		color[1] = 0.0;
 		color[2] = 0.0;
-		if (cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0) // fixed from xMod
+		if (cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0) { // fixed from xMod
 			sprintf(deploytime, CG_TranslateString("No more deployments this round"));
-		/*else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED)
-			sprintf(deploytime, CG_TranslateString("Deploying in %d seconds"), (int)(1 + (float)(cg_redlimbotime.integer - (cg.time%cg_redlimbotime.integer))*0.001f));*/
-		else
-			sprintf(deploytime, CG_TranslateString("Deploying in %d seconds"), CG_CalculateReinfTime(qfalse)); // RtcwPro fixed spawn times in limbo menu //(int)(1+(float)(cg_bluelimbotime.integer - (cg.time%cg_bluelimbotime.integer))*0.001f) );
+		} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
+			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
+					 (int)( 1 + (float)( cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer ) ) * 0.001f ) );
+		} else {
+			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
+					 (int)( 1 + (float)( cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer ) ) * 0.001f ) );
+		}
 
 		CG_DrawStringExt( INFOTEXT_STARTX, 68, deploytime, color, qtrue, qfalse, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 80 );
 
@@ -2777,6 +2824,7 @@ static void CG_DrawWarmup( void ) {
 	int sec;
 	int cw;
 	const char  *s, *s1, *s2;
+    static qboolean announced = qfalse;
 
 	if ( cgs.gametype == GT_SINGLE_PLAYER ) {
 		return;     // (SA) don't bother with this stuff in sp
@@ -2786,18 +2834,32 @@ static void CG_DrawWarmup( void ) {
 	if (cgs.gamestate == GS_WARMUP && cgs.readyState != CREADY_NONE) {
 		cw = 10;
 
-		s = CG_TranslateString(va("^nWARMUP:^7 Waiting on ^n%i ^7%s", cgs.minclients, cgs.minclients == 1 ? "player" : "players"));
+		if (cgs.readyState == CREADY_PENDING) {
+
+			s = CG_TranslateString( "^nGame Stopped ^7- Waiting for players to ready up" );
 		w = CG_DrawStrlen(s);
 		CG_DrawStringExt(320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0);
 
-		// Show only to real active clients..
-		if (!cg.demoPlayback && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR &&
-			(!(cg.snap->ps.pm_flags & PMF_FOLLOW) || (cg.snap->ps.pm_flags & PMF_LIMBO))) 
-		{
-			s1 = CG_TranslateString("Type ^n\\ready ^7in the console to start");
-			w = CG_DrawStrlen(s1);
-			CG_DrawStringExt(320 - w * cw / 2, 160, s1, colorWhite,
-				qfalse, qtrue, cw, (int)(cw * 1.5), 0);
+			s1 = va( CG_TranslateString( "Waiting for at least ^n%i ^7%s to ready" ), cgs.minclients, cgs.minclients == 1 ? "player" : "players" );
+			s2 = CG_TranslateString( "Type ^n\\ready ^7in the console to start" );
+			w = CG_DrawStrlen( s1 );
+			CG_DrawStringExt( 320 - w * cw / 2, 160, s1, colorWhite,
+							  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
+			w = CG_DrawStrlen( s2 );
+			CG_DrawStringExt( 320 - w * cw / 2, 180, s2, colorWhite,
+							  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
+		} else {
+			// No need to bother with count..scoreboard gives info..
+			s = CG_TranslateString( "^nGame Stopped ^7- Waiting for players to ready up" );
+			w = CG_DrawStrlen( s );
+			CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
+			if (!cg.demoPlayback && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR &&
+				   ( !( cg.snap->ps.pm_flags & PMF_FOLLOW ) || ( cg.snap->ps.pm_flags & PMF_LIMBO ) ) ) {
+				s1 = CG_TranslateString("Type ^n\\ready ^7in the console to start");
+				w = CG_DrawStrlen(s1);
+				CG_DrawStringExt(320 - w * cw / 2, 160, s1, colorWhite,
+					qfalse, qtrue, cw, (int)(cw * 1.5), 0);
+			}
 		}
 		return;
 	}
@@ -2806,7 +2868,7 @@ static void CG_DrawWarmup( void ) {
 		if ( cgs.gamestate == GS_WAITING_FOR_PLAYERS ) {
 			cw = 10;
 
-			s = CG_TranslateString( "^3Game Stopped ^7Waiting for more players" );
+			s = CG_TranslateString( "^3Game Stopped ^7- Waiting for more players" );
 
 			w = CG_DrawStrlen( s );
 			CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
@@ -2842,6 +2904,15 @@ static void CG_DrawWarmup( void ) {
 
 	w = CG_DrawStrlen( s );
 	CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
+    if (sec == 10 && !announced)
+	{
+		trap_S_StartLocalSound(cgs.media.prepFight, CHAN_ANNOUNCER);
+		announced = qtrue;
+	}
+	else if (sec != 10)
+	{
+		announced = qfalse;
+	}
 
 	// NERVE - SMF - stopwatch stuff
 	s1 = "";
@@ -2951,8 +3022,7 @@ static void CG_DrawFlashFade( void ) {
 		if (cg.snap->ps.powerups[PW_BLACKOUT] > 0) {
 			trap_Cvar_Set("ui_blackout", va("%d", cg.snap->ps.powerups[PW_BLACKOUT]));
 		}
-	}
-	else if (cg.snap->ps.powerups[PW_BLACKOUT] == 0) {
+	} else if ( cg.snap->ps.powerups[PW_BLACKOUT] == 0 ) {
 		trap_Cvar_Set("ui_blackout", "0");
 	}
 
@@ -2960,7 +3030,7 @@ static void CG_DrawFlashFade( void ) {
 	if (cgs.fadeAlphaCurrent > 0.0 || fBlackout) {
 		VectorClear( col );
 		col[3] = (fBlackout) ? 1.0f : cgs.fadeAlphaCurrent; // OSPx - Speclock
-		CG_FillRect(0, 0, 640, 480, col);
+		CG_FillRect( -10, -10, 650, 490, col );
 
 		//bani - #127 - bail out if we're a speclocked spectator with cg_draw2d = 0
 		if (cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR && !cg_draw2D.integer) {
@@ -2972,7 +3042,7 @@ static void CG_DrawFlashFade( void ) {
 			int i, nOffset = 90;
 			char *str, *format = "The %s team is speclocked!";
 			char *teams[TEAM_NUM_TEAMS] = { "??", "AXIS", "ALLIED", "???" };	
-			float color[4] = { 1, 1, 0.75, 1 };
+			float color[4] = { 1, 1, 0, 1 };
 
 			for (i = TEAM_RED; i <= TEAM_BLUE; i++) {
 				if (cg.snap->ps.powerups[PW_BLACKOUT] & i) {
@@ -3919,7 +3989,7 @@ static void CG_Draw2D( void ) {
 			//CG_DrawWeaponSelect();
 
 			// OSPx - In warmup we print ready intel there..
-			if (!(cgs.gamestate == GS_WARMUP && cgs.readyState != CREADY_NONE))
+			if (!cgs.gamestate == GS_WARMUP || cg_drawPickupItems.integer )
 				CG_DrawPickupItem();
 		}
 		if ( cgs.gametype >= GT_TEAM ) {
@@ -4157,8 +4227,7 @@ void CG_Text_Paint_ext2(float x, float y, float scale, vec4_t color, const char 
 				trap_R_SetColor(newColor);
 				s += 2;
 				continue;
-			}
-			else {
+			} else {
 				float yadj = useScale * glyph->top;
 				if (style == ITEM_TEXTSTYLE_SHADOWED || style == ITEM_TEXTSTYLE_SHADOWEDMORE) {
 					int ofs = style == ITEM_TEXTSTYLE_SHADOWED ? 1 : 2;
@@ -4221,8 +4290,7 @@ int CG_Text_Width_ext2(const char *text, float scale, int limit) {
 			if (Q_IsColorString(s)) {
 				s += 2;
 				continue;
-			}
-			else {
+			} else {
 				glyph = &font->glyphs[(int)*s];
 				out += glyph->xSkip;
 				s++;
@@ -4260,8 +4328,7 @@ int CG_Text_Height_ext2(const char *text, float scale, int limit) {
 			if (Q_IsColorString(s)) {
 				s += 2;
 				continue;
-			}
-			else {
+			} else {
 				glyph = &font->glyphs[(int)*s];
 				if (max < glyph->height) {
 					max = glyph->height;
@@ -4301,16 +4368,14 @@ void CG_Text_Paint_Ext(float x, float y, float scalex, float scaley, vec4_t colo
 			if (Q_IsColorString(s)) {
 				if (*(s + 1) == COLOR_NULL) {
 					memcpy(newColor, color, sizeof(newColor));
-				}
-				else {
+				} else {
 					memcpy(newColor, g_color_table[ColorIndex(*(s + 1))], sizeof(newColor));
 					newColor[3] = color[3];
 				}
 				trap_R_SetColor(newColor);
 				s += 2;
 				continue;
-			}
-			else {
+			} else {
 				float yadj = scaley * glyph->top;
 				if (style == ITEM_TEXTSTYLE_SHADOWED || style == ITEM_TEXTSTYLE_SHADOWEDMORE) {
 					int ofs = style == ITEM_TEXTSTYLE_SHADOWED ? 1 : 2;
@@ -4354,8 +4419,7 @@ int CG_Text_Height_Ext(const char *text, float scale, int limit, fontInfo_t* fon
 			if (Q_IsColorString(s)) {
 				s += 2;
 				continue;
-			}
-			else {
+			} else {
 				glyph = &font->glyphs[(unsigned char)*s];
 				if (max < glyph->height) {
 					max = glyph->height;
@@ -4390,8 +4454,7 @@ int CG_Text_Width_Ext(const char *text, float scale, int limit, fontInfo_t* font
 			if (Q_IsColorString(s)) {
 				s += 2;
 				continue;
-			}
-			else {
+			} else {
 				glyph = &font->glyphs[(unsigned char)*s];
 				out += glyph->xSkip;
 				s++;

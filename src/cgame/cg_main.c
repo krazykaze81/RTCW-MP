@@ -306,13 +306,17 @@ vmCvar_t cg_noVoice;
 vmCvar_t cg_noAmmoAutoSwitch;
 vmCvar_t cg_wideScreen;
 vmCvar_t cg_zoomedFOV;
+vmCvar_t cg_statsList;			// 0 = player only, 1 = team stats, 2 = stats of all players
 vmCvar_t cg_zoomedSens;
 vmCvar_t vp_drawnames;
 vmCvar_t cg_drawNames;
 vmCvar_t cg_showFlags;
 vmCvar_t cg_announcer;
+vmCvar_t cg_drawPickupItems;
 vmCvar_t cg_autoAction;
 vmCvar_t cg_useScreenshotJPEG;
+vmCvar_t cg_chatAlpha;
+vmCvar_t cg_chatBackgroundColor;
 vmCvar_t cg_instantTapout;
 vmCvar_t cg_forceTapout;
 vmCvar_t cg_hitsounds;
@@ -344,6 +348,11 @@ vmCvar_t demo_drawTimeScale;
 vmCvar_t demo_infoWindow;
 
 vmCvar_t mv_sensitivity;
+
+vmCvar_t demo_controlsWindow;
+vmCvar_t demo_popupWindow;
+vmCvar_t demo_showTimein;
+vmCvar_t demo_noAdvertisement;
 
 vmCvar_t int_cl_maxpackets;
 vmCvar_t int_cl_timenudge;
@@ -389,7 +398,7 @@ cvarTable_t cvarTable[] = {
 	{ &cg_drawFrags, "cg_drawFrags", "1", CVAR_ARCHIVE },
 	{ &cg_drawStatus, "cg_drawStatus", "1", CVAR_ARCHIVE  },
 	{ &cg_drawTimer, "cg_drawTimer", "0", CVAR_ARCHIVE  },
-	{ &cg_drawFPS, "cg_drawFPS", "0", CVAR_ARCHIVE  },
+	{ &cg_drawFPS, "cg_drawFPS", "1", CVAR_ARCHIVE  },
 	{ &cg_drawSnapshot, "cg_drawSnapshot", "0", CVAR_ARCHIVE  },
 	{ &cg_draw3dIcons, "cg_draw3dIcons", "1", CVAR_ARCHIVE  },
 	{ &cg_drawIcons, "cg_drawIcons", "1", CVAR_ARCHIVE  },
@@ -414,7 +423,7 @@ cvarTable_t cvarTable[] = {
 	{ &cg_reticleType, "cg_reticleType", "1", CVAR_ARCHIVE },
 	{ &cg_reticleBrightness, "cg_reticleBrightness", "0.7", CVAR_ARCHIVE },
 	{ &cg_markTime, "cg_marktime", "10000", CVAR_ARCHIVE },
-	{ &cg_lagometer, "cg_lagometer", "0", CVAR_ARCHIVE },
+	{ &cg_lagometer, "cg_lagometer", "1", CVAR_ARCHIVE },
 	{ &cg_railTrailTime, "cg_railTrailTime", "400", CVAR_ARCHIVE  },
 	{ &cg_gun_x, "cg_gunX", "0", CVAR_CHEAT },
 	{ &cg_gun_y, "cg_gunY", "0", CVAR_CHEAT },
@@ -568,13 +577,14 @@ cvarTable_t cvarTable[] = {
 	{ &cg_printObjectiveInfo, "cg_printObjectiveInfo", "1", CVAR_ARCHIVE },
 	{ &cg_muzzleFlash, "cg_muzzleFlash", "1", CVAR_ARCHIVE },
 	{ &cg_complaintPopUp, "cg_complaintPopUp", "1", CVAR_ARCHIVE },
-	{ &cg_drawReinforcementTime, "cg_drawReinforcementTime", "0", CVAR_ARCHIVE },
+	{ &cg_drawReinforcementTime, "cg_drawReinforcementTime", "1", CVAR_ARCHIVE },
 	{ &cg_reinforcementTimeColor, "cg_reinforcementTimeColor", "red", CVAR_ARCHIVE },
 	{ &cg_noChat, "cg_noChat", "0", CVAR_ARCHIVE },
 	{ &cg_noVoice, "cg_noVoice", "0", CVAR_ARCHIVE },
 	{ &cg_noAmmoAutoSwitch, "cg_noAmmoAutoSwitch", "1", CVAR_ARCHIVE },
 	{ &cg_wideScreen, "cg_wideScreen", "0", CVAR_ARCHIVE | CVAR_LATCH },
 	{ &cg_zoomedFOV, "cg_zoomedFOV", "90", CVAR_ARCHIVE },
+	{ &cg_statsList, "cg_statsList", "0", CVAR_ARCHIVE },
 	{ &cg_zoomedSens, "cg_zoomedSens", ".3", CVAR_ARCHIVE },
 	{ &vp_drawnames, "vp_drawnames", "0", CVAR_ARCHIVE | CVAR_CHEAT },
 	{ &cg_drawNames, "cg_drawNames", "1", CVAR_ROM },
@@ -592,6 +602,13 @@ cvarTable_t cvarTable[] = {
 	{ &int_cl_maxpackets, "cl_maxpackets", "30", CVAR_ARCHIVE },
 	{ &int_cl_timenudge, "cl_timenudge", "0", CVAR_ARCHIVE|CVAR_LATCH },
 	{ &int_ui_blackout, "ui_blackout", "0", CVAR_ROM },
+
+	{ &demo_infoWindow, "demo_infoWindow", "1", CVAR_ARCHIVE },
+	{ &demo_controlsWindow, "demo_controlsWindow", "1", CVAR_ARCHIVE},
+	{ &demo_popupWindow, "demo_popupWindow", "1", CVAR_ARCHIVE },
+	{ &demo_showTimein, "demo_showTimein", "1", CVAR_ARCHIVE },
+	{ &demo_noAdvertisement, "demo_noAdvertisement", "0", CVAR_ARCHIVE },
+	
 	{ &gender, "gender", "male", CVAR_ARCHIVE }
 	// -OSPx
 };
@@ -860,7 +877,7 @@ char *CG_generateFilename(void) {
 	const char *pszServerInfo = CG_ConfigString(CS_SERVERINFO);
 
 	trap_RealTime(&ct);
-	return(va("%s.%02d.%d/%02d.%02d.%02d-%s",
+	return( va( "%s.%02d.%d/%02d-%02d.%02d-%s",
 		aMonths[ct.tm_mon], ct.tm_mday, 1900 + ct.tm_year,
 		ct.tm_hour, ct.tm_min, ct.tm_sec,
 		Info_ValueForKey(pszServerInfo, "mapname")));
@@ -1044,7 +1061,8 @@ static void CG_RegisterSounds( void ) {
 //	cgs.media.teleInSound = trap_S_RegisterSound( "sound/world/telein.wav" );
 //	cgs.media.teleOutSound = trap_S_RegisterSound( "sound/world/teleout.wav" );
 //	cgs.media.respawnSound = trap_S_RegisterSound( "sound/items/respawn1.wav" );
-
+    cgs.media.prepFight = trap_S_RegisterSound( "sound/match/prepare.wav" ); //---- nihi added
+    cgs.media.announceFight = trap_S_RegisterSound( "sound/match/fight.wav" ); //---- nihi added
 	cgs.media.grenadebounce1 = trap_S_RegisterSound( "sound/weapons/grenade/hgrenb1a.wav" );
 	cgs.media.grenadebounce2 = trap_S_RegisterSound( "sound/weapons/grenade/hgrenb2a.wav" );
 
@@ -1248,6 +1266,7 @@ static void CG_RegisterSounds( void ) {
 	trap_S_RegisterSound( "sound/Loogie/sizzle.wav" );
 */
 // OSPx
+	cgs.media.countFightSound = trap_S_RegisterSound( "sound/scenaric/fight.wav" );
 	// Hitsounds
 	cgs.media.headShot = trap_S_RegisterSound("sound/game/hitsounds/hithead.wav");
 	cgs.media.bodyShot = trap_S_RegisterSound("sound/game/hitsounds/hit.wav");
@@ -2516,9 +2535,9 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 	cgs.serverCommandSequence = serverCommandSequence;
 
 	// load a few needed things before we do any screen updates
-	cgs.media.charsetShader     = trap_R_RegisterShader( "gfx/2d/hudchars" ); //trap_R_RegisterShader( "gfx/2d/bigchars" );
+	cgs.media.charsetShader     = trap_R_RegisterShader( "gfx/2d/hudchars_OSP1" ); //trap_R_RegisterShader( "gfx/2d/bigchars" );
 	// JOSEPH 4-17-00
-	cgs.media.menucharsetShader = trap_R_RegisterShader( "gfx/2d/hudchars" );
+	cgs.media.menucharsetShader = trap_R_RegisterShader( "gfx/2d/hudchars_OSP1" );
 	// END JOSEPH
 	cgs.media.whiteShader       = trap_R_RegisterShader( "white" );
 	cgs.media.charsetProp       = trap_R_RegisterShaderNoMip( "menu/art/font1_prop.tga" );
@@ -2554,6 +2573,9 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 // OSPx
 	// Reinforcements offset
 	CG_ParseReinforcementTimes(CG_ConfigString(CS_REINFSEEDS));
+	// So if client disconnects during pause..
+	if (!cgs.pauseState)
+		cgs.fadeAlpha = 0;
 // -OSPx
 // JPW NERVE -- pick a direction for smoke drift on the client -- cheap trick because it can be different on different clients, but who cares?
 	cgs.smokeWindDir = crandom();

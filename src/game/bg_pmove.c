@@ -2724,6 +2724,7 @@ static void PM_Weapon( void ) {
 	if ( pm->waterlevel == 3 ) {
 		if ( pm->ps->weapon != WP_KNIFE &&
 			 pm->ps->weapon != WP_KNIFE2 &&
+			 pm->ps->weapon != WP_MEDIC_SYRINGE &&
 			 pm->ps->weapon != WP_GRENADE_LAUNCHER &&
 			 pm->ps->weapon != WP_GRENADE_PINEAPPLE &&
 			 pm->ps->weapon != WP_DYNAMITE &&
@@ -3748,14 +3749,29 @@ void PM_Sprint( void ) {
 			pm->ps->sprintTime += 10;
 		} else {
 			if ( pm->gametype != GT_SINGLE_PLAYER ) {
-				pm->ps->sprintTime += 500 * pml.frametime;        // JPW NERVE adjusted for framerate independence
-				if ( pm->ps->sprintTime > 5000 ) {
-					pm->ps->sprintTime += 500 * pml.frametime;    // JPW NERVE adjusted for framerate independence
+// L0 - Stamina boost
+				extern vmCvar_t	g_staminaBoost;
+
+				if(g_staminaBoost.integer > 0) {
+					if(pm->ps->pm_flags & PMF_DUCKED) {  
+						pm->ps->sprintTime += 3000*pml.frametime;					
+				}
+
+				// we still need this for when we are standing	
+				pm->ps->sprintTime += 500*pml.frametime;	
+
+				if (pm->ps->sprintTime > 5000)
+					pm->ps->sprintTime += 500*pml.frametime;
+				
+				} else {
+					pm->ps->sprintTime += 500*pml.frametime;		// JPW NERVE adjusted for framerate independence
+					if (pm->ps->sprintTime > 5000)
+						pm->ps->sprintTime += 500*pml.frametime;	// JPW NERVE adjusted for framerate independence
 				}
 			} else {
 				pm->ps->sprintTime += 5;
 			}
-			// jpw
+// L0 end
 		}
 #endif // GAMEDLL
 		if ( pm->ps->sprintTime > 20000 ) {

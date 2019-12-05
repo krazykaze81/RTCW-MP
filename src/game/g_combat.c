@@ -334,10 +334,23 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	G_LogPrintf( "Kill: %i %i %i: %s killed %s by %s\n",
 				 killer, self->s.number, meansOfDeath, killerName,
 				 self->client->pers.netname, obit );
-	// OSP - Life Stats for Max Kills Peak
-	if (attacker && attacker->client) {		
-		if (!OnSameTeam(attacker, self)) {
-			attacker->client->pers.life_kills++;
+	// L0 - Stats 
+	if (attacker && attacker->client){
+		// Life kills & death spress
+		if (!OnSameTeam(attacker, self)){		
+			// attacker->client->pers.spreeDeaths = 0; // Reset deaths for death spress  // nihi commented out
+			attacker->client->pers.life_kills++;		// life kills		
+	
+				
+		// Count teamkill
+		} else {
+			// Don't count self kills..
+			if (attacker != self) {				
+				// Admin bot - teamKills
+				//sb_maxTeamKill(attacker);
+
+
+			}
 		}
 	}
 
@@ -389,6 +402,16 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				// jpw
 				AddScore( attacker, -1 );
 			}
+			// L0 - Life stats
+			if (g_lifeStats.integer) {
+				float acc = 0.00f; 
+				
+				acc = (self->client->pers.life_acc_shots == 0) ? 
+					0.00 : ((float)self->client->pers.life_acc_hits / (float)self->client->pers.life_acc_shots ) * 100.00f ;	
+			
+					CPx(self-g_entities, va("chat \"^zLast life: ^7Kills:^z%d ^7Headshots:^z%d ^7Acc:^z%2.2f\n\"",
+						self->client->pers.life_kills, self->client->pers.life_headshots, acc));
+			} // End
 		} else {
 			// JPW NERVE -- mostly added as conveneience so we can tweak from the #defines all in one place
 			if ( g_gametype.integer >= GT_WOLF ) {
@@ -399,6 +422,17 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			}
 
 			attacker->client->lastKillTime = level.time;
+			// L0 - Life stats
+			if (g_lifeStats.integer) {
+				float acc = 0.00f; 
+				
+				acc = (self->client->pers.life_acc_shots == 0) ? 
+					0.00 : ((float)self->client->pers.life_acc_hits / (float)self->client->pers.life_acc_shots ) * 100.00f ;	
+						
+					CPx(self-g_entities, va("chat \"^zLast life: ^7Kills:^z%d ^7Headshots:^z%d ^7Acc:^z%2.2f ^7Killer: %s^z(%ihp)\n\"",
+						self->client->pers.life_kills, self->client->pers.life_headshots, 
+						acc, attacker->client->pers.netname, attacker->health ));
+			} // End
 		}
 	} else {
 		AddScore( self, -1 );

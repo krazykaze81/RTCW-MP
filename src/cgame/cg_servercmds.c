@@ -135,8 +135,8 @@ void CG_ParseServerinfo( void ) {
 	char    *mapname;
 
 	info = CG_ConfigString( CS_SERVERINFO );
-	cg_gameType.integer = cgs.gametype = atoi(Info_ValueForKey(info, "g_gametype"));
-	cg_antilag.integer = cgs.antilag = atoi(Info_ValueForKey(info, "g_antilag"));
+	cgs.gametype = atoi( Info_ValueForKey( info, "g_gametype" ) );
+	cgs.antilag = atoi( Info_ValueForKey( info, "g_antilag" ) );
 	if ( !cgs.localServer ) {
 		trap_Cvar_Set( "g_gametype", va( "%i", cgs.gametype ) );
 		trap_Cvar_Set( "g_antilag", va( "%i", cgs.antilag ) );
@@ -179,7 +179,7 @@ NERVE - SMF
 void CG_ParseWolfinfo( void ) {
 	//int old_gs = cgs.gamestate;
 	const char  *info;
-
+    int        old_gs = cgs.gamestate;
 	info = CG_ConfigString( CS_WOLFINFO );
 
 	cgs.currentRound = atoi( Info_ValueForKey( info, "g_currentRound" ) );
@@ -187,11 +187,12 @@ void CG_ParseWolfinfo( void ) {
 	cgs.gamestate = atoi( Info_ValueForKey( info, "gamestate" ) );
 
 	// OSP - Announce game in progress if we are really playing
-	//if (old_gs != GS_PLAYING && cgs.gamestate == GS_PLAYING) {
-		//		if(cg_announcer.integer > 0) trap_S_StartLocalSound(cgs.media.countFight, CHAN_ANNOUNCER);
+	if (old_gs != GS_PLAYING && cgs.gamestate == GS_PLAYING)
+	{
+		trap_S_StartLocalSound(cgs.media.announceFight, CHAN_ANNOUNCER);
 	//	Pri("^1FIGHT!\n");
 	//	CPri("^1FIGHT!\n");
-	//}
+	}
 
 	if ( !cgs.localServer ) {
 		trap_Cvar_Set( "gamestate", va( "%i", cgs.gamestate ) );
@@ -386,6 +387,8 @@ void CG_SetConfigValues( void ) {
 // OSPx
 	// Reinforcements
 	CG_ParseReinforcementTimes(CG_ConfigString(CS_REINFSEEDS));
+	// L0 - Pause
+	CG_ParsePause( CG_ConfigString( CS_PAUSED ) );
 	// Ready	
 	CG_ParseReady(CG_ConfigString(CS_READY));
 // -OSPx
@@ -463,17 +466,6 @@ static void CG_ConfigStringModified( void ) {
 		cgs.scores1 = atoi( str );
 	} else if ( num == CS_SCORES2 ) {
 		cgs.scores2 = atoi( str );
-// OSPx 
-	// Set reinforcement times for each team
-	} else if (num == CS_REINFSEEDS) {
-		CG_ParseReinforcementTimes( str );
-	// Ready
-	} else if (num == CS_READY) {
-		CG_ParseReady( str );
-	// Pause
-	} else if (num == CS_PAUSED) {
-		CG_ParsePause( str );
-// OSPx
 	} else if ( num == CS_LEVEL_START_TIME ) {
 		cgs.levelStartTime = atoi( str );
 	} else if ( num == CS_VOTE_TIME ) {
@@ -534,9 +526,17 @@ static void CG_ConfigStringModified( void ) {
 //----(SA)
 	} else if ( num == CS_SHADERSTATE )   {
 		CG_ShaderStateChanged();
-	} /*else if (num == CS_VERSIONINFO) {
-		CG_ParseServerVersionInfo(str);         // OSP - set versioning info for older demo playback
-	}*/
+	}
+	 // Reinforcmements offset
+	else if ( num == CS_REINFSEEDS ) {
+		CG_ParseReinforcementTimes( str );
+	}  // Pause
+	else if ( num == CS_PAUSED ) {
+		CG_ParsePause( str );
+	} // Ready
+	else if ( num == CS_READY ) {
+		CG_ParseReady( str );
+	}
 }
 
 
@@ -848,6 +848,9 @@ static void CG_MapRestart( void ) {
 	cg.v_dmg_time = 0;
 	cg.v_noFireTime = 0;
 	cg.v_fireTime = 0;
+	// L0 - Pause
+	// If resetted while paused clear the screen.
+	cgs.fadeAlpha = 0;
 
 	// inform LOCAL server of animationSpeeds for AI use (ONLY)
 	//if (cgs.localServer) {
@@ -868,9 +871,28 @@ static void CG_MapRestart( void ) {
 	}
 #endif
 	// OSPx - Fight Announcement 
-	if (cg.warmup == 0 && cg_announcer.integer && !cgs.readyState)
+	if (cg.warmup == 0 && (cgs.gamestate == GS_WARMUP_COUNTDOWN))
+	{
 		// Poor man's solution...replace font one of this days as this is ridicoulus.	:C		
-		CG_AddAnnouncer("F IGH T !", cgs.media.countFightSound, 1.6f, 1200, 1.0f, 0.0f, 0.0f, ANNOUNCER_NORMAL);
+		CG_AddAnnouncer("F IGH T !", cgs.media.countFightSound, 1.6f, 1200, 0.5f, 0.0f, 0.0f, ANNOUNCER_NORMAL);
+
+		/*// Hooking auto demo for tournament mode..
+		if (!cg.demoPlayback &&	cgs.tournamentMode == TOURNY_FULL &&
+			cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR) 
+		{
+			CG_autoRecord_f();
+		}*/
+	}
+	/*else if (cg.warmup == 0 && cgs.gamestate != GS_WARMUP_COUNTDOWN ) {
+		// Bail on the demo if we reset the match or smth..
+		if (!cg.demoPlayback &&					  
+			cgs.tournamentMode == TOURNY_FULL &&
+			cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR)
+		{
+			trap_SendConsoleCommand("stoprecord\n");
+		}
+	}*/
+	// -OSPx
 	trap_Cvar_Set( "cg_thirdPerson", "0" );
 }
 
@@ -1541,7 +1563,7 @@ void CG_parseWeaponStats_cmd( void( txt_dump ) ( char * ) ) {
 	ci = &cgs.clientinfo[nClient];
 
 	Q_strncpyz( strName, ci->name, sizeof( strName ) );
-	txt_dump( va( "^2Overall stats for: ^7%s ^7(^2%d^7 Round%s)\n\n", strName, nRounds, ( ( nRounds != 1 ) ? "s" : "" ) ) );
+	txt_dump( va( "^7Overall stats for: ^z%s ^7(^2%d^7 Round%s)\n\n", strName, nRounds, ( ( nRounds != 1 ) ? "s" : "" ) ) );
 
 	if ( fFull ) {
 		txt_dump(     "Weapon     Acrcy Hits/Atts Kills Deaths Headshots\n" );
@@ -1627,7 +1649,7 @@ void CG_parseClientStats_cmd (void( txt_dump ) ( char * ) ) {
 	ci = &cgs.clientinfo[nClient];
 
 	Q_strncpyz( strName, ci->name, sizeof( strName ) );
-	txt_dump( va( "^3Current game stats for: ^7%s\n\n", strName ));
+	txt_dump( va( "^7Current game stats for: ^c%s\n\n", strName ));
 
 	if ( fFull ) {
 		txt_dump(     "Kills HS   Deaths TKs Suicides ^3DmgGiv DmgRcv TeamDmg\n" );
@@ -1678,7 +1700,7 @@ void CG_parseClientStats_cmd (void( txt_dump ) ( char * ) ) {
 		if (kill_peak > 0 || gibs > 0)
 			txt_dump(va("^3Kill Peak: ^7%-3d    ^3Gibbed     : ^7%d\n", kill_peak, gibs));
 		if (acc_shots > 0 || acc_hits > 0)
-			txt_dump(va("^3Accouracy: ^7%-3.2f  ^3Shots-Hits : ^7%d/^n%d\n", acc, acc_shots, acc_hits));
+			txt_dump(va("^3Accuracy: ^7%-3.2f  ^3Shots-Hits : ^7%d/^n%d\n", acc, acc_shots, acc_hits));
 	}
 	else {
 		if (ammo_giv > 0 || med_giv > 0)
@@ -1688,7 +1710,7 @@ void CG_parseClientStats_cmd (void( txt_dump ) ( char * ) ) {
 		if (kill_peak > 0 || gibs > 0)
 			txt_dump(va("^zKill Peak: ^7%-3d    ^zGibbed     : ^7%d\n", kill_peak, gibs));
 		if (acc_shots > 0 || acc_hits > 0)
-			txt_dump(va("^zAccouracy: ^7%-3.2f  ^zShots-Hits : ^7%d/^n%d\n", acc, acc_shots, acc_hits));
+			txt_dump(va("^zAccuracy: ^7%-3.2f  ^zShots-Hits : ^7%d/^n%d\n", acc, acc_shots, acc_hits));
 	}	
 			
 	if ( !fFull ) {
@@ -1916,7 +1938,7 @@ void CG_dumpStats( void ) {
 	// /me holds breath (using circular va() buffer)
 	if ( cgs.dumpStatsFile == 0 ) {
 		fDoScores = qtrue;
-		cgs.dumpStatsFileName = va( "stats/%s.%02d.%d/%02d.%02d.%02d-%s.txt",
+		cgs.dumpStatsFileName = va( "stats/%s.%02d.%d/%02d%02d%02d.%s.txt",
 									aMonths[ct.tm_mon],ct.tm_mday, 1900 + ct.tm_year,
 									ct.tm_hour, ct.tm_min, ct.tm_sec, Info_ValueForKey( info, "mapname" ) ); // Map has to be last so they sort right..
 	}
@@ -2032,8 +2054,7 @@ static void CG_ServerCommand( void ) {
 	if (!Q_stricmp(cmd, "ws")) {
 		if (cgs.dumpStatsTime > cg.time) {
 			CG_dumpStats();
-		}
-		else {
+		} else {
 			CG_parseWeaponStats_cmd(CG_printConsoleString);
 			cgs.dumpStatsTime = 0;
 		}

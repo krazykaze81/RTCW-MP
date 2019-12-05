@@ -111,6 +111,8 @@ typedef enum {
 
 // OSPx
 
+
+// -OSPx
 // Random reinforcement seed settings
 #define MAX_REINFSEEDS  8
 #define REINF_RANGE     16      // (0 to n-1 second offset)
@@ -279,13 +281,6 @@ typedef enum {
 	WEAPON_RELOADING    //----(SA)	added
 } weaponstate_t;
 
-// OSP
-typedef enum {
-	WSTATE_IDLE,
-	WSTATE_SWITCH,
-	WSTATE_FIRE,
-	WSTATE_RELOAD
-} weaponstateCompact_t;
 
 // pmove->pm_flags	(sent as max 16 bits in msg.c)
 #define PMF_DUCKED          1
@@ -516,7 +511,6 @@ typedef enum {
 	KEY_14,
 	KEY_15,
 	KEY_16,
-	KEY_LOCKED_PICKABLE, // RtcwPro added this in case we can use it - TDF: ent can be unlocked with the WP_LOCKPICK.
 	KEY_NUM_KEYS
 } wkey_t;           // conflicts with types.h
 
@@ -1160,7 +1154,43 @@ typedef enum {
 
 // Time between location updates
 #define TEAM_LOCATION_UPDATE_TIME       1000
+// Stats
+typedef enum extWeaponStats_s
+{
+	WS_KNIFE,               // 0
+	WS_LUGER,               // 1
+	WS_COLT,                // 2
+	WS_MP40,                // 3
+	WS_THOMPSON,            // 4
+	WS_STEN,                // 5
+	WS_FG42,                // 6	-- Also includes WS_BAR (allies version of fg42)
+	WS_PANZERFAUST,         // 7
+	WS_FLAMETHROWER,        // 8
+	WS_GRENADE,             // 9	-- Includes axis and allies grenade types
+	WS_MORTAR,              // 10
+	WS_DYNAMITE,            // 11
+	WS_AIRSTRIKE,           // 12	-- Lt. smoke grenade attack
+	WS_ARTILLERY,           // 13	-- Lt. binocular attack
+	WS_SYRINGE,             // 14	-- Medic syringe uses/successes
+	WS_SMOKE,               // 15
+	WS_MG42,                // 16
+	WS_RIFLE,				// 17 - equivalent american weapon to german mauser
+	WS_VENOM,				// 18						
+	WS_MAX
+} extWeaponStats_t;
 
+typedef struct {
+	qboolean fHasHeadShots;
+	const char *pszCode;
+	const char *pszName;
+} weap_ws_t;
+
+extern const weap_ws_t aWeaponInfo[WS_MAX];
+
+typedef struct weap_ws_convert_s {
+	weapon_t iWeapon;
+	extWeaponStats_t iWS;
+} weap_ws_convert_t;
 // How many players on the overlay
 #define TEAM_MAXOVERLAY     8
 
@@ -1258,6 +1288,7 @@ typedef enum {
 // OSPx
 	MOD_ADMKILL,
 	MOD_SELFKILL,
+	MOD_ARTILLERY,	
 	MOD_SWITCHTEAM,
 	MOD_NUM_MODS
 // -OSPx
@@ -1459,7 +1490,6 @@ typedef enum {
 	HINT_DISARM,            // DHM - Nerve
 	HINT_REVIVE,            // DHM - Nerve
 	HINT_DYNAMITE,          // DHM - Nerve
-	HINT_LOCKPICK, // RtcwPro - added this in case we can use it
 
 	HINT_BAD_USER,  // invisible user with no target
 
@@ -1790,7 +1820,7 @@ int BG_GetAnimScriptEvent( playerState_t *ps, scriptAnimEventTypes_t event );
 extern animStringItem_t animStateStr[];
 extern animStringItem_t animBodyPartsStr[];
 // OSP
-#define MATCH_MINPLAYERS "4" //"1"	// Minimum # of players needed to start a match
+#define MATCH_MINPLAYERS "2" // Minimum # of players needed to start a match
 
 // Multiview support
 int BG_simpleHintsCollapse( int hint, int val );
@@ -1812,30 +1842,6 @@ void BG_setCrosshair( char *colString, float *col, float alpha, char *cvarName )
 #define CGF_AUTOACTIVATE    0x04
 #define CGF_PREDICTITEMS    0x08
 
-// Stats
-typedef enum extWeaponStats_s
-{
-	WS_KNIFE,               // 0
-	WS_LUGER,               // 1
-	WS_COLT,                // 2
-	WS_MP40,                // 3
-	WS_THOMPSON,            // 4
-	WS_STEN,                // 5
-	WS_FG42,                // 6	-- Also includes WS_BAR (allies version of fg42)
-	WS_PANZERFAUST,         // 7
-	WS_FLAMETHROWER,        // 8
-	WS_GRENADE,             // 9	-- Includes axis and allies grenade types
-	WS_MORTAR,              // 10
-	WS_DYNAMITE,            // 11
-	WS_AIRSTRIKE,           // 12	-- Lt. smoke grenade attack
-	WS_ARTILLERY,           // 13	-- Lt. binocular attack
-	WS_SYRINGE,             // 14	-- Medic syringe uses/successes
-	WS_SMOKE,               // 15
-	WS_MG42,                // 16
-	WS_RIFLE,				// 17 - equivalent american weapon to german mauser
-	WS_VENOM,				// 18						
-	WS_MAX
-} extWeaponStats_t;
 
 // Voting
 typedef struct {
@@ -1848,28 +1854,12 @@ extern int numVotesAvailable;
 
 #define VOTING_DISABLED     ( ( 1 << numVotesAvailable ) - 1 )
 
-typedef struct {
-	qboolean fHasHeadShots;
-	const char *pszCode;
-	const char *pszName;
-} weap_ws_t;
 
-extern const weap_ws_t aWeaponInfo[WS_MAX];
 // -OSP
 
 
-//
-// bg_stats.c
-//
-
-typedef struct weap_ws_convert_s {
-	weapon_t iWeapon;
-	extWeaponStats_t iWS;
-} weap_ws_convert_t;
 
 extWeaponStats_t BG_WeapStatForWeapon( weapon_t iWeaponID );
 
 // ET Port
 int BG_cleanName(const char *pszIn, char *pszOut, unsigned int dwMaxLength, qboolean fCRLF);
-
-// -OSPx
