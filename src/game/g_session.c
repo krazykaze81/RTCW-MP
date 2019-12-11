@@ -55,7 +55,7 @@ void G_WriteClientSessionData( gclient_t *client ) {
 		G_deleteStats(client - level.clients);
 	}
 
-	s = va( "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",       // DHM - Nerve
+	s = va( "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",       // DHM - Nerve
 			client->sess.sessionTeam,
 			client->sess.spectatorTime,
 			client->sess.spectatorState,
@@ -77,6 +77,9 @@ void G_WriteClientSessionData( gclient_t *client ) {
 			client->sess.ip[1],
 			client->sess.ip[2],
 			client->sess.ip[3],
+			client->sess.guid &&
+			( !client->sess.guid || !Q_stricmp( client->sess.guid, "" ) ) ? "NOGUID" : client->sess.guid,
+			client->sess.referee,
 			client->sess.admin,
 			client->sess.incognito,
 			client->sess.ignored,

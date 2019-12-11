@@ -677,12 +677,6 @@ typedef enum {
 	HR_NUM_HITREGIONS,
 } hitRegion_t;
 
-typedef struct {
-	weaponStats_t weaponStats[WP_NUM_WEAPONS];
-	int suicides;
-	int hitRegions[HR_NUM_HITREGIONS];
-	int objectiveStats[MAX_OBJECTIVES];
-} playerStats_t;
 // -OSP
 typedef struct ammotable_s {
 	int maxammo;            //

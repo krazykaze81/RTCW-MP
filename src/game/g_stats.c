@@ -280,7 +280,7 @@ void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod ) {
 			targ->client->sess.deaths++;
 
 			// OSPx - Life(s) Kill peak
-			if (attacker->client->pers.life_kills >= attacker->client->sess.killPeak)
+			if (attacker->client->pers.lifeKills >= attacker->client->sess.killPeak)
 				attacker->client->sess.killPeak++;
 		}
 	}

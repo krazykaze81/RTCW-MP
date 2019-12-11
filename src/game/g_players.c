@@ -34,84 +34,116 @@ Created: 5 May/14
 #include "g_local.h"
 
 
+/*
+=================
+Drop objective
 
-//
-// Update info:
-//	1. Add line to aCommandInfo w/appropriate info
-//	2. Add implementation for specific command (see an existing command for an example)
-//
-
-/* Code from ET
-typedef struct {
-	char *pszCommandName;
-	qboolean fAnytime;
-	qboolean fValue;
-	void(*pCommand)(gentity_t *ent, unsigned int dwCommand, qboolean fValue);
-	const char *pszHelpInfo;
-} cmd_reference_t;
-
-// VC optimizes for dup strings :)
-static const cmd_reference_t aCommandInfo[] = {
-	{ "+stats",          qtrue,  qtrue,  NULL, ":^7 HUD overlay showing current weapon stats info" },
-	{ "+topshots",       qtrue,  qtrue,  NULL, ":^7 HUD overlay showing current top accuracies of all players" },
-	{ "?",       qtrue,  qtrue,  G_commands_cmd, ":^7 Gives a list of OSP-specific commands" },
-	{ "autorecord",      qtrue,  qtrue,  NULL, ":^7 Creates a demo with a consistent naming scheme" },
-	{ "autoscreenshot",  qtrue,  qtrue,  NULL, ":^7 Creates a screenshot with a consistent naming scheme" },
-	{ "bottomshots", qtrue,  qfalse, G_weaponRankings_cmd, ":^7 Shows WORST player for each weapon. Add ^3<weapon_ID>^7 to show all stats for a weapon" },
-	//	{ "callvote",		qtrue,	qfalse,	Cmd_CallVote_f, " <params>:^7 Calls a vote" },
-		{ "callvote",        qtrue,  qfalse, (void(*) (gentity_t *, unsigned int, qboolean))Cmd_CallVote_f, " <params>:^7 Calls a vote" },
-		//	{ "captains",		qtrue,	qtrue,	NULL, ":^7 Shows team captains" },
-		//	{ "coach",			qtrue,	qtrue,	NULL, ":^7 Accepts coach invitation/restarts coach view" },
-		//	{ "coachdecline",	qtrue,	qtrue,	NULL, ":^7 Declines coach invitation or resigns coach status" },
-		//	{ "coachinvite",	qtrue,	qtrue,	NULL, " <player_ID>:^7 Invites a player to coach team" },
-		//	{ "coachkick",		qtrue,	qtrue,	NULL, " <player_ID>:^7 Kicks active coach from team" },
-			{ "commands",        qtrue,  qtrue,  G_commands_cmd, ":^7 Gives a list of OSP-specific commands" },
-			{ "currenttime", qtrue,  qtrue,  NULL, ":^7 Displays current local time" },
-			{ "follow",          qfalse, qtrue,  Cmd_Follow_f, " <player_ID|allies|axis>:^7 Spectates a particular player or team" },
-			//	{ "invite",			qtrue,	qtrue,	NULL, " <player_ID>:^7 Invites a player to join a team" },
-				{ "lock",            qtrue,  qtrue,  G_lock_cmd, ":^7 Locks a player's team to prevent others from joining" },
-				{ "notready",        qtrue,  qfalse, G_ready_cmd, ":^7 Sets your status to ^5not ready^7 to start a match" },
-				{ "pause",           qfalse, qtrue,  G_pause_cmd, ":^7 Allows a team to pause a match" },
-				{ "players",     qtrue,  qtrue,  G_players_cmd, ":^7 Lists all active players and their IDs/information" },
-				{ "ready",           qtrue,  qtrue,  G_ready_cmd, ":^7 Sets your status to ^5ready^7 to start a match" },
-				{ "readyteam",       qfalse, qtrue,  G_teamready_cmd, ":^7 Sets an entire team's status to ^5ready^7 to start a match" },
-				{ "ref",         qtrue,  qtrue,  G_ref_cmd, " <password>:^7 Become a referee (admin access)" },
-				//	{ "remove",			qtrue,	qtrue,	NULL, " <player_ID>:^7 Removes a player from the team" },
-				//	{ "resign",			qtrue,	qtrue,	NULL, " [player_ID]:^7 Resigns captainship.  Can optionally be given to another teammate" },
-					{ "say_teamnl",      qtrue,  qtrue,  G_say_teamnl_cmd, "<msg>:^7 Sends a team chat without location info" },
-					{ "scores",          qtrue,  qtrue,  G_scores_cmd, ":^7 Displays current match stat info" },
-					{ "specinvite",      qtrue,  qtrue,  G_specinvite_cmd, ":^7 Invites a player to spectate a speclock'ed team" },
-					{ "speclock",        qtrue,  qtrue,  G_speclock_cmd, ":^7 Locks a player's team from spectators" },
-					//	{ "speconly",		qtrue,	qtrue,	NULL, ":^7 Toggles option to stay as a spectator in 1v1" },
-						{ "specunlock",      qtrue,  qfalse, G_speclock_cmd, ":^7 Unlocks a player's team from spectators" },
-						{ "statsall",        qtrue,  qfalse, G_statsall_cmd, ":^7 Shows weapon accuracy stats for all players" },
-						{ "statsdump",       qtrue,  qtrue,  NULL, ":^7 Shows player stats + match info saved locally to a file" },
-						{ "team",            qtrue,  qtrue,  Cmd_Team_f, " <b|r|s|none>:^7 Joins a team (b = allies, r = axis, s = spectator)" },
-						//	{ "setclass",		qtrue,	qtrue,	Cmd_SetClass_f, " <classnum>:^7 Selects a class" },
-						//	{ "setweapons",		qtrue,	qtrue,	Cmd_SetWeapons_f, " <weapon|weapon2>:^7 Selects your weapon loadout" },
-							{ "timein",          qfalse, qfalse, G_pause_cmd, ":^7 Unpauses a match (if initiated by the issuing team)" },
-							{ "timeout",     qfalse, qtrue,  G_pause_cmd, ":^7 Allows a team to pause a match" },
-							{ "topshots",        qtrue,  qtrue,  G_weaponRankings_cmd, ":^7 Shows BEST player for each weapon. Add ^3<weapon_ID>^7 to show all stats for a weapon" },
-							{ "unlock",          qtrue,  qfalse, G_lock_cmd, ":^7 Unlocks a player's team, allowing others to join" },
-							{ "unpause",     qfalse, qfalse, G_pause_cmd, ":^7 Unpauses a match (if initiated by the issuing team)" },
-							{ "unready",     qtrue,  qfalse, G_ready_cmd, ":^7 Sets your status to ^5not ready^7 to start a match" },
-							{ "weaponstats", qtrue,  qfalse, G_weaponStats_cmd, " [player_ID]:^7 Shows weapon accuracy stats for a player" },
-							//	{ "viewcam",		qfalse,	qtrue,	NULL, ":^7 Switches to cinematic camera mode" },
-							//	{ "vc_follow",		qfalse,	qtrue,	NULL, " [player_ID]:^7 Puts viewcam in follow mode.  Can optionally to follow a specific player" },
-							//	{ "vc_free",		qfalse,	qtrue,	NULL, ":^7 Toggle viewcam between manual/automatic change" },
-							//	{ "vc_view",		qfalse,	qtrue,	NULL, ":^7 Toggle ViewCam between static/dynamic views" },
-							//	{ "viewadd",		qfalse,	qtrue,	NULL, " <player_ID>:^7 Adds a player to multi-screen view" },
-							//	{ "viewall",		qfalse,	qtrue,	NULL, ":^7 Adds all active players to a multi-screen view" },
-							//	{ "viewallies",		qfalse,	qtrue,	NULL, ": ^7 Views entire allies/axis team" },
-							//	{ "viewaxis",		qfalse,	qtrue,	NULL, ": ^7 Views entire allies/axis team" },
-							//	{ "viewcyclenext",	qfalse,	qtrue,	NULL, ":^7 Cycles through players in current view" },
-							//	{ "viewfollow",		qfalse,	qtrue,	NULL, ":^7 Follows current highlighted view" },
-							//	{ "viewnext",		qfalse,	qtrue,	NULL, ":^7 Moves through active screen in a multi-screen display" },
-							//	{ "viewnone",		qfalse,	qtrue,	NULL, ":^7 Disables multiview mode and goes back to spectator mode" },
-							//	{ "viewremove",		qfalse,	qtrue,	NULL, " [player_ID]:^7 Removes current selected or specific player from multi-screen view" },
-								{ 0,                qfalse, qtrue,  NULL, 0 }
-};
+Port from NQ
+=================
 */
+void Cmd_DropObj(gentity_t *self)
+{
+	gitem_t *item= NULL;
+
+	// drop flag regardless
+	if (self->client->ps.powerups[PW_REDFLAG]) {
+		item = BG_FindItem("Red Flag");
+		if (!item)
+			item = BG_FindItem("Objective");
+
+		self->client->ps.powerups[PW_REDFLAG] = 0;
+	}
+	if (self->client->ps.powerups[PW_BLUEFLAG]) {
+		item = BG_FindItem("Blue Flag");
+		if (!item)
+			item = BG_FindItem("Objective");
+
+		self->client->ps.powerups[PW_BLUEFLAG] = 0;
+	}
+
+	if (item) {
+		vec3_t launchvel = { 0, 0, 0 };
+		vec3_t forward;
+		vec3_t origin;
+		vec3_t angles;
+		gentity_t *flag;
+
+		VectorCopy(self->client->ps.origin, origin);
+		// tjw: if the player hasn't died, then assume he's
+		//      throwing objective per g_dropObj
+		if(self->health > 0) {
+			VectorCopy(self->client->ps.viewangles, angles);
+			if(angles[PITCH] > 0)
+				angles[PITCH] = 0;
+			AngleVectors(angles, forward, NULL, NULL);
+			VectorMA(self->client->ps.velocity,
+				96, forward, launchvel);
+			VectorMA(origin, 36, forward, origin);
+			origin[2] += self->client->ps.viewheight;
+		}
+
+		flag = LaunchItem(item, origin, launchvel, self->s.number);
+
+		flag->s.modelindex2 = self->s.otherEntityNum2;// JPW NERVE FIXME set player->otherentitynum2 with old modelindex2 from flag and restore here
+		flag->message = self->message;	// DHM - Nerve :: also restore item name
+		// Clear out player's temp copies
+		self->s.otherEntityNum2 = 0;
+		self->message = NULL;
+		self->droppedObj = qtrue;
+	} 
+	/*else
+	{
+		Cmd_ThrowKnives( self );
+	}*/
+}
+
+/*
+===================
+Drag players 
+
+From BOTW/S4NDMoD 
+===================
+*/
+void Cmd_Drag( gentity_t *ent) {
+	gentity_t *target;
+	vec3_t start,dir,end;
+	trace_t tr;
+	target = NULL;
+
+	if (!g_dragBodies.integer)
+		return;
+
+	if (level.time < (ent->lastDragTime + 20))		
+		return;
+
+	if (ent->client->ps.stats[STAT_HEALTH] <= 0)	
+		return;
+
+	AngleVectors(ent->client->ps.viewangles, dir, NULL, NULL);
+
+	VectorCopy(ent->s.pos.trBase, start);	
+	start[2] += ent->client->ps.viewheight;
+	VectorMA (start, 100, dir, end);
+
+	trap_Trace (&tr, start, NULL, NULL, end, ent->s.number, CONTENTS_CORPSE);
+
+	if (tr.entityNum >= MAX_CLIENTS)
+		return;
+
+	target = &(g_entities[tr.entityNum]);
+
+    if ((!target->inuse) || (!target->client))
+	return;		
+
+	VectorCopy(target->r.currentOrigin, start); 
+	VectorCopy(ent->r.currentOrigin, end); 
+	VectorSubtract(end, start, dir); 
+	VectorNormalize(dir); 
+	VectorScale(dir,100, target->client->ps.velocity);
+	VectorCopy(dir, target->movedir); 
+       
+	ent->lastDragTime = level.time;		
+}
 
 // ************** PLAYERS
 //
@@ -356,6 +388,10 @@ void pCmd_ready(gentity_t *ent, qboolean state) {
 	if (!g_doWarmup.integer) {
 		return;
 	}
+	// Just swallow it...
+	if (g_gamestate.integer == GS_PLAYING) {		
+		return;
+	}
 	if (!state && g_gamestate.integer == GS_WARMUP_COUNTDOWN) {
 		CP("print \"Countdown started, ^3notready^7 ignored.\n\"");
 		return;
@@ -387,6 +423,7 @@ void pCmd_ready(gentity_t *ent, qboolean state) {
 
 			// Doesn't rly matter..score tab will show slow ones..
 			AP(va("popin \"%s ^7is %s%s!\n\"", ent->client->pers.netname, (state ? "^n" : "^z"), status[state]));
+			AP(va("@print \"%s ^7is %s%s.\n\"", ent->client->pers.netname, (state ? "^n" : "^z"), status[state]));
 		}
 	}
 }

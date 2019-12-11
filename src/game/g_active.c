@@ -1196,7 +1196,21 @@ void ClientThink_real( gentity_t *ent ) {
 										// OSPx - Ignore all this if we're under pause..
 			if (!client->dropWeaponTime && level.match_pause == PAUSE_NONE) {
 				client->dropWeaponTime = 1; // just latch it for now
-				if ( ( client->ps.stats[STAT_PLAYER_CLASS] == PC_SOLDIER ) || ( client->ps.stats[STAT_PLAYER_CLASS] == PC_LT ) ) {
+				// L0 - Throw knife & Drop Obj
+				if ( client->ps.weapon == WP_KNIFE ) {
+					if ( client->ps.stats[STAT_HEALTH] > 0 ) {
+						if ( g_dropObj.integer > 0 ) 
+							Cmd_DropObj( ent );
+						/*else
+							Cmd_ThrowKnives( ent );*/
+					}
+
+					return;
+				}// End
+				// L0 - Patched it for g_unlockWeapons..
+				if ( ( client->ps.stats[STAT_PLAYER_CLASS] == PC_SOLDIER ) || ( client->ps.stats[STAT_PLAYER_CLASS] == PC_LT ) || 
+					  ( g_unlockWeapons.integer && client->ps.stats[STAT_PLAYER_CLASS] == PC_MEDIC ) || 
+					  ( g_unlockWeapons.integer && client->ps.stats[STAT_PLAYER_CLASS] == PC_ENGINEER )) 	
 					for ( i = 0; i < MAX_WEAPS_IN_BANK_MP; i++ ) {
 						weapon = weapBanksMultiPlayer[3][i];
 						if ( COM_BitCheck( client->ps.weapons,weapon ) ) {
@@ -1250,7 +1264,6 @@ void ClientThink_real( gentity_t *ent ) {
 		} else {
 			client->dropWeaponTime = 0;
 		}
-	}
 // jpw
 
 	// check for inactivity timer, but never drop the local client of a non-dedicated server
@@ -1490,8 +1503,13 @@ void ClientThink_real( gentity_t *ent ) {
 	// Ridah, made it a latched event (occurs on keydown only)
 	if ( client->latched_buttons & BUTTON_ACTIVATE ) {
 		Cmd_Activate_f( ent );
+		Cmd_Drag( ent );	// L0 - Drag bodies	
 	}
 
+	// L0 - drag bodies
+	if (client->buttons & BUTTON_GESTURE || client->buttons & BUTTON_ACTIVATE) {
+		Cmd_Drag( ent );
+	} // End	
 	if ( ent->flags & FL_NOFATIGUE ) {
 		ent->client->ps.sprintTime = 20000;
 	}
@@ -1693,13 +1711,13 @@ int teamRespawnTime(int team, qboolean warmup) {
 		if (warmup)
 			time = level.time % 3000;
 		else
-			time = (level.dwRedReinfOffset + level.time - level.startTime) % g_redlimbotime.integer;
+			time = (level.dwRedReinfOffset + level.timeCurrent - level.startTime) % g_redlimbotime.integer;
 	}
 	else {
 		if (warmup)
 			time = level.time % 3000;
 		else
-			time = (level.dwBlueReinfOffset + level.time - level.startTime) % g_bluelimbotime.integer;
+			time = (level.dwBlueReinfOffset + level.timeCurrent - level.startTime) % g_bluelimbotime.integer;
 	}
 	return time;
 }

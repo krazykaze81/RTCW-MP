@@ -873,7 +873,7 @@ static float CG_DrawTeamOverlay( float y ) {
 			// jpw
 
 			CG_DrawStringExt( xx, y,
-							  va("%s%s", isRevivable, ci->name), pcolor, qtrue, qfalse,
+							  va("%s %s", isRevivable, ci->name), pcolor, qtrue, qfalse,
 							  TINYCHAR_WIDTH, TINYCHAR_HEIGHT, TEAM_OVERLAY_MAXNAME_WIDTH );
 
 			if ( lwidth ) {

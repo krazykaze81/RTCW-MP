@@ -39,6 +39,7 @@ If you have questions concerning this license or the applicable additional terms
 // the "gameversion" client command will print this plus compile date
 //----(SA) Wolfenstein
 #define GAMEVERSION "RtcwPro Beta 0.1"
+#define PB_GUID_LENGTH 33 // PB : 32 + trailing zero
 // done.
 
 #define BODY_QUEUE_SIZE     8
@@ -403,6 +404,8 @@ struct gentity_s {
 	int voiceChatPreviousTime;              // DHM - Nerve
 	int lastBurnedFrameNumber;              // JPW - Nerve   : to fix FT instant-kill exploit
 	// OSPx
+	int			lastDragTime;				// Drag bodies
+	qboolean	droppedObj;					// Objective dropping
 	qboolean	dmginloop;
 	gentity_t	*dmgparent;
 };
@@ -463,6 +466,7 @@ typedef enum {
 	ADMIN_4,
 	ADMIN_5
 } adminStatus_t;
+
 // OSP - weapon stat counters
 typedef struct {
 	unsigned int atts;
@@ -496,6 +500,7 @@ typedef struct {
 	// OSP
 	unsigned int uci;						// Country Flags
 	unsigned int ip[4];						// IP
+	char guid[PB_GUID_LENGTH];
 	adminStatus_t admin;					// Admin, ref..
 	qboolean incognito;						// Hidden admin
 	qboolean ignored;						// Ignored..
@@ -530,7 +535,7 @@ typedef struct {
 	int specInvited;
 	int specLocked;
 	int status;
-	int			clientFlags;		// Sort some stuff based upon user settings   // nihi addded
+	int	clientFlags;		// Sort some stuff based upon user settings   // nihi addded
 // -OSPx
 } clientSession_t;
 
@@ -585,7 +590,6 @@ typedef struct {
 	qboolean bAutoReloadAux; // TTimo - auxiliary storage for pmoveExt_t::bAutoReload, to achieve persistance
 
 	// OSP
-	playerStats_t playerStats;
 	unsigned int autoaction;            // End-of-match auto-requests
 	unsigned int clientFlags;           // Client settings that need server involvement
 	unsigned int clientMaxPackets;      // Client com_maxpacket settings
@@ -613,11 +617,15 @@ typedef struct {
 	int	lastammo_client;
 	int	lasthealth_client;
 	
-	// Life stats
-	int life_acc_shots;
-	int life_acc_hits;
-	int life_headshots;
-	int life_kills;
+	// Life Stats
+	int		lifeKills;
+	int		lifeGibs;
+	int		lifeAmmo;
+	int		lifeHealth; // not in use  yet
+	int		lifeRevives;
+	int		lifeAcc_shots;
+	int		lifeAcc_hits;
+	int		lifeHeadshots;
 	unsigned int int_stats;
 	unsigned int int_statsType;
 	unsigned int int_selectedWeapon;
@@ -919,22 +927,17 @@ typedef struct {
 	// OSP
 	int axisLeft;		// For DM
 	int alliedLeft;		// For DM
-	// Reinforcements offset
-	int dwBlueReinfOffset;
-	int dwRedReinfOffset;
+	int	motdTime;			// MOTDs
+	int	flagTaken;			// Flag retaking
 	int	axisPlayers;		// For auto lock and auto team balance
 	int alliedPlayers;		// For auto lock and auto team balance
-	int taken;			// Flag retaking
+
 	int balanceTimer;	// Auto balance teams timer
 	qboolean fLocalHost;
 	qboolean fResetStats;
 	int	HAprintnum;
 	int	HAlastPrintTime;
-	int	CNstart;		// count down
-	int cnPush;
-	int cnNum;
-	qboolean CNyes;		// We're done with all..so go to countdown
-	qboolean ref_allready;                  // Referee forced match start
+
 	int server_settings;
 
 	voteInfo_t voteInfo;
@@ -954,6 +957,19 @@ typedef struct {
 	qboolean axisCalledTimeout;
 	qboolean autoPaused;
 	qboolean cnStarted;
+	int	CNstart;		// count down
+	int cnPush;
+	int cnNum;
+	qboolean CNyes;		// We're done with all..so go to countdown
+	
+	// Round stats
+	int			statsNum;
+	int			statsPrint;
+	qboolean	statsStarted;
+	
+	// Reinforcements offset
+	int dwBlueReinfOffset;
+	int dwRedReinfOffset;
 	int match_pause;
 	
 	int sortedStats[MAX_CLIENTS];           // sorted by weapon stat
@@ -964,6 +980,7 @@ typedef struct {
 
 
 	// Ready
+	qboolean ref_allready;                  // Referee forced match start
 	qboolean readyAll;
 	qboolean readyPrint;
 	qboolean readyTeam[TEAM_NUM_TEAMS];
@@ -1514,13 +1531,13 @@ extern vmCvar_t	a3_cmds;
 extern vmCvar_t	a4_cmds;
 extern vmCvar_t	a5_cmds;
 extern vmCvar_t	a5_allowAll;
-extern vmCvar_t		adm_help;
-extern vmCvar_t g_gamelocked;
-extern vmCvar_t g_extendedLog;
-extern vmCvar_t g_spectatorInactivity;
-extern vmCvar_t g_showFlags;
+extern vmCvar_t	adm_help;
 
-extern vmCvar_t g_allowSoftKill;
+
+
+extern vmCvar_t	IP_handling;
+extern vmCvar_t	bannedMSG;
+
 extern vmCvar_t match_latejoin;
 extern vmCvar_t match_minplayers;
 extern vmCvar_t match_mutespecs;
@@ -1529,20 +1546,30 @@ extern vmCvar_t match_timeoutcount;
 extern vmCvar_t match_timeoutlength;
 extern vmCvar_t match_warmupDamage;
 extern vmCvar_t server_autoconfig;
+extern vmCvar_t g_gamelocked;
+extern vmCvar_t g_extendedLog;
+extern vmCvar_t g_spectatorInactivity;
+extern vmCvar_t g_showFlags;
+extern vmCvar_t g_allowSoftKill;
+extern vmCvar_t	g_unlockWeapons;
+extern vmCvar_t	g_disableSMGPickup;
+extern vmCvar_t	g_flagRetake;
 extern vmCvar_t g_fixedphysics;
 extern vmCvar_t g_hitsounds;
 extern vmCvar_t g_drawHitboxes;
-extern vmCvar_t		g_mapConfigs;
-extern vmCvar_t		g_inactivityToSpecs;
-extern vmCvar_t		g_ignoreSpecs;
-extern vmCvar_t		g_allowPMs;
+extern vmCvar_t	g_mapConfigs;
+extern vmCvar_t	g_inactivityToSpecs;
+extern vmCvar_t	g_ignoreSpecs;
+extern vmCvar_t	g_allowPMs;
+
+
 extern vmCvar_t server_motd0;
 extern vmCvar_t server_motd1;
 extern vmCvar_t server_motd2;
 extern vmCvar_t server_motd3;
 extern vmCvar_t server_motd4;
 extern vmCvar_t server_motd5;
-extern vmCvar_t team_maxPanzers;
+
 extern vmCvar_t team_maxplayers;
 extern vmCvar_t team_nocontrols;
 extern vmCvar_t vote_limit;
@@ -1555,17 +1582,29 @@ extern vmCvar_t match_latejoin;
 extern vmCvar_t match_minplayers;
 extern vmCvar_t match_readypercent;
 extern vmCvar_t match_timeoutlength;
-extern vmCvar_t		g_spectatorAllowDemo;
+extern vmCvar_t	g_spectatorAllowDemo;
 extern vmCvar_t match_timeoutcount;
 
 // Weapon/class stuff
-extern vmCvar_t g_lifeStats;
+extern vmCvar_t	g_ltNades;
+extern vmCvar_t	g_medicNades;
+extern vmCvar_t	g_soldNades;
+extern vmCvar_t	g_engNades;
+extern vmCvar_t	g_medicClips;
+extern vmCvar_t	g_engineerClips;
+extern vmCvar_t	g_soldierClips;
+extern vmCvar_t	g_leutClips;
+extern vmCvar_t	g_pistolClips;
 extern vmCvar_t g_maxTeamPF;
 extern vmCvar_t g_maxTeamSniper;
 extern vmCvar_t g_maxTeamVenom;
 extern vmCvar_t g_maxTeamFlamer;
+extern vmCvar_t	g_dragBodies;
+extern vmCvar_t	g_dropObj;
 
 
+// MOTDs
+extern vmCvar_t	g_serverMessage;
 
 extern vmCvar_t z_serverflags;
 extern vmCvar_t sv_hostname;
@@ -1573,6 +1612,10 @@ extern vmCvar_t sv_hostname;
 extern vmCvar_t g_pauseLimit;
 extern vmCvar_t g_duelAutoPause;
 extern vmCvar_t team_commands;
+
+// Stats
+extern vmCvar_t	g_showLifeStats;
+extern vmCvar_t	g_roundStats;
 
 //
 // NOTE!!! If any vote flags are added, MAKE SURE to update the voteFlags struct in bg_misc.c w/appropriate info,
@@ -1851,26 +1894,21 @@ void G_HistoricalTrace( gentity_t* ent, trace_t *results, const vec3_t start, co
 //void G_SetPlayerRank(	gentity_t* ent );
 //void G_AddExperience(	gentity_t* ent, float exp );
 
-// HRESULTS
-#define G_OK            0
-#define G_INVALID       -1
-#define G_NOTFOUND  -2
-#define AP( x ) trap_SendServerCommand( -1, x )                 // Print to all
-#define CP( x ) trap_SendServerCommand( ent - g_entities, x )     // Print to an ent
-#define CPx( x, y ) trap_SendServerCommand( x, y )              // Print to id = x
-
-#define HELP_COLUMNS    4
-
-#define CMD_DEBOUNCE    5000    // 5s between cmds
-
-#define EOM_WEAPONSTATS 0x01    // Dump of player weapon stats at end of match.
-#define EOM_MATCHINFO   0x02    // Dump of match stats at end of match.
-
-#define AA_STATSALL     0x01    // Client AutoAction: Dump ALL player stats
-#define AA_STATSTEAM    0x02    // Client AutoAction: Dump TEAM player stats
 
 
 
+
+
+
+
+
+
+// Max Lives
+void CheckMaxLivesGUID( char *guid );
+int SortMaxLivesGUID( gentity_t *ent );
+void TrackMaxLivesGUID( char *guid, int lives, int team );
+void ClearMaxLivesGUID ( void );
+int CalculateLives(gentity_t *ent);
 
 ///////////////////////
 // g_main.c
@@ -1921,6 +1959,12 @@ void G_statsPrint( gentity_t *ent, int nType );
 unsigned int G_weapStatIndex_MOD( unsigned int iWeaponMOD );
 void G_verifyMatchState(int nTeam);
 void G_matchPrintInfo(char *msg);
+void CountDown(qboolean restart);
+int isWeaponLimited (gclient_t *client, int weap);
+void setDefaultWeapon(gclient_t *client, qboolean isSold);
+void PauseHandle(void);
+void resetPause(void);
+
 ///////////////////////
 // ET g_multiview.c
 //
@@ -1987,6 +2031,9 @@ void G_updateSpecLock( int nTeam, qboolean fLock );
 ///////////////////////
 // g_vote.c
 //
+#define G_OK            0 // voting
+#define G_INVALID       -1 // voting
+#define G_NOTFOUND  -2 // voting
 int  G_voteCmdCheck( gentity_t *ent, char *arg, char *arg2, qboolean fRefereeCmd );
 void G_voteFlags(void);
 void G_voteHelp( gentity_t *ent, qboolean fShowVote );
@@ -2053,6 +2100,7 @@ void APRSound(gentity_t *ent, char *sound);
 //
 // g_admin.c
 //
+extern char *TempBannedMessage;
 void admLog(char *info);
 char *sortTag(gentity_t *ent);
 char *usrTag(gentity_t *ent, qboolean inquiry);
@@ -2123,16 +2171,13 @@ void G_weaponRankings_cmd(gentity_t *ent, unsigned int dwCommand, qboolean state
 void G_printMatchInfo( gentity_t *ent );
 void G_matchInfoDump( unsigned int dwDumpType );
 void G_statsall_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fDump);
+void stats_RoundStats( void );
 
 //
 // Macros
 //
+#define AP( x ) trap_SendServerCommand( -1, x )                 // Print to all
 #define AP( x ) trap_SendServerCommand( -1, x )					// Print to all
-void CountDown(qboolean restart);
-int isWeaponLimited (gclient_t *client, int weap);
-void setDefaultWeapon(gclient_t *client, qboolean isSold);
-void PauseHandle(void);
-void resetPause(void);
 #define CP( x ) trap_SendServerCommand( ent - g_entities, x )	// Print to an ent
 #define CPx( x, y ) trap_SendServerCommand( x, y )				// Print to id = x
 #define TP( x, y ) G_TeamCommand( x, y)							// Sends team command
@@ -2145,6 +2190,11 @@ void resetPause(void);
 //
 // Constants / Bit Flags
 //
+#define CFLAGS_HITSOUNDS	1
+#define CFLAGS_MP40			2
+#define CFLAGS_THOMPSON		8
+#define CFLAGS_STEN			16
+
 // - Config
 #define ZSF_COMP        0x01    // Have comp settings loaded for current gametype?
 

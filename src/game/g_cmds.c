@@ -769,10 +769,22 @@ void SetTeam(gentity_t *ent, char *s, qboolean forced) {
 	client->pers.teamState.state = TEAM_BEGIN;
 	if ( oldTeam != TEAM_SPECTATOR ) {
 		if ( !( ent->client->ps.pm_flags & PMF_LIMBO ) ) {
+			int i;
 			// Kill him (makes sure he loses flags, etc)
 			ent->flags &= ~FL_GODMODE;
 			ent->client->ps.stats[STAT_HEALTH] = ent->health = 0;
 			player_die( ent, ent, ent, 100000, MOD_SWITCHTEAM ); // OSPx - Fix this for stats..
+			// L0 - Remove any spectators if speclock is on	
+			for (i = 0; i < level.maxclients; i++) {
+				if (level.clients[i].sess.sessionTeam == TEAM_SPECTATOR
+					&& level.clients[i].sess.spectatorState == SPECTATOR_FOLLOW
+					&& level.clients[i].sess.spectatorClient == clientNum &&
+					teamInfo[team].spec_lock &&
+					ent->client->sess.specInvited != team)
+				{
+					StopFollowing(&g_entities[i]);
+				}
+			}
 		}
 	}
 	// they go to the end of the line for tournements
@@ -796,6 +808,32 @@ void SetTeam(gentity_t *ent, char *s, qboolean forced) {
 		AP(va( "print \"[lof]%s" S_COLOR_WHITE " [lon]joined the ^2battle^7.\n\"", client->pers.netname ) );
 	}
 
+	// L0 - connect message
+	CP(va( "cp \"%s\n\"2", g_serverMessage.string));
+
+	// L0 - Advertise
+	CPx(clientNum, va("print \"This server is running ^3%s\n\"", GAMEVERSION));
+	CPx(clientNum, "print \"^7Type ^3/commands ^7to see the list of all available options.\n\"");
+
+	// L0 - Headshots only..
+	//if (g_headshotsOnly.integer)
+	//	CPx(clientNum, "chat \"console: ^3Headshots Only ^7mode is enabled.\n\"");
+
+	// L0 - Notify them it's DM
+	//if (g_deathMatch.integer)
+	//	CPx(ent - g_entities, "chat \"console: This server is running in ^3DeathMatch ^7mode.\n\"");
+
+	// L0 - Notify them that stuff is forced..
+	/*if (g_forceClass.integer != -1) {
+		if (g_forceClass.integer == 0)
+			CPx(ent - g_entities, "print \"^3Info^7: Server is forcing everyone to play as Soldier!\n\"");
+		else if (g_forceClass.integer == 1)
+			CPx(ent - g_entities, "print \"^3Info^7: Server is forcing everyone to play as Medic!\n\"");
+		else if (g_forceClass.integer == 2)
+			CPx(ent - g_entities, "print \"^3Info^7: Server is forcing everyone to play as Engineer!\n\"");
+		else if (g_forceClass.integer == 3)
+			CPx(ent - g_entities, "print \"^3Info^7: Server is forcing everyone to play as Leut!\n\"");
+	}*/
 	// get and distribute relevent paramters
 	ClientUserinfoChanged( clientNum );
 
@@ -1786,9 +1824,13 @@ void Cmd_Vote_f( gentity_t *ent ) {
 
 			trap_SendServerCommand( cl->ps.clientNum, va( "print \"^1Warning^7: Complaint filed against you. [lof](%d [lon]until kicked[lof])\n\"", num ) );
 			trap_SendServerCommand( ent - g_entities, "complaint -1" );
-		} else {
+		} else
 			trap_SendServerCommand( ent - g_entities, "complaint -2" );
-		}
+			// L0 - Inform about dismissed complain :)
+			if ( msg[0] == 'n' || msg[1] == 'N' || msg[1] == '1' ) 
+			{
+				CPx( cl->ps.clientNum, va("print \"Complain dismissed^3!\n\"" ) );
+			}
 
 		return;
 	}
