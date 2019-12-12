@@ -220,7 +220,7 @@ void pCmd_players(gentity_t *ent, qboolean fParam) {
 			}
 		}
 		
-		if (cl->sess.admin && !cl->sess.incognito) {			
+		if (cl->sess.referee && !cl->sess.incognito) {			
 			strcpy(ref, sortTag(ent));
 		}
 		/*

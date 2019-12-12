@@ -146,7 +146,7 @@ void G_ReadSessionData( gclient_t *client ) {
 	var = va( "session%i", client - level.clients );
 	trap_Cvar_VariableStringBuffer( var, s, sizeof( s ) );
 
-	sscanf( s, "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",       // DHM - Nerve
+	sscanf( s, "%i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i %i",       // DHM - Nerve
 			(int *)&client->sess.sessionTeam,
 			&client->sess.spectatorTime,
 			(int *)&client->sess.spectatorState,
@@ -167,6 +167,7 @@ void G_ReadSessionData( gclient_t *client ) {
 			&client->sess.ip[1],
 			&client->sess.ip[2],
 			&client->sess.ip[3],
+			(int *)&client->sess.referee,
 			(int *)&client->sess.admin,
 			(int *)&client->sess.incognito,
 			(int *)&client->sess.ignored,

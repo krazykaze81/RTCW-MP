@@ -307,6 +307,14 @@ void CountDown( qboolean restart ) {
 	if (level.cnNum == 0) {
 		index = "prepare.wav";
 		AP("cp \"Prepare to fight^2!\n\"2");
+
+		// Spec Lock
+		teamInfo[TEAM_RED].spec_lock = qtrue;
+		teamInfo[TEAM_BLUE].spec_lock = qtrue;
+
+		// Team Lock
+		teamInfo[TEAM_RED].team_lock = qtrue;
+		teamInfo[TEAM_BLUE].team_lock = qtrue;
 	}
 	else if (level.cnNum < 6) {
 		index = va("cn_%d.wav", (6 - level.cnNum) );
