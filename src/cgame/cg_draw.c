@@ -797,7 +797,7 @@ static float CG_DrawTeamOverlay( float y ) {
 		w = ( pwidth + lwidth + 8 ) * TINYCHAR_WIDTH; // JPW NERVE was +4+7
 
 	}
-	x = 640 - w - 4; // JPW was -32
+	x = 640 - w - 6; // JPW was -32
 	h = plyrs * TINYCHAR_HEIGHT;
 
 	// DHM - Nerve :: Set the max characters that can be printed before the left edge
@@ -825,7 +825,7 @@ static float CG_DrawTeamOverlay( float y ) {
 		ci = cgs.clientinfo + sortedTeamPlayers[i];
 		if ( ci->infoValid && ci->team == cg.snap->ps.persistant[PERS_TEAM] ) {
 			// OSPx - Add * in front or revivable players..
-			char *isRevivable = "";
+			char *isRevivable = " ";
 
 			// NERVE - SMF
 			// determine class type
@@ -842,29 +842,16 @@ static float CG_DrawTeamOverlay( float y ) {
 				classType[0] = 'S';
 			}
 
-			Com_sprintf( st, sizeof( st ), "%s", CG_TranslateString( classType ) );
-
-			xx = x + TINYCHAR_WIDTH;
-
-			hcolor[0] = hcolor[1] = 1.0;
-			hcolor[2] = 0.0;
-			hcolor[3] = cg_hudAlpha.value;
-
-			CG_DrawStringExt( xx, y,
-							  st, hcolor, qtrue, qfalse,
-							  TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 1 );
-
-			hcolor[0] = hcolor[1] = hcolor[2] = 1.0;
-			hcolor[3] = cg_hudAlpha.value;
-
-			xx = x + 3 * TINYCHAR_WIDTH;
+			Com_sprintf(st, sizeof(st), "%s", CG_TranslateString(classType));
 
 			// JPW NERVE
-			if ( ci->health > 80 ) {
+			if (ci->health > 80) {
 				pcolor = hcolor;
-			} else if ( ci->health > 0 ) {
+			}
+			else if (ci->health > 0) {
 				pcolor = damagecolor;
-			} else {
+			}
+			else {
 				pcolor = deathcolor;
 				// OSPx - *
 				if (!(cg.snap->ps.pm_flags & PMF_LIMBO))
@@ -872,8 +859,21 @@ static float CG_DrawTeamOverlay( float y ) {
 			}
 			// jpw
 
-			CG_DrawStringExt( xx, y,
-							  va("%s %s", isRevivable, ci->name), pcolor, qtrue, qfalse,
+			xx = x + 1; // * TINYCHAR_WIDTH;
+
+			hcolor[0] = hcolor[1] = 1.0;
+			hcolor[2] = 0.0;
+			hcolor[3] = cg_hudAlpha.value;
+
+			// RtcwPro put IsRevivable in front of class type
+			CG_DrawStringExt( xx, y, va("%s%s", isRevivable, st), pcolor, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 5 );
+
+			hcolor[0] = hcolor[1] = hcolor[2] = 1.0;
+			hcolor[3] = cg_hudAlpha.value;
+
+			xx = x + 3 * TINYCHAR_WIDTH;
+
+			CG_DrawStringExt( xx + 1, y, ci->name, pcolor, qtrue, qfalse, // RtcwPro moved IsRevivable above
 							  TINYCHAR_WIDTH, TINYCHAR_HEIGHT, TEAM_OVERLAY_MAXNAME_WIDTH );
 
 			if ( lwidth ) {
@@ -965,10 +965,9 @@ static float CG_DrawRespawnTimer(float y) {
 
 	w = CG_DrawStrlen(str) * TINYCHAR_WIDTH;
 
-//	x = 46 + 6;
 	x = 46 + 40;
-//	y = 480 - 245;
-	y = 480 - 410;
+	y = 480 - 390;
+	//y = 480 - 410;
 
 	if (cgs.gamestate != GS_PLAYING) {
 		CG_DrawStringExt((x + 4) - w, y, str, colorYellow, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
@@ -2836,7 +2835,7 @@ static void CG_DrawWarmup( void ) {
 
 		if (cgs.readyState == CREADY_PENDING) {
 
-			s = CG_TranslateString( "^nGame Stopped ^7- Waiting for players to ready up" );
+			s = CG_TranslateString( "^nWARMUP: ^7Waiting for players to ready up" );
 		w = CG_DrawStrlen(s);
 		CG_DrawStringExt(320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0);
 
@@ -2850,7 +2849,7 @@ static void CG_DrawWarmup( void ) {
 							  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
 		} else {
 			// No need to bother with count..scoreboard gives info..
-			s = CG_TranslateString( "^nGame Stopped ^7- Waiting for players to ready up" );
+			s = CG_TranslateString( "^nWARMUP: ^7Waiting for players to ready up" );
 			w = CG_DrawStrlen( s );
 			CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
 			if (!cg.demoPlayback && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR &&
@@ -2868,7 +2867,7 @@ static void CG_DrawWarmup( void ) {
 		if ( cgs.gamestate == GS_WAITING_FOR_PLAYERS ) {
 			cw = 10;
 
-			s = CG_TranslateString( "^3Game Stopped ^7- Waiting for more players" );
+			s = CG_TranslateString( "^3WARMUP: ^7Waiting for more players" );
 
 			w = CG_DrawStrlen( s );
 			CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );

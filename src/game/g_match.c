@@ -476,7 +476,8 @@ void G_verifyMatchState(int nTeam) {
 				trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WARMUP));
 			}
 			else {
-				teamInfo[nTeam].team_lock = qfalse;
+				if (gs == GS_INTERMISSION)
+					teamInfo[nTeam].team_lock = qfalse;
 			}
 			G_teamReset(nTeam, qtrue);
 		}
