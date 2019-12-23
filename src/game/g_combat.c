@@ -36,6 +36,10 @@ If you have questions concerning this license or the applicable additional terms
 #include "g_local.h"
 
 
+void AddScore(gentity_t *ent, int score) {
+	AddScoreNew(ent, score, WOLF_OTHER_STAT);
+}
+
 /*
 ============
 AddScore
@@ -43,7 +47,7 @@ AddScore
 Adds score to both the client and his team
 ============
 */
-void AddScore( gentity_t *ent, int score ) {
+void AddScoreNew( gentity_t *ent, int score, WOLF_OBJECTIVE_STATS statType ) {
 	if ( !ent->client ) {
 		return;
 	}
@@ -61,6 +65,56 @@ void AddScore( gentity_t *ent, int score ) {
 
 
 	ent->client->ps.persistant[PERS_SCORE] += score;
+	
+	switch (statType)
+	{
+		case WOLF_CAPTURE_BONUS_STAT:
+			ent->client->sess.majorObjectives++;
+			break;
+
+		case WOLF_STEAL_OBJ_BONUS_STAT:
+			ent->client->sess.objectivesTaken++;
+			break;
+
+		case WOLF_SECURE_OBJ_BONUS_STAT:
+			ent->client->sess.objectivesReturned++;
+			break;
+
+		case WOLF_REPAIR_BONUS_STAT:
+			ent->client->sess.repairObject++;
+			break;
+
+		case WOLF_DYNAMITE_BONUS_STAT:
+			ent->client->sess.dynamiteObjective++;
+			break;
+
+		case WOLF_FRAG_CARRIER_BONUS_STAT:
+			ent->client->sess.objectiveCarrierKills++;
+			break;
+
+		case WOLF_SP_CAPTURE_STAT:
+			ent->client->sess.ownFlagTaken++;
+			break;
+
+		case WOLF_SP_RECOVER_STAT:
+			ent->client->sess.enemyFlagTaken++;
+			break;
+
+
+
+
+
+		case WOLF_FLAG_DEFENSE_BONUS_STAT:
+			ent->client->sess.flagKills++;
+			break;
+
+
+
+		default:
+			break;
+	}
+		
+
 	if ( g_gametype.integer >= GT_TEAM ) { // JPW NERVE changed to >=
 		level.teamScores[ ent->client->ps.persistant[PERS_TEAM] ] += score;
 	}
@@ -437,10 +491,10 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 
 			// JPW NERVE
 			if ( g_gametype.integer >= GT_WOLF ) { // high penalty to offset medic heal
-				AddScore( attacker, WOLF_FRIENDLY_PENALTY );
+				AddScore( attacker, WOLF_FRIENDLY_PENALTY);
 			} else {
 				// jpw
-				AddScore( attacker, -1 );
+				AddScore( attacker, -1);
 			}
 			// L0 - Life stats
 			if (g_showLifeStats.integer) {
@@ -469,7 +523,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 				AddScore( attacker, WOLF_FRAG_BONUS );
 			} else {
 				// jpw
-				AddScore( attacker, 1 );
+				AddScore( attacker, 1);
 			}
 
 			attacker->client->lastKillTime = level.time;
@@ -500,7 +554,7 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			}*/
 		}
 	} else {
-		AddScore( self, -1 );
+		AddScore( self, -1);
 	}
 
 	// Add team bonuses

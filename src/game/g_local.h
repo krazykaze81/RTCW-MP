@@ -509,32 +509,16 @@ typedef struct {
 	int selectedWeapon; // If enabled allows mp40, sten, thompson..
 	
 	// Stats
-	int damage_given;
-	int damage_received;
-	int deaths;
-	int game_points;
-	int kills;
-	int referee;
-	int rounds;
-	int spec_invite;
-	int spec_team;
-	int suicides;
-	int team_damage;
-	int team_kills;
-	int headshots;
-	int med_given;
-	int ammo_given;
-	int gibs;
-	int poisoned;
-	int revives;
-	int acc_shots; 
-	int acc_hits;
-	int killPeak;
+	int damage_given, damage_received, team_damage;
+	int kills, deaths, suicides, team_kills, headshots, killPeak;
+	int game_points, ownFlagTaken, enemyFlagTaken;
+	int objectiveCarrierKills, objectivesReturned, objectivesTaken, secondaryObjectives, majorObjectives, repairObject, dynamiteObjective;
+	int flagKills, spawnPointKills;
+	int referee, status;
+	int rounds, spec_invite, specInvited, specLocked;
+	int med_given, ammo_given, gibs, revives;
+	int acc_shots, acc_hits;
 	weapon_stat_t aWeaponStats[WS_MAX + 1];   // Weapon stats.  +1 to avoid invalid weapon check
-	// Spec lock
-	int specInvited;
-	int specLocked;
-	int status;
 	int	clientFlags;		// Sort some stuff based upon user settings   // nihi addded
 // -OSPx
 } clientSession_t;
@@ -1248,7 +1232,8 @@ void InitClientResp( gclient_t *client );
 void InitBodyQue(void);
 void ClientSpawn( gentity_t *ent, qboolean revived );
 void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int mod );
-void AddScore( gentity_t *ent, int score );
+void AddScore(gentity_t *ent, int score);
+void AddScoreNew(gentity_t *ent, int score, enum WOLF_OBJECTIVE_STATS statType);
 void CalculateRanks(void);
 qboolean SpotWouldTelefrag( gentity_t *spot );
 char *clientIP(gentity_t *ent, qboolean full);

@@ -914,7 +914,9 @@ static float CG_DrawTeamOverlay( float y ) {
 	return y;
 }
 
-/*
+
+
+
 /*
 =================
 OSPx 
@@ -929,13 +931,28 @@ float CG_CalculateReinfTime_Float( void ) {
 	team = cgs.clientinfo[cg.snap->ps.clientNum].team;
 
 	dwDeployTime = (team == TEAM_RED) ? cg_redlimbotime.integer : cg_bluelimbotime.integer;
-	//return (1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
-	return (1 + (dwDeployTime - ((cg.time) % dwDeployTime)) * 0.001f);    //nihi added -cg.pauseTime
+	return (1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
+	//return (1 + (dwDeployTime - ((cg.time) % dwDeployTime)) * 0.001f);    //nihi added -cg.pauseTime
 }
 
 int CG_CalculateReinfTime( void ) {
 	return((int)CG_CalculateReinfTime_Float());
 }
+
+/*
+=================
+L0
+
+Reinforcement Timer for Specs in tournament mode
+=================
+*/
+float CG_CalculateReinfTimeSpecs(team_t team) {
+	int dwDeployTime;
+
+	dwDeployTime = (team == TEAM_RED) ? cg_redlimbotime.integer : cg_bluelimbotime.integer;
+	return ((1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f));
+}
+
 /*
 ========================
 OSPx 
@@ -2693,12 +2710,10 @@ static void CG_DrawLimboMessage( void ) {
 	// JPW NERVE
 	if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
 		str = CG_TranslateString( "No more reinforcements this round." );
-	} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
-		str = va( CG_TranslateString( "Reinforcements deploy in %d seconds." ),
-				  (int)( 1 + (float)( cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer ) ) * 0.001f ) );
-	} else {
-		str = va( CG_TranslateString( "Reinforcements deploy in %d seconds." ),
-				  (int)( 1 + (float)( cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer ) ) * 0.001f ) );
+	}
+	else {
+		// OSPx - Reinforcement Offset
+		str = va(CG_TranslateString("Reinforcements deploy in %d seconds."), CG_CalculateReinfTime());
 	}
 
 	CG_DrawSmallStringColor( INFOTEXT_STARTX, 104, str, color );
@@ -2735,12 +2750,10 @@ static qboolean CG_DrawFollow( void ) {
 		color[2] = 0.0;
 		if (cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0) { // fixed from xMod
 			sprintf(deploytime, CG_TranslateString("No more deployments this round"));
-		} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
-			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
-					 (int)( 1 + (float)( cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer ) ) * 0.001f ) );
-		} else {
-			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
-					 (int)( 1 + (float)( cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer ) ) * 0.001f ) );
+		}
+		else {
+			// OSPx - Reinforcement Offset
+			sprintf(deploytime, CG_TranslateString("Deploying in %d seconds"), CG_CalculateReinfTime());
 		}
 
 		CG_DrawStringExt( INFOTEXT_STARTX, 68, deploytime, color, qtrue, qfalse, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 80 );

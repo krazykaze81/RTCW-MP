@@ -653,7 +653,7 @@ typedef enum {
 	WP_SMOKE_GRENADE,       // 45
 	// -NERVE - SMF
 	WP_BINOCULARS,          // 46
-	WP_MEDIC_ADRENALINE,    // 47 OSP
+
 	WP_NUM_WEAPONS          // 48 originally 47   NOTE: this cannot be larger than 64 for AI/player weapons!
 
 } weapon_t;

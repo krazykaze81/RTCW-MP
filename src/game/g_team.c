@@ -1426,10 +1426,10 @@ void checkpoint_spawntouch( gentity_t *self, gentity_t *other, trace_t *trace ) 
 // JPW NERVE
 	if ( self->s.frame == WCP_ANIM_NOFLAG ) {
 		AddScore( other, WOLF_SP_CAPTURE );
-		//G_matchPrintInfo(va("%s captured the flag!\n", ((other->client->sess.sessionTeam == TEAM_RED) ? "Axis" : "Allies")));		
+		G_matchPrintInfo(va("%s captured the flag!\n", ((other->client->sess.sessionTeam == TEAM_RED) ? "Axis" : "Allies")));		
 	} else {
 		AddScore( other, WOLF_SP_RECOVER );
-		//G_matchPrintInfo(va("%s reclaimed the flag!\n", ((other->client->sess.sessionTeam == TEAM_RED) ? "Axis" : "Allies")));
+		G_matchPrintInfo(va("%s reclaimed the flag!\n", ((other->client->sess.sessionTeam == TEAM_RED) ? "Axis" : "Allies")));
 	}
 // jpw
 

@@ -2265,6 +2265,37 @@ static void CG_PlayerPowerups( centity_t *cent ) {
 	}
 }
 
+/*
+===============
+CG_PlayerFloatSprite
+
+Float a sprite over the player's head
+DHM - Nerve :: added height parameter
+===============
+*/
+static void CG_PlayerFloatSprite( centity_t *cent, qhandle_t shader, int height ) {
+	int rf;
+	refEntity_t ent;
+
+	if ( cent->currentState.number == cg.snap->ps.clientNum && !cg.renderingThirdPerson ) {
+		rf = RF_THIRD_PERSON;       // only show in mirrors
+	} else {
+		rf = 0;
+	}
+
+	memset( &ent, 0, sizeof( ent ) );
+	VectorCopy( cent->lerpOrigin, ent.origin );
+	ent.origin[2] += height;            // DHM - Nerve :: was '48'
+	ent.reType = RT_SPRITE;
+	ent.customShader = shader;
+	ent.radius = 6.66;
+	ent.renderfx = rf;
+	ent.shaderRGBA[0] = 255;
+	ent.shaderRGBA[1] = 255;
+	ent.shaderRGBA[2] = 255;
+	ent.shaderRGBA[3] = 255;
+	trap_R_AddRefEntityToScene( &ent );
+}
 /******** OSPx - draw hud names *******/
 
 qboolean CG_WorldCoordToScreenCoordFloat(vec3_t worldCoord, float *x, float *y)
@@ -2365,37 +2396,7 @@ static void CG_PlayerFloatText(centity_t *cent, const char *text, int height)
 }
 /******** -OSPx - End draw hud names *******/
 
-/*
-===============
-CG_PlayerFloatSprite
 
-Float a sprite over the player's head
-DHM - Nerve :: added height parameter
-===============
-*/
-static void CG_PlayerFloatSprite( centity_t *cent, qhandle_t shader, int height ) {
-	int rf;
-	refEntity_t ent;
-
-	if ( cent->currentState.number == cg.snap->ps.clientNum && !cg.renderingThirdPerson ) {
-		rf = RF_THIRD_PERSON;       // only show in mirrors
-	} else {
-		rf = 0;
-	}
-
-	memset( &ent, 0, sizeof( ent ) );
-	VectorCopy( cent->lerpOrigin, ent.origin );
-	ent.origin[2] += height;            // DHM - Nerve :: was '48'
-	ent.reType = RT_SPRITE;
-	ent.customShader = shader;
-	ent.radius = 6.66;
-	ent.renderfx = rf;
-	ent.shaderRGBA[0] = 255;
-	ent.shaderRGBA[1] = 255;
-	ent.shaderRGBA[2] = 255;
-	ent.shaderRGBA[3] = 255;
-	trap_R_AddRefEntityToScene( &ent );
-}
 
 
 

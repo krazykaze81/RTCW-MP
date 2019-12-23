@@ -876,15 +876,15 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 			switch ( client->sess.sessionTeam ) {
 			case TEAM_BLUE:
 				COM_BitSet( client->ps.weapons, WP_GRENADE_PINEAPPLE );
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_PINEAPPLE )] = 1;
+				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_PINEAPPLE )] = ltNades;
 				break;
 			case TEAM_RED:
 				COM_BitSet( client->ps.weapons, WP_GRENADE_LAUNCHER );
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_LAUNCHER )] = 1;
+				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_LAUNCHER )] = ltNades;
 				break;
 			default:
 				COM_BitSet( client->ps.weapons, WP_GRENADE_PINEAPPLE );
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_PINEAPPLE )] = 1;
+				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_PINEAPPLE )] = ltNades;
 				break;
 			}
 		}
@@ -895,38 +895,51 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 		case TEAM_RED: // JPW NERVE
 			COM_BitSet( client->ps.weapons, WP_LUGER );
 			client->ps.ammoclip[BG_FindClipForWeapon( WP_LUGER )] += 8;
-			client->ps.ammo[BG_FindAmmoForWeapon( WP_LUGER )] += 24;
+				client->ps.ammo[BG_FindAmmoForWeapon( WP_LUGER )] += gunClips * 8;
 			client->ps.weapon = WP_LUGER;
 			break;
 		default: // '0' // TEAM_BLUE
 			COM_BitSet( client->ps.weapons, WP_COLT );
 			client->ps.ammoclip[BG_FindClipForWeapon( WP_COLT )] += 8;
-			client->ps.ammo[BG_FindAmmoForWeapon( WP_COLT )] += 24;
+				client->ps.ammo[BG_FindAmmoForWeapon( WP_COLT )] += gunClips * 8;
 			client->ps.weapon = WP_COLT;
 			break;
 		}
 
-		// Everyone except Medic and LT get some grenades
-		if ( ( pc != PC_LT ) && ( pc != PC_MEDIC ) ) { // JPW NERVE
+
 
 			switch ( client->sess.sessionTeam ) { // was playerItem
-
+			int nades;
 			case TEAM_BLUE:
 				COM_BitSet( client->ps.weapons, WP_GRENADE_PINEAPPLE );
 				client->ps.ammo[BG_FindAmmoForWeapon( WP_GRENADE_PINEAPPLE )] = 0;
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_PINEAPPLE )] = 4 + 4 * ( pc == PC_ENGINEER ); // JPW NERVE
+				if ( pc == PC_LT ) nades = ltNades;
+				else if ( pc == PC_ENGINEER ) nades = engNades;
+				else if ( pc == PC_MEDIC ) nades = medNades;
+				else if ( pc == PC_SOLDIER ) nades = soldNades;
+				else nades = 1;
+				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_PINEAPPLE )] = nades;
 				break;
 			case TEAM_RED:
 				COM_BitSet( client->ps.weapons, WP_GRENADE_LAUNCHER );
 				client->ps.ammo[BG_FindAmmoForWeapon( WP_GRENADE_LAUNCHER )] = 0;
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_LAUNCHER )] = 4 + 4 * ( pc == PC_ENGINEER ); // JPW NERVE
+				if ( pc == PC_LT ) nades = ltNades;
+				else if ( pc == PC_ENGINEER ) nades = engNades;
+				else if ( pc == PC_MEDIC ) nades = medNades;
+				else if ( pc == PC_SOLDIER ) nades = soldNades;
+				else nades = 1;
+				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_LAUNCHER )] = nades;
 				break;
 			default:
 				COM_BitSet( client->ps.weapons, WP_GRENADE_PINEAPPLE );
 				client->ps.ammo[BG_FindAmmoForWeapon( WP_GRENADE_PINEAPPLE )] = 0;
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_PINEAPPLE )] = 4 + 4 * ( pc == PC_ENGINEER ); // JPW NERVE
+				if ( pc == PC_LT ) nades = ltNades;
+				else if ( pc == PC_ENGINEER ) nades = engNades;
+				else if ( pc == PC_MEDIC ) nades = medNades;
+				else if ( pc == PC_SOLDIER ) nades = soldNades;
+				else nades = 1;
+				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_PINEAPPLE )] = nades;
 				break;
-			}
 		}
 
 
@@ -940,20 +953,6 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 			client->ps.ammoclip[BG_FindClipForWeapon( WP_MEDKIT )] = 1;
 			client->ps.ammo[WP_MEDKIT] = 1;
 
-			switch ( client->sess.sessionTeam ) { // was playerItem
-			case TEAM_BLUE:
-				COM_BitSet( client->ps.weapons, WP_GRENADE_PINEAPPLE );
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_PINEAPPLE )] = 1;
-				break;
-			case TEAM_RED:
-				COM_BitSet( client->ps.weapons, WP_GRENADE_LAUNCHER );
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_LAUNCHER )] = 1;
-				break;
-			default:
-				COM_BitSet( client->ps.weapons, WP_GRENADE_PINEAPPLE );
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_GRENADE_PINEAPPLE )] = 1;
-				break;
-			}
 		}
 		// jpw
 
@@ -975,9 +974,9 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 				COM_BitSet( client->ps.weapons, WP_MP40 );
 				client->ps.ammoclip[BG_FindClipForWeapon( WP_MP40 )] += 32;
 				if ( pc == PC_SOLDIER ) {
-					client->ps.ammo[BG_FindAmmoForWeapon( WP_MP40 )] += 64;
+					client->ps.ammo[BG_FindAmmoForWeapon( WP_MP40 )] += (32 * soldClips);
 				} else {
-					client->ps.ammo[BG_FindAmmoForWeapon( WP_MP40 )] += 32;
+					client->ps.ammo[BG_FindAmmoForWeapon( WP_MP40 )] += (32 * ltClips);
 				}
 				client->ps.weapon = WP_MP40;
 				break;
@@ -986,9 +985,9 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 				COM_BitSet( client->ps.weapons, WP_THOMPSON );
 				client->ps.ammoclip[BG_FindClipForWeapon( WP_THOMPSON )] += 30;
 				if ( pc == PC_SOLDIER ) {
-					client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += 60;
+					client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += (30 * soldClips);
 				} else {
-					client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += 30;
+					client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += (30 * ltClips);
 				}
 				client->ps.weapon = WP_THOMPSON;
 				break;
@@ -997,9 +996,9 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 				COM_BitSet( client->ps.weapons, WP_STEN );
 				client->ps.ammoclip[BG_FindClipForWeapon( WP_STEN )] += 32;
 				if ( pc == PC_SOLDIER ) {
-					client->ps.ammo[BG_FindAmmoForWeapon( WP_STEN )] += 64;
+					client->ps.ammo[BG_FindAmmoForWeapon( WP_STEN )] += (32 * soldClips);
 				} else {
-					client->ps.ammo[BG_FindAmmoForWeapon( WP_STEN )] += 32;
+					client->ps.ammo[BG_FindAmmoForWeapon( WP_STEN )] += (32 * ltClips);
 				}
 				client->ps.weapon = WP_STEN;
 				break;
@@ -1008,7 +1007,20 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 				if ( pc != PC_SOLDIER ) {
 					return;
 				}
-
+				// L0 - Weapon limits
+				if (isWeaponLimited(client, client->sess.playerWeapon)) {
+					CPx(client->ps.clientNum, va("cp \"Sniper limit(^3%d^7) has been reached.\n Please select a different weapon.\n\"2", g_maxTeamSniper.integer));				
+					setDefaultWeapon(client, qtrue);
+				return;
+				// L0 - Balanced teams check
+				} /*else if (!isWeaponBalanced(6)) {
+					CPx(client->ps.clientNum, va("cp \"At least %d players per team required to spawn with Sniper rifle.\n\"2", g_balanceSniper.integer));				
+					setDefaultWeapon(client, qtrue);
+				return;
+				}*/ else {
+					( client->sess.sessionTeam == TEAM_RED ) ? level.axisSniper++ : level.alliedSniper++;
+					client->pers.restrictedWeapon = WP_MAUSER;
+				} // End
 				COM_BitSet( client->ps.weapons, WP_SNIPERRIFLE );
 				client->ps.ammoclip[BG_FindClipForWeapon( WP_SNIPERRIFLE )] = 10;
 				client->ps.ammo[BG_FindAmmoForWeapon( WP_SNIPERRIFLE )] = 10;
@@ -1047,6 +1059,20 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 				if ( pc != PC_SOLDIER ) {
 					return;
 				}
+				// L0 - Weapon limits
+				if (isWeaponLimited(client, client->sess.playerWeapon)) {					
+					CPx(client->ps.clientNum, va("cp \"Venom limit(^3%d^7) has been reached.\n Please select a different weapon.\n\"2", g_maxTeamVenom.integer));
+					setDefaultWeapon(client, qtrue);
+					return;
+				// L0 - Balanced teams check
+				} /*else if (!isWeaponBalanced(9)) {
+					CPx(client->ps.clientNum, va("cp \"At least %d players per team required to spawn with Venom.\n\"2", g_balanceVenom.integer));				
+					setDefaultWeapon(client, qtrue);
+					return;
+				}*/ else {
+					( client->sess.sessionTeam == TEAM_RED ) ? level.axisVenom++ : level.alliedVenom++;
+					client->pers.restrictedWeapon = WP_VENOM;
+				} // End
 				COM_BitSet( client->ps.weapons, WP_VENOM );
 				client->ps.ammoclip[BG_FindAmmoForWeapon( WP_VENOM )] = 500;
 				client->ps.weapon = WP_VENOM;
@@ -1056,7 +1082,20 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 				if ( pc != PC_SOLDIER ) {
 					return;
 				}
-
+				// L0 - Weapon limits
+				if (isWeaponLimited(client, client->sess.playerWeapon)) {
+					CPx(client->ps.clientNum, va("cp \"Flamer limit(^3%d^7) has been reached.\n Please select a different weapon.\n\"2", g_maxTeamFlamer.integer));
+					setDefaultWeapon(client, qtrue);
+					return;
+				// L0 - Balanced teams check
+				} /*else if (!isWeaponBalanced(10)) {
+					CPx(client->ps.clientNum, va("cp \"At least %d players per team required to spawn with Flamerthrower.\n\"2", g_balanceFlamer.integer));				
+					setDefaultWeapon(client, qtrue);
+					return;
+				}*/ else {
+					( client->sess.sessionTeam == TEAM_RED ) ? level.axisFlamer++ : level.alliedFlamer++;
+					client->pers.restrictedWeapon = WP_FLAMETHROWER;
+				} // End
 				COM_BitSet( client->ps.weapons, WP_FLAMETHROWER );
 				client->ps.ammoclip[BG_FindAmmoForWeapon( WP_FLAMETHROWER )] = 200;
 				client->ps.weapon = WP_FLAMETHROWER;
@@ -1067,43 +1106,27 @@ void SetWolfSpawnWeapons( gclient_t *client ) {
 					COM_BitSet( client->ps.weapons, WP_MP40 );
 					client->ps.ammoclip[BG_FindClipForWeapon( WP_MP40 )] += 32;
 					if ( pc == PC_SOLDIER ) {
-						client->ps.ammo[BG_FindAmmoForWeapon( WP_MP40 )] += 64;
+						client->ps.ammo[BG_FindAmmoForWeapon( WP_MP40 )] += (32 * soldClips);
 					} else {
-						client->ps.ammo[BG_FindAmmoForWeapon( WP_MP40 )] += 32;
+						client->ps.ammo[BG_FindAmmoForWeapon( WP_MP40 )] += (30 * ltClips);
 					}
 					client->ps.weapon = WP_MP40;
 				} else { // TEAM_BLUE
 					COM_BitSet( client->ps.weapons, WP_THOMPSON );
 					client->ps.ammoclip[BG_FindClipForWeapon( WP_THOMPSON )] += 30;
 					if ( pc == PC_SOLDIER ) {
-						client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += 60;
+						client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += (30 * soldClips);
 					} else {
-						client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += 30;
+						client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += (30 * ltClips);
 					}
 					client->ps.weapon = WP_THOMPSON;
 				}
 				break;
 			}
 		} else { // medic or engineer gets assigned MP40 or Thompson with one magazine ammo
-			if ( client->sess.sessionTeam == TEAM_RED ) { // axis
-				COM_BitSet( client->ps.weapons, WP_MP40 );
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_MP40 )] += 32;
-				// JPW NERVE
-				if ( pc == PC_ENGINEER ) { // OK so engineers get two mags
-					client->ps.ammo[BG_FindAmmoForWeapon( WP_MP40 )] += 32;
-				}
-				// jpw
-				client->ps.weapon = WP_MP40;
-			} else { // allied
-				COM_BitSet( client->ps.weapons, WP_THOMPSON );
-				client->ps.ammoclip[BG_FindClipForWeapon( WP_THOMPSON )] += 30;
-				// JPW NERVE
-				if ( pc == PC_ENGINEER ) {
-					client->ps.ammo[BG_FindAmmoForWeapon( WP_THOMPSON )] += 30;
-				}
-				// jpw
-				client->ps.weapon = WP_THOMPSON;
-			}
+			// L0 - Removed and handled in g_players.c now...due custom MG spawning..
+			setDefaultWeapon(client, qfalse);
+			// End
 		}
 
 	} else // Knifeonly block
@@ -2312,6 +2335,19 @@ void ClientSpawn( gentity_t *ent, qboolean revived ) {
 				client->pers.restrictedWeapon = WP_NONE;
 			}
 
+			if ( ( g_maxTeamVenom.integer ) && ( client->pers.restrictedWeapon == WP_VENOM ) && ( client->sess.latchPlayerWeapon != 9 ) ) {
+				( client->sess.sessionTeam == TEAM_RED ) ? level.axisVenom-- : level.alliedVenom--;
+				client->pers.restrictedWeapon = WP_NONE;
+			}
+
+			if ( ( g_maxTeamFlamer.integer ) && ( client->pers.restrictedWeapon == WP_FLAMETHROWER ) && ( client->sess.latchPlayerWeapon != 10 ) ) {
+				( client->sess.sessionTeam == TEAM_RED ) ? level.axisFlamer-- : level.alliedFlamer--;
+				client->pers.restrictedWeapon = WP_NONE;
+			}
+
+			if ( ( g_maxTeamSniper.integer ) && ( client->pers.restrictedWeapon == WP_MAUSER ) && ( client->sess.latchPlayerWeapon != 6 ) ) {
+				( client->sess.sessionTeam == TEAM_RED ) ? level.axisSniper-- : level.alliedSniper--;			
+			} // End
 			client->sess.playerType = client->sess.latchPlayerType;
 			client->sess.playerWeapon = client->sess.latchPlayerWeapon;
 			client->sess.playerItem = client->sess.latchPlayerItem;

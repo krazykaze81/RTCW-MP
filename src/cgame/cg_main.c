@@ -86,7 +86,7 @@ int vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4, int a
 		CG_MouseEvent( arg0, arg1 );
 		return 0;
 	case CG_EVENT_HANDLING:
-		CG_EventHandling( arg0 );
+		CG_EventHandling(arg0, qtrue);
 		return 0;
 	case CG_GET_TAG:
 		return CG_GetTag( arg0, (char *)arg1, (orientation_t *)arg2 );
@@ -690,8 +690,7 @@ void CG_UpdateCvars( void ) {
 		// Check if we need to update any client flags to be sent to the server
 		if (cv->vmCvar == &cg_autoAction || cv->vmCvar == &cg_autoReload ||
 			cv->vmCvar == &int_cl_timenudge || cv->vmCvar == &int_cl_maxpackets ||
-			cv->vmCvar == &cg_autoactivate || cv->vmCvar == &cg_predictItems ||
-			cv->vmCvar == &gender) {
+			cv->vmCvar == &cg_autoactivate || cv->vmCvar == &cg_predictItems) {
 			fSetFlags = qtrue;
 		// Crosshairs
 		} else if (cv->vmCvar == &cg_crosshairColor || cv->vmCvar == &cg_crosshairAlpha) {
@@ -730,23 +729,6 @@ void CG_UpdateCvars( void ) {
 
 /*
 =================
-OSPx - Gender
-=================
-*/
-int setGender( void ) {
-	if (!Q_stricmp(gender.string, "male") || 
-		!Q_stricmp(gender.string, "m") || 
-		!Q_stricmp(gender.string, "0"))
-		return 0;
-	else if (!Q_stricmp(gender.string, "female") || 
-		!Q_stricmp(gender.string, "f") || 
-		!Q_stricmp(gender.string, "1"))
-		return 1;
-	else
-		return 0;
-}
-/*
-=================
 OSPx - Client Flags
 =================
 */
@@ -770,9 +752,7 @@ void CG_setClientFlags(void) {
 		// Timenudge
 		int_cl_timenudge.integer,
 		// MaxPackets
-		int_cl_maxpackets.integer,
-		// Gender 
-		setGender()
+		int_cl_maxpackets.integer
 		));
 }
 
@@ -1265,10 +1245,9 @@ static void CG_RegisterSounds( void ) {
 	trap_S_RegisterSound( "sound/Loogie/spit.wav" );
 	trap_S_RegisterSound( "sound/Loogie/sizzle.wav" );
 */
-// OSPx
-	cgs.media.countFightSound = trap_S_RegisterSound( "sound/scenaric/fight.wav" );
+// OSPxf
 	// Hitsounds
-	cgs.media.headShot = trap_S_RegisterSound("sound/game/hitsounds/hithead.wav");
+	cgs.media.headShot = trap_S_RegisterSound("sound/game/hitsounds/hitH.wav");
 	cgs.media.bodyShot = trap_S_RegisterSound("sound/game/hitsounds/hit.wav");
 	cgs.media.teamShot = trap_S_RegisterSound("sound/game/hitsounds/hitteam.wav");
 }

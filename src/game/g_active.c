@@ -1626,7 +1626,7 @@ void ClientThink_real( gentity_t *ent ) {
 			}
 			// -NERVE - SMF
 		} // -OSPx
-		return;
+		return; // ProTODO check this for problems
 	}
 
 	// OSPx - Pause wrapper
@@ -1748,29 +1748,37 @@ void SpectatorClientEndFrame( gentity_t *ent ) {
 	if ( ( ent->client->sess.spectatorState == SPECTATOR_FOLLOW ) || ( ent->client->ps.pm_flags & PMF_LIMBO ) ) { // JPW NERVE for limbo
 		int clientNum;
 
-		if ( ent->client->sess.sessionTeam == TEAM_RED ) {
-			// OSPx - Warmup Damage
-			if (match_warmupDamage.integer && g_gamestate.integer != GS_PLAYING)
-				testtime = teamRespawnTime(TEAM_RED, qtrue);
-			else
-				// OSPx - Reinforcements Offset (patched)
-				testtime = teamRespawnTime(TEAM_RED, qfalse);
+		if (ent->client->sess.sessionTeam == TEAM_RED) {
+			// OSPx - Reinforcements Offset (patched)
+			testtime = teamRespawnTime(TEAM_RED, qfalse);
 
-			if ( testtime < ent->client->pers.lastReinforceTime ) {
-				do_respawn = 1;
-			}
+			// L0 - If warmup damage is on, respawn instantly
+			if (match_warmupDamage.integer > 0) {
+				if ( g_gamestate.integer != GS_PLAYING ) {
+					testtime = teamRespawnTime(TEAM_RED, qtrue);
+					do_respawn = 1;
+				}
+			} // End
+
+			if (testtime < ent->client->pers.lastReinforceTime)
+				do_respawn=1;
+
 			ent->client->pers.lastReinforceTime = testtime;
-		} else if ( ent->client->sess.sessionTeam == TEAM_BLUE ) {
-			// OSPx - Warmup Damage
-			if (match_warmupDamage.integer && g_gamestate.integer != GS_PLAYING)
-				testtime = teamRespawnTime(TEAM_BLUE, qtrue);
-			else
-				// OSPx - Reinforcements Offset (patched)
-				testtime = teamRespawnTime(TEAM_BLUE, qfalse);
+		}
+		else if (ent->client->sess.sessionTeam == TEAM_BLUE) {
+			// OSPx - Reinforcements Offset (patched)
+			testtime = teamRespawnTime(TEAM_BLUE, qfalse);
 
-			if ( testtime < ent->client->pers.lastReinforceTime ) {
-				do_respawn = 1;
-			}
+			// L0 - If warmup damage is on, respawn instantly
+			if (match_warmupDamage.integer > 0) {
+				if ( g_gamestate.integer != GS_PLAYING ) {
+					testtime = teamRespawnTime(TEAM_BLUE, qtrue);
+					do_respawn = 1;
+				}
+			} // End
+
+			if (testtime < ent->client->pers.lastReinforceTime)
+				do_respawn=1;
 			ent->client->pers.lastReinforceTime = testtime;
 		}
 

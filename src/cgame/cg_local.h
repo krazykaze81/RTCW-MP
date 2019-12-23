@@ -114,14 +114,6 @@ If you have questions concerning this license or the applicable additional terms
 
 // OSP
 
-// Cursor
-#define CURSOR_OFFSETX  13
-#define CURSOR_OFFSETY  12
-
-// Demo controls
-#define WID_DEMOCONTROLS	0x01    // Demo Controls
-#define WID_DEMOPOPUP		0x02	// Demo Pop ups
-
 // MV overlay
 #define MVINFO_TEXTSIZE     10
 #define MVINFO_RIGHT        640 - 3
@@ -1241,12 +1233,9 @@ typedef struct {
 	vec4_t xhairColor;
 	vec4_t xhairColorAlt;
 
-	// Reinforcements 
-	vec4_t reinforcementColor;
 
-	// Draw names on hud
-	qboolean	renderingFreeCam;
-	specName_t	specOnScreenNames[MAX_CLIENTS];
+
+
 
 	// Announcer
 	int		centerPrintAnnouncerTime;
@@ -1256,8 +1245,12 @@ typedef struct {
 	vec3_t	centerPrintAnnouncerColor;
 	int		centerPrintAnnouncerMode;
 
-	// Auto Actions
-	qboolean	latchAutoActions;
+	// Draw names on hud
+	qboolean	renderingFreeCam;
+	specName_t	specOnScreenNames[MAX_CLIENTS];
+	// Reinforcements 
+	vec4_t reinforcementColor;
+
 
 	// Stats
 	cg_string_t aStringPool[MAX_STRINGS];
@@ -1286,82 +1279,12 @@ typedef struct {
 	char popinPrint[1024];
 	int popinPrintLines;
 	qboolean popinBlink;
+	// Auto Actions
+	qboolean	latchAutoActions;
 // -OSPx
 
 
 	pmoveExt_t pmext;
-	
-	// OSP stuff
-	/*
-	qboolean fResize;                                   // MV window "resize" status
-	qboolean fSelect;                                   // MV window "select" status
-	qboolean fKeyPressed[256];                          // Key status to get around console issues
-	int timescaleUpdate;                                // Timescale display for demo playback
-	int aviDemoRate;                                    // Demo playback recording
-	vec2_t ccMenuPos;
-	qboolean ccMenuShowing;
-	int ccMenuType;
-	int ccSelectedLayer;
-	int ccSelectedObjective;
-	int ccSelectedTeam;                     // ( 1 = ALLIES, 0 = AXIS )
-	int ccSelectedWeaponNumber;
-	int ccSelectedClass;
-	int ccSelectedWeapon;
-	int ccSelectedWeapon2;
-	int ccWeaponShots;
-	vec3_t ccPortalPos;
-	vec3_t ccPortalAngles;
-	int ccPortalEnt;
-	int ccFilter;
-	int ccCurrentCamObjective;
-	int ccRequestedObjective;
-	int ccLastObjectiveRequestTime;
-	int demohelpWindow;
-	int mv_cnt;                                 // Number of active MV windows
-	int mvClientList;                           // Cached client listing of who is merged
-	cg_window_t         *mvCurrentActive;       // Client ID of current active window (-1 = none)
-	cg_window_t         *mvCurrentMainview;     // Client ID used in the main display (should always be set if mv_cnt > 0)
-	cg_mvinfo_t mvOverlay[MAX_MVCLIENTS];        // Cached info for MV overlay
-	int mvTeamList[TEAM_NUM_TEAMS][MAX_MVCLIENTS];
-	int mvTotalClients;                         // Total # of clients available for MV processing
-	int mvTotalTeam[TEAM_NUM_TEAMS];
-	refdef_t            *refdef_current;        // Handling of some drawing elements for MV
-	int spechelpWindow;
-	int thirdpersonUpdate;
-	qboolean showStats;
-	cg_string_t aStringPool[MAX_STRINGS];
-	int aReinfOffset[TEAM_NUM_TEAMS];                   // Team reinforcement offsets
-	int cursorUpdate;                                   // Timeout for mouse pointer view
-	fileHandle_t dumpStatsFile;                         // File to dump stats
-	char* dumpStatsFileName;              				// Name of file to dump stats
-	int dumpStatsTime;                                  // Next stats command that comes back will be written to a logfile
-	int game_versioninfo;                               // game base version
-	gameStats_t gamestats;
-	topshotStats_t topshots;
-	*/
-/*
-	cg_window_t         *motdWindow;
-	cg_window_t         *msgWstatsWindow;
-	cg_window_t         *msgWtopshotsWindow;
-
-	int statsRequestTime;
-	int topshotsRequestTime;
-	cg_window_t         *topshotsWindow;
-	cg_window_t         *windowCurrent;         // Current window to update.. a bit of a hack :p
-	cg_windowHandler_t winHandler;
-	vec4_t xhairColor;
-	vec4_t xhairColorAlt;
-
-	//mapEntityData_t ccMenuEnt;
-
-	int ccWeaponHits;
-
-	int ltChargeTime[2];
-	int soldierChargeTime[2];
-	int engineerChargeTime[2];
-	int medicChargeTime[2];
-*/
-	// -OSP
 } cg_t;
 
 #define NUM_FUNNEL_SPRITES  21
@@ -2416,6 +2339,7 @@ extern char systemChat[256];
 extern char teamChat1[256];
 extern char teamChat2[256];
 extern char cg_fxflags;  // JPW NERVE
+float CG_CalculateReinfTimeSpecs(team_t team);
 
 void CG_AddLagometerFrameInfo( void );
 void CG_AddLagometerSnapshotInfo( snapshot_t *snap );
@@ -2756,6 +2680,7 @@ void CG_DrawTourneyScoreboard( void );
 //
 qboolean CG_ConsoleCommand( void );
 void CG_InitConsoleCommands( void );
+void CG_ScoresUp_f(void);
 // OSPx
 void CG_autoRecord_f( void );
 void CG_autoScreenShot_f( void );
@@ -3051,6 +2976,12 @@ int         CG_LoadCamera( const char *name );
 void        CG_FreeCamera( int camNum );
 //----(SA)	end
 
+// L0 - New stuff
+void trap_ReqSS( int quality );
+void trap_HTTP_Submit_cmd(char *url, char *cmd);	
+void trap_HTTP_Post_cmd(char *url, char *cmd);
+void trap_HTTP_Query_cmd(char *url);	
+
 // - Text
 int CG_Text_Width_Ext(const char *text, float scale, int limit, fontInfo_t* font);
 int CG_Text_Height_Ext(const char *text, float scale, int limit, fontInfo_t* font);
@@ -3074,6 +3005,8 @@ void CG_DrawRect_FixedBorder( float x, float y, float width, float height, int b
 #define CREADY_AWAITING	0x01
 #define CREADY_PENDING	0x02
 
+// Should be in bg_ but due 1.0 backwards compatibility it's here..
+#define MAX_NETNAME		36
 // Macros
 #define Pri( x ) CG_Printf( "[cgnotify]%s", CG_LocalizeServerCommand( x ) )
 #define CPri( x ) CG_CenterPrint( CG_LocalizeServerCommand( x ), SCREEN_HEIGHT - ( SCREEN_HEIGHT * 0.2 ), SMALLCHAR_WIDTH );

@@ -346,11 +346,10 @@ int WM_DrawObjectives( int x, int y, int width, float fade ) {
 		}
 		CG_DrawSmallString( x,y,s,fade );
 		// OSPx - Reinforcement Offset (patched)
-		if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
-			msec = cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer );
-		} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_BLUE )     {
-			msec = cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer );
-		} else { // no team (spectator mode)
+		if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED || cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_BLUE) {
+			msec = CG_CalculateReinfTime() * 1000;
+		}
+		else { // no team (spectator mode)
 			msec = 0;
 		}
 
@@ -649,7 +648,8 @@ static int WM_TeamScoreboard( int x, int y, team_t team, float fade, int maxrows
 	// draw header
 	if ( team == TEAM_RED ) {
 		char *str;
-		CG_DrawSmallString( x, y, va( "%s [%d] (%d %s)", CG_TranslateString( "Axis" ), cg.teamScores[0], cg.teamPlayers[team], CG_TranslateString( "players" ) ), fade );
+		//CG_DrawPic(x + 2, y + 4, 2 * TOURINFO_TEXTSIZE, TOURINFO_TEXTSIZE, trap_R_RegisterShaderNoMip("ui_mp/assets/ger_flag.tga"));
+		CG_DrawSmallString( x + 26, y, va( "%s [%d] (%d %s)", CG_TranslateString( "Axis" ), cg.teamScores[0], cg.teamPlayers[team], CG_TranslateString( "players" ) ), fade );
 		// L0 - Average Ping
 		str = va("^nAVG PING");
 		CG_DrawStringExt(x + width - 5 - (CG_DrawStrlen(str) * (TINYCHAR_WIDTH - 2)),
@@ -669,7 +669,8 @@ static int WM_TeamScoreboard( int x, int y, team_t team, float fade, int maxrows
 		// ~L0
 	} else if ( team == TEAM_BLUE ) {
 		char *str;
-		CG_DrawSmallString( x, y, va( "%s [%d] (%d %s)", CG_TranslateString( "Allies" ), cg.teamScores[1], cg.teamPlayers[team], CG_TranslateString( "players" ) ), fade );
+		//CG_DrawPic(x + 2, y + 4, 2 * TOURINFO_TEXTSIZE, TOURINFO_TEXTSIZE, trap_R_RegisterShaderNoMip("ui_mp/assets/usa_flag.tga"));
+		CG_DrawSmallString( x + 26, y, va( "%s [%d] (%d %s)", CG_TranslateString( "Allies" ), cg.teamScores[1], cg.teamPlayers[team], CG_TranslateString( "players" ) ), fade );
 		// L0 - Average Ping
 		str = va("^nAVG PING");
 		CG_DrawStringExt(x + width - 5 - (CG_DrawStrlen(str) * (TINYCHAR_WIDTH - 2)),

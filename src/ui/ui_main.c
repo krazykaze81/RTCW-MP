@@ -7172,7 +7172,7 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 	int xferRate;
 	const char *s;
 
-	vec4_t bg_color = { 0.3f, 0.3f, 0.3f, 0.8f };
+	vec4_t bg_color = { 0.1f, 0.1f, 0.1f, 0.6f };
 
 	downloadSize = trap_Cvar_VariableValue( "cl_downloadSize" );
 	downloadCount = trap_Cvar_VariableValue( "cl_downloadCount" );
@@ -7181,10 +7181,10 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 	// Background
 	UI_FillRect( 0, yStart + 185, 640, 83, bg_color );
 
-	UI_SetColor( colorYellow );
-	Text_Paint( 92, yStart + 210, scale, colorYellow, dlText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE );
-	Text_Paint( 35, yStart + 235, scale, colorYellow, etaText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE );
-	Text_Paint( 86, yStart + 260, scale, colorYellow, xferText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE );
+	UI_SetColor(colorRed);
+	Text_Paint(92, yStart + 210, scale, colorRed, dlText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE);
+	Text_Paint(35, yStart + 235, scale, colorRed, etaText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE);
+	Text_Paint(86, yStart + 260, scale, colorRed, xferText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE);
 
 	if ( downloadSize > 0 ) {
 		s = va( "%s (%d%%)", downloadName, downloadCount * 100 / downloadSize );
@@ -7192,14 +7192,15 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 		s = downloadName;
 	}
 
-	Text_Paint( 260, yStart + 210, scale, colorYellow, s, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE );
+	s = ( (strlen(s) > 40) ? va("Downloading .. (%d%%)", (downloadCount * 100 / downloadSize)) : s );
+	Text_Paint( 260, yStart + 210, scale, colorWhite, s, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE );
 
 	UI_ReadableSize( dlSizeBuf,     sizeof dlSizeBuf,       downloadCount );
 	UI_ReadableSize( totalSizeBuf,  sizeof totalSizeBuf,    downloadSize );
 
 	if ( downloadCount < 4096 || !downloadTime ) {
-		Text_PaintCenter( centerPoint, yStart + 235, scale, colorYellow, "estimating", 0 );
-		Text_PaintCenter( centerPoint, yStart + 340, scale, colorYellow, va( "(%s of %s copied)", dlSizeBuf, totalSizeBuf ), 0 );
+		Text_PaintCenter( centerPoint, yStart + 235, scale, colorWhite, "estimating", 0 );
+		Text_PaintCenter( centerPoint, yStart + 340, scale, colorWhite, va( "(%s of %s copied)", dlSizeBuf, totalSizeBuf ), 0 );
 	} else {
 		if ( ( uiInfo.uiDC.realTime - downloadTime ) / 1000 ) {
 			xferRate = downloadCount / ( ( uiInfo.uiDC.realTime - downloadTime ) / 1000 );
@@ -7227,19 +7228,21 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 
 			UI_PrintTime( dlTimeBuf, sizeof dlTimeBuf, timeleft );
 
-			Text_Paint( 260, yStart + 235, scale, colorYellow, dlTimeBuf, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE );
-			Text_PaintCenter( centerPoint, yStart + 340, scale, colorYellow, va( "(%s of %s copied)", dlSizeBuf, totalSizeBuf ), 0 );
-		} else {
-			Text_PaintCenter( centerPoint, yStart + 235, scale, colorYellow, "estimating", 0 );
+			Text_Paint(260, yStart + 235, scale, colorWhite, dlTimeBuf, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE);
+			Text_PaintCenter(centerPoint, yStart + 340, scale, colorWhite, va("(%s of %s copied)", dlSizeBuf, totalSizeBuf), 0);
+		}
+		else {
+			Text_PaintCenter(centerPoint, yStart + 235, scale, colorWhite, "estimating", 0);
 			if ( downloadSize ) {
-				Text_PaintCenter( centerPoint, yStart + 340, scale, colorYellow, va( "(%s of %s copied)", dlSizeBuf, totalSizeBuf ), 0 );
-			} else {
-				Text_PaintCenter( centerPoint, yStart + 340, scale, colorYellow, va( "(%s copied)", dlSizeBuf ), 0 );
+				Text_PaintCenter(centerPoint, yStart + 340, scale, colorWhite, va("(%s of %s copied)", dlSizeBuf, totalSizeBuf), 0);
+			}
+			else {
+				Text_PaintCenter(centerPoint, yStart + 340, scale, colorWhite, va("(%s copied)", dlSizeBuf), 0);
 			}
 		}
 
 		if ( xferRate ) {
-			Text_Paint( 260, yStart + 260, scale, colorYellow, va( "%s/Sec", xferRateBuf ), 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE );
+			Text_Paint(260, yStart + 260, scale, colorWhite, va("%s/Sec", xferRateBuf), 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE);
 		}
 	}
 }
@@ -7260,7 +7263,6 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 	char info[MAX_INFO_VALUE];
 	char text[256];
 	float centerPoint, yStart, scale;
-	vec4_t color = { 0.3f, 0.3f, 0.3f, 0.8f };
 
 	char downloadName[MAX_INFO_VALUE];
 
@@ -7324,10 +7326,11 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 
 			// if out of temp buffer room OR end of string OR it is time to linebreak & we've found a space
 			if ( ( index >= 58 ) || ( i == ( len - 1 ) ) || ( neednewline && s[i] == ' ' ) ) {
+				vec4_t bg_color = { 0.1f, 0.1f, 0.1f, 0.6f }; // L0 - More transparent bg & changed text to red..
 				ps[index + 1] = '\0';
 
-				DC->fillRect( 0, yPrint - 17, 640, 22, color );
-				Text_PaintCenter( centerPoint, yPrint, scale, colorYellow, ps, 0 );
+				DC->fillRect( 0, yPrint - 17, 640, 22, bg_color );				
+				Text_PaintCenter( centerPoint, yPrint, scale, colorRed, ps, 0 );
 
 				neednewline = qfalse;
 				yPrint += 22;       // next line
@@ -7787,7 +7790,6 @@ UI_StartServerRefresh
 =================
 */
 static void UI_StartServerRefresh( qboolean full ) {
-	int i;
 	char    *ptr;
 
 	qtime_t q;
@@ -7816,18 +7818,14 @@ static void UI_StartServerRefresh( qboolean full ) {
 	}
 
 	uiInfo.serverStatus.refreshtime = uiInfo.uiDC.realTime + 5000;
-	if ( ui_netSource.integer == AS_GLOBAL || ui_netSource.integer == AS_MPLAYER ) {
 		if ( ui_netSource.integer == AS_GLOBAL ) {
-			i = 0;
-		} else {
-			i = 1;
-		}
 
 		ptr = UI_Cvar_VariableString( "debug_protocol" );
 		if ( strlen( ptr ) ) {
-			trap_Cmd_ExecuteText( EXEC_NOW, va( "globalservers %d %s full empty\n", i, ptr ) );
-		} else {
-			trap_Cmd_ExecuteText( EXEC_NOW, va( "globalservers %d %d full empty\n", i, (int)trap_Cvar_VariableValue( "protocol" ) ) );
+			trap_Cmd_ExecuteText(EXEC_NOW, va("globalservers 0 %s full empty\n", ptr));
+		}
+		else {
+			trap_Cmd_ExecuteText(EXEC_NOW, va("globalservers 0 %d full empty\n", (int)trap_Cvar_VariableValue("protocol")));
 		}
 	}
 }

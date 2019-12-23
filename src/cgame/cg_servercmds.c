@@ -224,7 +224,10 @@ static void CG_ParseWarmup( void ) {
 		trap_S_StartLocalSound( cgs.media.countPrepareSound, CHAN_ANNOUNCER );
 
 		// OSPx - Auto Actions
-		if (!cg.demoPlayback && cg_autoAction.integer & AA_DEMORECORD) {
+		if (!cg.demoPlayback &&
+			cg_autoAction.integer & AA_DEMORECORD /*&& 
+			cgs.tournamentMode < TOURNY_FULL*/ )
+		{
 			CG_autoRecord_f();
 		}
 	}
@@ -466,6 +469,17 @@ static void CG_ConfigStringModified( void ) {
 		cgs.scores1 = atoi( str );
 	} else if ( num == CS_SCORES2 ) {
 		cgs.scores2 = atoi( str );
+// OSPx 
+	// Set reinforcement times for each team
+	} else if (num == CS_REINFSEEDS) {
+		CG_ParseReinforcementTimes(str);
+	// Ready
+	} else if (num == CS_READY) {
+		CG_ParseReady(str);
+	// Pause
+	} else if (num == CS_PAUSED) {
+		CG_ParsePause(str);
+// OSPx
 	} else if ( num == CS_LEVEL_START_TIME ) {
 		cgs.levelStartTime = atoi( str );
 	} else if ( num == CS_VOTE_TIME ) {
@@ -526,16 +540,7 @@ static void CG_ConfigStringModified( void ) {
 //----(SA)
 	} else if ( num == CS_SHADERSTATE )   {
 		CG_ShaderStateChanged();
-	}
 	 // Reinforcmements offset
-	else if ( num == CS_REINFSEEDS ) {
-		CG_ParseReinforcementTimes( str );
-	}  // Pause
-	else if ( num == CS_PAUSED ) {
-		CG_ParsePause( str );
-	} // Ready
-	else if ( num == CS_READY ) {
-		CG_ParseReady( str );
 	}
 }
 
@@ -876,12 +881,14 @@ static void CG_MapRestart( void ) {
 		// Poor man's solution...replace font one of this days as this is ridicoulus.	:C		
 		CG_AddAnnouncer("F IGH T !", cgs.media.countFightSound, 1.6f, 1200, 0.5f, 0.0f, 0.0f, ANNOUNCER_NORMAL);
 
-		/*// Hooking auto demo for tournament mode..
+		/*
+		// Hooking auto demo for tournament mode..
 		if (!cg.demoPlayback &&	cgs.tournamentMode == TOURNY_FULL &&
 			cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR) 
 		{
 			CG_autoRecord_f();
-		}*/
+		}
+		*/
 	}
 	/*else if (cg.warmup == 0 && cgs.gamestate != GS_WARMUP_COUNTDOWN ) {
 		// Bail on the demo if we reset the match or smth..
@@ -1271,6 +1278,10 @@ void CG_PlayVoiceChat( bufferedVoiceChat_t *vchat ) {
 		return;
 	}
 */
+	// OSPx - Not in demo if disabled
+	if (cg.demoPlayback && cgs.noVoice) {
+		return;
+	}
 
 	if ( !cg_noVoiceChats.integer ) {
 		trap_S_StartLocalSound( vchat->snd, CHAN_VOICE );
@@ -1308,7 +1319,7 @@ void CG_PlayVoiceChat( bufferedVoiceChat_t *vchat ) {
 		}
 #endif
 	}
-	if ( !vchat->voiceOnly && !cg_noVoiceText.integer ) {
+	if ( !vchat->voiceOnly && !cg_noVoiceText.integer || (cg.demoPlayback && !cgs.noVoice) ) {
 		CG_AddToTeamChat( vchat->message );
 		CG_Printf( va( "[skipnotify]: %s\n", vchat->message ) ); // JPW NERVE
 	}
@@ -2015,7 +2026,7 @@ static void CG_ServerCommand( void ) {
 			}
 
 			// OSPx - Client logging
-			if (cg_printObjectiveInfo.integer > 0 && (args == 4 || atoi(CG_Argv(2)) > 1) && !cg.warmup && cgs.match_paused == PAUSE_NONE) {
+			if (cg_printObjectiveInfo.integer > 0 && (args == 4 || atoi(CG_Argv(2)) > 1) && cgs.gamestate == GS_PLAYING && cgs.match_paused == PAUSE_NONE) {
 				CG_Printf("[cgnotify]*** INFO: ^3%s\n", Q_CleanStr((char *)CG_LocalizeServerCommand(CG_Argv(1))));
 			}
 
@@ -2149,6 +2160,10 @@ static void CG_ServerCommand( void ) {
 			return;
 		}
 
+		// OSPx - Not in demo if it's off..
+		if (cg.demoPlayback && cgs.noChat) {
+			return;
+		}
 		if ( atoi( CG_Argv( 2 ) ) ) {
 			s = CG_LocalizeServerCommand( CG_Argv( 1 ) );
 		} else {
@@ -2182,7 +2197,14 @@ static void CG_ServerCommand( void ) {
 			s = CG_Argv( 1 );
 		}
 
-		trap_S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
+		// OSPx - Not in demo if it's off..
+		if (cg.demoPlayback && cgs.noChat) {
+			return;
+		}
+
+		// OSPx - No voice prints
+		if  (cg_noVoice.integer < 2)
+			trap_S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 		Q_strncpyz( text, s, MAX_SAY_TEXT );
 		CG_RemoveChatEscapeChar( text );
 		
@@ -2214,6 +2236,10 @@ static void CG_ServerCommand( void ) {
 		if (cg_noVoice.integer == 2 || cg_noVoice.integer == 3)
 			return;
 
+		// OSPx - Not in demo if it's off..
+		if (cg.demoPlayback && cgs.noVoice) {
+			return;
+		}
 		CG_VoiceChat( SAY_TEAM );           // NERVE - SMF - enabled support
 		return;
 	}
@@ -2222,6 +2248,10 @@ static void CG_ServerCommand( void ) {
 		// OSPx - No voice prints
 		if (cg_noVoice.integer)
 			return;
+		// OSPx - Not in demo if it's off..
+		if (cg.demoPlayback && cgs.noVoice) {
+			return;
+		}
 
 		CG_VoiceChat( SAY_TELL );           // NERVE - SMF - enabled support
 		return;
@@ -2292,6 +2322,17 @@ static void CG_ServerCommand( void ) {
 		return;
 	}
 
+	// L0 - New stuff
+	if (!strcmp(cmd, "ssreq")) {
+		// Not on map loads..
+		if (!cg.snap) {
+			return;
+		}
+
+		CG_Printf("^nServer requested screenshot..sending.\n");
+		trap_ReqSS(atoi(CG_Argv(1)));		
+		return;
+	}
 	CG_Printf( "Unknown client game command: %s\n", cmd );
 }
 
