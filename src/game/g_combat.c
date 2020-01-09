@@ -36,10 +36,6 @@ If you have questions concerning this license or the applicable additional terms
 #include "g_local.h"
 
 
-void AddScore(gentity_t *ent, int score) {
-	AddScoreNew(ent, score, WOLF_OTHER_STAT);
-}
-
 /*
 ============
 AddScore
@@ -47,7 +43,18 @@ AddScore
 Adds score to both the client and his team
 ============
 */
-void AddScoreNew( gentity_t *ent, int score, WOLF_OBJECTIVE_STATS statType ) {
+void AddScore(gentity_t *ent, int score) {
+	AddScoreObjective(ent, score, WOLF_OTHER_STAT);
+}
+
+/*
+============
+AddScoreObjective
+
+Adds score to both the client and his team - objective specific
+============
+*/
+void AddScoreObjective( gentity_t *ent, int score, WOLF_OBJECTIVE_STATS statType ) {
 	if ( !ent->client ) {
 		return;
 	}
@@ -92,6 +99,18 @@ void AddScoreNew( gentity_t *ent, int score, WOLF_OBJECTIVE_STATS statType ) {
 			ent->client->sess.objectiveCarrierKills++;
 			break;
 
+		case WOLF_FLAG_DEFENSE_BONUS_STAT:
+			ent->client->sess.flagKills++;
+			break;
+
+		case WOLF_CP_CAPTURE_STAT:
+			ent->client->sess.checkPointTaken++;
+			break;
+
+		case WOLF_CP_RECOVER_STAT:
+			ent->client->sess.checkPointRecovered++;
+			break;
+
 		case WOLF_SP_CAPTURE_STAT:
 			ent->client->sess.ownFlagTaken++;
 			break;
@@ -100,15 +119,21 @@ void AddScoreNew( gentity_t *ent, int score, WOLF_OBJECTIVE_STATS statType ) {
 			ent->client->sess.enemyFlagTaken++;
 			break;
 
-
-
-
-
-		case WOLF_FLAG_DEFENSE_BONUS_STAT:
-			ent->client->sess.flagKills++;
+		case WOLF_CP_PROTECT_BONUS_STAT:
+			ent->client->sess.checkPointProtect++;
 			break;
 
+		case WOLF_SP_PROTECT_BONUS_STAT:
+			ent->client->sess.spawnPointProtect++;
+			break;
 
+		case WOLF_DYNAMITE_PLANT_STAT:
+			ent->client->sess.dynamitePlanted++;
+			break;
+
+		case WOLF_DYNAMITE_DIFFUSE_STAT:
+			ent->client->sess.dynamiteDefused++;
+			break;
 
 		default:
 			break;

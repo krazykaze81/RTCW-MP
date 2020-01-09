@@ -135,11 +135,11 @@ void setDefaultWeapon(gclient_t *client, qboolean isSold) {
 
 	// Sort any bit flags..
 	// NOTE: If client during game types e.g. /thompson they will spawn with it during server session..
-	if (client->sess.clientFlags & CFLAGS_MP40 /*&& g_customMGs.integer*/ && !client->sess.selectedWeapon)
+	if (client->sess.clientFlags & CFLAGS_MP40 && !client->sess.selectedWeapon)
 		client->sess.selectedWeapon = WP_MP40;
-	else if (client->sess.clientFlags & CFLAGS_THOMPSON  /*&& g_customMGs.integer*/ && !client->sess.selectedWeapon)
+	else if (client->sess.clientFlags & CFLAGS_THOMPSON  && !client->sess.selectedWeapon)
 		client->sess.selectedWeapon = WP_THOMPSON;
-	else if (client->sess.clientFlags & CFLAGS_STEN  /*&& g_customMGs.integer*/ && !client->sess.selectedWeapon)
+	else if (client->sess.clientFlags & CFLAGS_STEN  && !client->sess.selectedWeapon)
 		client->sess.selectedWeapon = WP_STEN;
 
 	// Sorts ammo
@@ -147,7 +147,7 @@ void setDefaultWeapon(gclient_t *client, qboolean isSold) {
 
 	// Medic
 	if (client->ps.stats[STAT_PLAYER_CLASS] == PC_MEDIC) {
-		if (/*g_customMGs.integer &&*/ client->sess.selectedWeapon != 0) {
+		if (client->sess.selectedWeapon != 0) {
 			COM_BitSet(client->ps.weapons, client->sess.selectedWeapon);
 			client->ps.ammoclip[BG_FindClipForWeapon(client->sess.selectedWeapon)] += ammo;
 			client->ps.ammo[BG_FindAmmoForWeapon(client->sess.selectedWeapon)] += (ammo * g_medicClips.integer);
@@ -161,7 +161,7 @@ void setDefaultWeapon(gclient_t *client, qboolean isSold) {
 
 	// Engineer
 	if (client->ps.stats[STAT_PLAYER_CLASS] == PC_ENGINEER) {
-		if (/*g_customMGs.integer &&*/ client->sess.selectedWeapon != 0) {
+		if (client->sess.selectedWeapon != 0) {
 			COM_BitSet(client->ps.weapons, client->sess.selectedWeapon);
 			client->ps.ammoclip[BG_FindClipForWeapon(client->sess.selectedWeapon)] += ammo;
 			client->ps.ammo[BG_FindAmmoForWeapon(client->sess.selectedWeapon)] += (ammo * g_engineerClips.integer);

@@ -260,9 +260,9 @@ void G_refPause_cmd(gentity_t *ent, qboolean fPause) {
 		trap_SetConfigstring(CS_SERVERTOGGLES, va("%d", level.server_settings));
 	}
 	else {
-		AP(va("print \"\n^3%s ^5UNPAUSES^3 the match ... resuming in 10 seconds!\n\n\"", referee));
+		AP(va("print \"\n^3%s ^5UNPAUSED^3 the match ... resuming in 10 seconds!\n\n\"", referee));
 		level.match_pause = PAUSE_UNPAUSING;
-		G_globalSound("sound/osp/prepare.wav");
+		G_globalSound("sound/match/prepare.wav");
 		G_spawnPrintf(DP_UNPAUSING, level.time + 10, NULL);
 		return;
 	}

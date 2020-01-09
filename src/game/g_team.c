@@ -187,7 +187,7 @@ void Team_FragBonuses( gentity_t *targ, gentity_t *inflictor, gentity_t *attacke
 	if ( targ->client->ps.powerups[enemy_flag_pw] ) {
 		attacker->client->pers.teamState.lastfraggedcarrier = level.time;
 		if ( g_gametype.integer >= GT_WOLF ) {
-			AddScore( attacker, WOLF_FRAG_CARRIER_BONUS );
+			AddScoreObjective( attacker, WOLF_FRAG_CARRIER_BONUS, WOLF_FRAG_CARRIER_BONUS_STAT);
 		} else {
 			AddScore( attacker, CTF_FRAG_CARRIER_BONUS );
 			PrintMsg( NULL, "%s" S_COLOR_WHITE " fragged %s's flag carrier!\n",
@@ -268,7 +268,7 @@ void Team_FragBonuses( gentity_t *targ, gentity_t *inflictor, gentity_t *attacke
 			 attacker->client->sess.sessionTeam != targ->client->sess.sessionTeam ) {
 			// we defended the base flag
 			if ( g_gametype.integer >= GT_WOLF ) { // JPW NERVE FIXME -- don't report flag defense messages, change to gooder message
-				AddScore( attacker, WOLF_FLAG_DEFENSE_BONUS );
+				AddScoreObjective( attacker, WOLF_FLAG_DEFENSE_BONUS, WOLF_FLAG_DEFENSE_BONUS_STAT );
 			} else {
 				AddScore( attacker, CTF_FLAG_DEFENSE_BONUS );
 				if ( !flag->r.contents ) {
@@ -312,7 +312,7 @@ void Team_FragBonuses( gentity_t *targ, gentity_t *inflictor, gentity_t *attacke
 		if ( ( flag->s.frame != WCP_ANIM_NOFLAG ) && ( flag->count == attacker->client->sess.sessionTeam ) ) {
 			if ( VectorLength( v1 ) < WOLF_CP_PROTECT_RADIUS ) {
 				if ( flag->spawnflags & 1 ) {                     // protected spawnpoint
-					AddScore( attacker, WOLF_SP_PROTECT_BONUS );
+					AddScoreObjective( attacker, WOLF_SP_PROTECT_BONUS, WOLF_SP_PROTECT_BONUS_STAT);
 				} else {
 					AddScore( attacker, WOLF_CP_PROTECT_BONUS );  // protected checkpoint
 				}
@@ -465,7 +465,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 		// hey, its not home.  return it by teleporting it back
 // JPW NERVE
 		if ( g_gametype.integer >= GT_WOLF ) {
-			AddScore( other, WOLF_SECURE_OBJ_BONUS );
+			AddScoreObjective( other, WOLF_SECURE_OBJ_BONUS, WOLF_SECURE_OBJ_BONUS_STAT );
 			te = G_TempEntity( other->s.pos.trBase, EV_GLOBAL_SOUND );
 			te->r.svFlags |= SVF_BROADCAST;
 			te->s.teamNum = cl->sess.sessionTeam;
@@ -527,7 +527,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 
 	// other gets another 10 frag bonus
 	if ( g_gametype.integer >= GT_WOLF ) {
-		AddScore( other, WOLF_CAPTURE_BONUS );
+		AddScoreObjective( other, WOLF_CAPTURE_BONUS, WOLF_CAPTURE_BONUS_STAT );
 		PrintMsg( NULL,"%s" S_COLOR_WHITE " captured enemy objective!\n",cl->pers.netname );
 	} else {
 		AddScore( other, CTF_CAPTURE_BONUS );
@@ -555,7 +555,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 			if ( player != other ) {
 // JPW NERVE
 				if ( g_gametype.integer >= GT_WOLF ) {
-					AddScore( player, WOLF_CAPTURE_BONUS );
+					AddScoreObjective( player, WOLF_CAPTURE_BONUS, WOLF_CAPTURE_BONUS_STAT );
 				} else {
 // jpw
 					AddScore( player, CTF_CAPTURE_BONUS );
@@ -598,7 +598,7 @@ int Team_TouchEnemyFlag( gentity_t *ent, gentity_t *other, int team ) {
 	// hey, its not our flag, pick it up
 	if ( g_gametype.integer >= GT_WOLF ) {
 // JPW NERVE
-		AddScore( other, WOLF_STEAL_OBJ_BONUS );
+		AddScoreObjective( other, WOLF_STEAL_OBJ_BONUS, WOLF_STEAL_OBJ_BONUS_STAT );
 		te = G_TempEntity( other->s.pos.trBase, EV_GLOBAL_SOUND );
 		te->r.svFlags |= SVF_BROADCAST;
 		te->s.teamNum = cl->sess.sessionTeam;
@@ -1366,7 +1366,7 @@ void checkpoint_touch( gentity_t *self, gentity_t *other, trace_t *trace ) {
 
 // JPW NERVE
 	if ( self->s.frame == WCP_ANIM_NOFLAG ) {
-		AddScore( other, WOLF_CP_CAPTURE );		
+		AddScoreObjective( other, WOLF_CP_CAPTURE, WOLF_CP_CAPTURE_STAT );
 	} else {
 		AddScore( other, WOLF_CP_RECOVER );		
 	}
@@ -1425,10 +1425,10 @@ void checkpoint_spawntouch( gentity_t *self, gentity_t *other, trace_t *trace ) 
 
 // JPW NERVE
 	if ( self->s.frame == WCP_ANIM_NOFLAG ) {
-		AddScore( other, WOLF_SP_CAPTURE );
+		AddScoreObjective( other, WOLF_SP_CAPTURE, WOLF_SP_CAPTURE_STAT );
 		G_matchPrintInfo(va("%s captured the flag!\n", ((other->client->sess.sessionTeam == TEAM_RED) ? "Axis" : "Allies")));		
 	} else {
-		AddScore( other, WOLF_SP_RECOVER );
+		AddScoreObjective( other, WOLF_SP_RECOVER, WOLF_SP_RECOVER_STAT );
 		G_matchPrintInfo(va("%s reclaimed the flag!\n", ((other->client->sess.sessionTeam == TEAM_RED) ? "Axis" : "Allies")));
 	}
 // jpw

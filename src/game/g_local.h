@@ -512,8 +512,8 @@ typedef struct {
 	int damage_given, damage_received, team_damage;
 	int kills, deaths, suicides, team_kills, headshots, killPeak;
 	int game_points, ownFlagTaken, enemyFlagTaken;
-	int objectiveCarrierKills, objectivesReturned, objectivesTaken, secondaryObjectives, majorObjectives, repairObject, dynamiteObjective;
-	int flagKills, spawnPointKills;
+	int objectiveCarrierKills, objectivesReturned, objectivesTaken, secondaryObjectives, majorObjectives, repairObject, dynamiteObjective, dynamitePlanted, dynamiteDefused;
+	int flagKills, spawnPointKills, checkPointTaken, checkPointRecovered, checkPointProtect, spawnPointProtect;
 	int referee, status;
 	int rounds, spec_invite, specInvited, specLocked;
 	int med_given, ammo_given, gibs, revives;
@@ -1233,7 +1233,7 @@ void InitBodyQue(void);
 void ClientSpawn( gentity_t *ent, qboolean revived );
 void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int mod );
 void AddScore(gentity_t *ent, int score);
-void AddScoreNew(gentity_t *ent, int score, enum WOLF_OBJECTIVE_STATS statType);
+void AddScoreObjective(gentity_t *ent, int score, enum WOLF_OBJECTIVE_STATS statType);
 void CalculateRanks(void);
 qboolean SpotWouldTelefrag( gentity_t *spot );
 char *clientIP(gentity_t *ent, qboolean full);
@@ -1921,35 +1921,7 @@ void G_globalSound(char *sound);
 void G_resetRoundState(void);
 void G_resetModeState(void);
 
-/*//////////////////////
-// ET g_match.c
-//
-void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod );
-void G_addStatsHeadShot( gentity_t *attacker, int mod );
-qboolean G_allowPanzer( gentity_t *ent );
-int G_checkServerToggle( vmCvar_t *cv );
-char *G_createStats( gentity_t *refEnt );
-void G_deleteStats( int nClient );
-qboolean G_desiredFollow( gentity_t *ent, int nTeam );
-void G_initMatch(void);
-void G_loadMatchGame(void);
-void G_matchInfoDump( unsigned int dwDumpType );
-void G_printMatchInfo( gentity_t *ent );
-void G_parseStats( char *pszStatsInfo );
-void G_resetModeState(void);
-void G_resetRoundState(void);
-void CountDown(qboolean restart);
-void G_spawnPrintf( int print_type, int print_time, gentity_t *owner );
-void G_statsPrint( gentity_t *ent, int nType );
-unsigned int G_weapStatIndex_MOD( unsigned int iWeaponMOD );
-void G_verifyMatchState(int nTeam);
-void G_matchPrintInfo(char *msg);
-void CountDown(qboolean restart);
-int isWeaponLimited (gclient_t *client, int weap);
-void setDefaultWeapon(gclient_t *client, qboolean isSold);
-void PauseHandle(void);
-void resetPause(void);
-
+/*
 ///////////////////////
 // ET g_multiview.c
 //
@@ -1973,7 +1945,7 @@ void resetPause(void);
 //
 void Cmd_AuthRcon_f( gentity_t *ent );
 void G_refAllReady_cmd( gentity_t *ent );
-void G_ref_cmd( gentity_t *ent, unsigned int dwCommand, qboolean fValue );
+void G_ref_cmd( gentity_t *ent, /*unsigned int dwCommand,*/ qboolean fValue );
 qboolean G_refCommandCheck( gentity_t *ent, char *cmd );
 void G_refHelp_cmd( gentity_t *ent );
 void G_refLockTeams_cmd( gentity_t *ent, qboolean fLock );

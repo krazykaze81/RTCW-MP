@@ -586,6 +586,7 @@ void G_printMatchInfo( gentity_t *ent ) {
 	int i, j, cnt, eff;
 	float tot_acc = 0.00f;
 	int tot_rev, tot_kills, tot_deaths, tot_gp, tot_hs, tot_sui, tot_tk, tot_dg, tot_dr, tot_td, tot_hits, tot_shots;
+	int tot_mo, tot_ot, tot_or, tot_ro, tot_do, tot_ok, tot_fk, tot_ft, tot_et, tot_sp, tot_dp, tot_dd; // new totals
 	gclient_t *cl;
 	char *ref;
 	char n1[MAX_NETNAME];
@@ -597,6 +598,7 @@ void G_printMatchInfo( gentity_t *ent ) {
 			GAMEVERSION, sv_hostname.string, ct.tm_hour, ct.tm_min, ct.tm_sec, ct.tm_mday, dMonths[ct.tm_mon], 1900+ct.tm_year));
 
 	cnt = 0;
+	// MAIN STATS
 	for (i = TEAM_RED; i <= TEAM_BLUE; i++) {
 		if (!TeamCount(-1, i)) {
 			continue;
@@ -616,7 +618,8 @@ void G_printMatchInfo( gentity_t *ent ) {
 		tot_acc = 0;
 		tot_rev = 0;
 
-			CP(va("sc \"%s ^7Team\n"
+		CP(va("sc Main Stats\n"));
+		CP(va("sc \"%s ^7Team\n"
 			     "^7--------------------------------------------------------------------------"
 				 "\nPlayer          ^eKll ^7Dth Sui TK ^cEff ^7Accrcy   ^eHS    DG    DR   TD  Rev ^7Score\n"
 				 "^7--------------------------------------------------------------------------\n\"", (i == TEAM_RED) ? "^1Axis" : "^4Allied"  ));
@@ -660,10 +663,9 @@ void G_printMatchInfo( gentity_t *ent ) {
 			}
 
 			cnt++;
-            CP( va( "sc \"%s%-15s^e%4d^7%4d%4d%3d%s^c%4d ^7%6.2f^e%5d%6d%6d%5d%3d^7%7d\n\"",
-//			CP( va( "sc \"%s%-15s^n%4d^7%4d%4d%3d%s^z%4d ^7%6.2f^n%5d%6d%6d%5d^7%7d\n\"",
+			CP(va("sc \"%s%-15s^e%4d^7%4d%4d%3d%s^c%4d ^7%6.2f^e%5d%6d%6d%5d%3d^7%7d\n\"",
 				ref,
-					n2,
+				n2, // player name
 				cl->sess.kills,
 				cl->sess.deaths,
 				cl->sess.suicides,
@@ -675,8 +677,22 @@ void G_printMatchInfo( gentity_t *ent ) {
 				cl->sess.damage_given,
 				cl->sess.damage_received,
 				cl->sess.team_damage,
-					cl->sess.revives,
+				cl->sess.revives,
 				cl->ps.persistant[PERS_SCORE]));
+
+			eff = (cl->sess.deaths + cl->sess.kills == 0) ? 0 : 100 * cl->sess.kills / (cl->sess.deaths + cl->sess.kills);
+			if (eff < 0) {
+				eff = 0;
+			}
+
+			if (ent->client == cl ||
+				(ent->client->sess.sessionTeam == TEAM_SPECTATOR &&
+					ent->client->sess.spectatorState == SPECTATOR_FOLLOW &&
+					ent->client->sess.spectatorClient == level.sortedClients[j])) {
+				ref = "^7";
+			}
+
+			cnt++;
 		}
 
 		eff = (tot_kills + tot_deaths == 0) ? 0 : 100 * tot_kills / (tot_kills + tot_deaths);
@@ -698,8 +714,100 @@ void G_printMatchInfo( gentity_t *ent ) {
 			tot_dg,
 			tot_dr,
 			tot_td,
-				tot_rev,
+			tot_rev,
 			tot_gp));
+	}
+
+	// Objective Stats
+	for (i = TEAM_RED; i <= TEAM_BLUE; i++) {
+		if (!TeamCount(-1, i)) {
+			continue;
+		}
+
+		tot_mo = tot_ot = tot_or = tot_ro = tot_do = tot_ok = tot_fk = tot_ft = tot_et = tot_sp = tot_dp = tot_dd = 0; // new totals
+
+		CP(va("sc Objective Stats\n"));
+		CP(va("sc \%s ^7Team\n"
+			"^7-------------------------------------------------------------------"
+			"\nPlayer          ^eMO  OT  OR  RO  DO  OK  FK  FT  ET  SP  DP  DD\n"
+			"^7-------------------------------------------------------------------\n\"", (i == TEAM_RED) ? "^1Axis" : "^4Allied"));
+
+		for (j = 0; j < level.numPlayingClients; j++) {
+			cl = level.clients + level.sortedClients[j];
+
+			if (cl->pers.connected != CON_CONNECTED || cl->sess.sessionTeam != i) {
+				continue;
+			}
+
+			Q_decolorString(cl->pers.netname, n1);
+			SanitizeString(n1, n2, qfalse);
+			Q_CleanStr(n2);
+			n2[15] = 0;
+			ref = "^7";
+
+			if (ent->client == cl ||
+				(ent->client->sess.sessionTeam == TEAM_SPECTATOR &&
+					ent->client->sess.spectatorState == SPECTATOR_FOLLOW &&
+					ent->client->sess.spectatorClient == level.sortedClients[j])) {
+				ref = "^7";
+			}
+
+			// new objective stats
+			tot_mo += cl->sess.majorObjectives;
+			tot_ot += cl->sess.objectivesTaken;
+			tot_or += cl->sess.objectivesReturned;
+			tot_ro += cl->sess.repairObject;
+			tot_do += cl->sess.dynamiteObjective;
+			tot_ok += cl->sess.objectiveCarrierKills;
+			tot_fk += cl->sess.flagKills;
+			tot_ft += cl->sess.ownFlagTaken;
+			tot_et += cl->sess.enemyFlagTaken;
+			tot_sp += cl->sess.spawnPointProtect;
+			tot_dp += cl->sess.dynamitePlanted;
+			tot_dd += cl->sess.dynamiteDefused;
+
+			if (ent->client == cl ||
+				(ent->client->sess.sessionTeam == TEAM_SPECTATOR &&
+					ent->client->sess.spectatorState == SPECTATOR_FOLLOW &&
+					ent->client->sess.spectatorClient == level.sortedClients[j])) {
+				ref = "^7";
+			}
+
+			cnt++;
+			CP(va("sc \"%s%-15s^e%3d%3d%3d%3d%3d%3d%3d%3d%3d%3d%3d%3d\n\"",
+				ref,
+				n2, // player name
+				// new stats
+				cl->sess.majorObjectives,
+				cl->sess.objectivesTaken,
+				cl->sess.objectivesReturned,
+				cl->sess.repairObject,
+				cl->sess.dynamiteObjective,
+				cl->sess.objectiveCarrierKills,
+				cl->sess.flagKills,
+				cl->sess.ownFlagTaken,
+				cl->sess.enemyFlagTaken,
+				cl->sess.spawnPointProtect,
+				cl->sess.dynamitePlanted,
+				cl->sess.dynamiteDefused));
+				// end new stats
+		}
+
+		CP(va("sc \"^7--------------------------------------------------------------------------\n"
+			"%-19s^e%3d%3d%3d%3d%3d%3d%3d%3d%3d%3d%3d%3d\n\n\n\"",
+			"^eTotals^7",
+			tot_mo,
+			tot_ot,
+			tot_or,
+			tot_ro,
+			tot_do,
+			tot_ok,
+			tot_fk,
+			tot_ft,
+			tot_et,
+			tot_sp,
+			tot_dp,
+			tot_dd));
 	}
 	CP( va( "sc \"%s\n\" 0", ( ( !cnt ) ? "^c\nNo scores to report." : "" ) ) );
 }
