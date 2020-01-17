@@ -450,6 +450,7 @@
     <ClInclude Include="g_admin.h" />
     <ClInclude Include="g_local.h" />
     <ClInclude Include="g_public.h" />
+    <ClInclude Include="g_stats.h" />
     <ClInclude Include="g_team.h" />
     <ClInclude Include="q_shared.h" />
     <ClInclude Include="surfaceflags.h" />

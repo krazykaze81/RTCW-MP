@@ -466,7 +466,7 @@ void Weapon_Engineer( gentity_t *ent ) {
 				traceEnt->health = MG42_MULTIPLAYER_HEALTH;
 			}
 
-			AddScore( ent, WOLF_REPAIR_BONUS ); // JPW NERVE props to the E for the fixin'
+			AddScoreObjective( ent, WOLF_REPAIR_BONUS, WOLF_REPAIR_BONUS_STAT ); // JPW NERVE props to the E for the fixin'
 
 			traceEnt->takedamage = qtrue;
 			traceEnt->s.eFlags &= ~EF_SMOKING;
@@ -584,7 +584,7 @@ void Weapon_Engineer( gentity_t *ent ) {
 
 						if ( ( !( hit->spawnflags & OBJECTIVE_DESTROYED ) ) &&
 							 te->s.teamNum && ( te->s.teamNum != ent->client->sess.sessionTeam ) ) {
-							AddScore( traceEnt->parent, WOLF_DYNAMITE_PLANT ); // give drop score to guy who dropped it
+							AddScoreObjective( traceEnt->parent, WOLF_DYNAMITE_PLANT, WOLF_DYNAMITE_PLANT_STAT ); // give drop score to guy who dropped it
 							traceEnt->parent = ent; // give explode score to guy who armed it
 //	jpw pulled					hit->spawnflags |= OBJECTIVE_DESTROYED; // this is pretty kludgy but we can't test it in explode fn
 						}
@@ -640,7 +640,7 @@ void Weapon_Engineer( gentity_t *ent ) {
 							traceEnt->r.svFlags |= SVF_BROADCAST;
 							if ( ent->client->sess.sessionTeam == TEAM_RED ) {
 								if ( ( hit->spawnflags & AXIS_OBJECTIVE ) && ( !scored ) ) {
-									AddScore( ent,WOLF_DYNAMITE_DIFFUSE ); // FIXME add team info to *dynamite* so we don't get points for diffusing own team dynamite
+									AddScoreObjective( ent, WOLF_DYNAMITE_DIFFUSE, WOLF_DYNAMITE_DIFFUSE_STAT ); // FIXME add team info to *dynamite* so we don't get points for diffusing own team dynamite
 									scored++;
 									hit->spawnflags &= ~OBJECTIVE_DESTROYED; // "re-activate" objective since it wasn't destroyed.  kludgy, I know; see G_ExplodeMissile for the other half
 								}
@@ -649,7 +649,7 @@ void Weapon_Engineer( gentity_t *ent ) {
 								traceEnt->s.teamNum = TEAM_RED;
 							} else { // TEAM_BLUE
 								if ( ( hit->spawnflags & ALLIED_OBJECTIVE ) && ( !scored ) ) {
-									AddScore( ent,WOLF_DYNAMITE_DIFFUSE );
+									AddScoreObjective( ent, WOLF_DYNAMITE_DIFFUSE, WOLF_DYNAMITE_DIFFUSE_STAT );
 									scored++;
 									hit->spawnflags &= ~OBJECTIVE_DESTROYED; // "re-activate" objective since it wasn't destroyed
 								}

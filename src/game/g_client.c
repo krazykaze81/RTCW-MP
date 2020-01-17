@@ -1565,8 +1565,12 @@ void ClientUserinfoChanged( int clientNum ) {
 		sscanf(s, "%[^z]s:%*s", s);
 	}
 
-
-	// OSP - extra client info settings
+	// Check for "" GUID..
+	if (!Q_stricmp(Info_ValueForKey(userinfo, "cl_guid"), "D41D8CD98F00B204E9800998ECF8427E") ||
+		!Q_stricmp(Info_ValueForKey(userinfo, "cl_guid"), "d41d8cd98f00b204e9800998ecf8427e")) {
+		trap_DropClient(clientNum, "(Known bug) Corrupted GUID^3! ^7Restart your game..");
+	}
+	
 	//		 FIXME: move other userinfo flag settings in here
 /*	
 	// Spoofs
