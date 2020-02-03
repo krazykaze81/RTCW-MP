@@ -559,38 +559,6 @@ void Svcmd_StartMatch_f() {
 
 /*
 ============
-Svcmd_ResetMatch_f
-
-NERVE - SMF - this has three behaviors
-- if not in tournament mode, do a map_restart
-- if in tournament mode, go back to waitingForPlayers mode
-- if in stopwatch mode, reset back to first round
-============
-
-void Svcmd_ResetMatch_f() {
-	if ( g_gametype.integer == GT_WOLF_STOPWATCH ) {
-		trap_Cvar_Set( "g_currentRound", "0" );
-		trap_Cvar_Set( "g_nextTimeLimit", "0" );
-	}
-
-	if ( !g_noTeamSwitching.integer || ( g_minGameClients.integer > 1 && level.numPlayingClients >= g_minGameClients.integer ) ) {
-		trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
-		return;
-	} else {
-		// OSPx - Ready
-		if (g_doWarmup.integer) {
-			trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WARMUP));
-			trap_SetConfigstring(CS_READY, va("%i", READY_PENDING));
-		}
-		else {
-			trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WAITING_FOR_PLAYERS));
-		}
-		return;
-	}
-}
-*/
-/*
-============
 Svcmd_SwapTeams_f
 
 NERVE - SMF - swaps all clients to opposite team
@@ -638,6 +606,39 @@ void Svcmd_ResetMatch_f(qboolean fDoReset, qboolean fDoRestart) {
 		trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", ((g_gamestate.integer != GS_PLAYING) ? GS_RESET : GS_WARMUP)));
 	}
 }
+
+/*
+============
+Svcmd_ResetMatch_f
+
+NERVE - SMF - this has three behaviors
+- if not in tournament mode, do a map_restart
+- if in tournament mode, go back to waitingForPlayers mode
+- if in stopwatch mode, reset back to first round
+============
+
+void Svcmd_ResetMatch_f() {
+	if ( g_gametype.integer == GT_WOLF_STOPWATCH ) {
+		trap_Cvar_Set( "g_currentRound", "0" );
+		trap_Cvar_Set( "g_nextTimeLimit", "0" );
+	}
+
+	if ( !g_noTeamSwitching.integer || ( g_minGameClients.integer > 1 && level.numPlayingClients >= g_minGameClients.integer ) ) {
+		trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
+		return;
+	} else {
+		// OSPx - Ready
+		if (g_doWarmup.integer) {
+			trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WARMUP));
+			trap_SetConfigstring(CS_READY, va("%i", READY_PENDING));
+		}
+		else {
+			trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WAITING_FOR_PLAYERS));
+		}
+		return;
+	}
+}
+*/
 
 /*
 ====================

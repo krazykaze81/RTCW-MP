@@ -273,8 +273,15 @@ void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod ) {
 
 	// General player stats
 	if ( mod != MOD_SYRINGE ) {
+
+		// RtcwPro
+		// if damage is more than the target's health don't give them more damage than necessary
+		if (dmg > fabs(targ->health))
+			dmg = fabs(targ->health);
+
 		attacker->client->sess.damage_given += dmg;
 		targ->client->sess.damage_received += dmg;
+
 		if ( targ->health <= 0 ) {
 			attacker->client->sess.kills++;
 			targ->client->sess.deaths++;
@@ -330,6 +337,20 @@ void G_deleteStats( int nClient ) {
 	cl->sess.acc_hits = 0;
 	cl->sess.acc_shots = 0;
 	cl->sess.killPeak = 0;
+
+	// new object stats
+	cl->sess.majorObjectives = 0;
+	cl->sess.objectivesTaken = 0;
+	cl->sess.objectivesReturned = 0;
+	cl->sess.repairObject = 0;
+	cl->sess.dynamiteObjective = 0;
+	cl->sess.objectiveCarrierKills = 0;
+	cl->sess.flagKills = 0;
+	cl->sess.ownFlagTaken = 0;
+	cl->sess.enemyFlagTaken = 0;
+	cl->sess.spawnPointProtect = 0;
+	cl->sess.dynamitePlanted = 0;
+	cl->sess.dynamiteDefused = 0;
 
 	memset( &cl->sess.aWeaponStats, 0, sizeof( cl->sess.aWeaponStats ) );
 	trap_Cvar_Set( va( "wstats%i", nClient ), va( "%d", nClient ) );
