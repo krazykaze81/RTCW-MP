@@ -1364,7 +1364,7 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 		}
 
 // JPW NERVE overcome previous chunk of code for making grenades work again
-		if ( /*mod != MOD_GARAND && mod != MOD_MAUSER &&*/ ( g_gametype.integer != GT_SINGLE_PLAYER ) && ( take > 190 ) ) { // 190 is greater than 2x mauser headshot, so headshots don't gib
+		if ( ( g_gametype.integer != GT_SINGLE_PLAYER ) && ( take > 190 ) ) { // 190 is greater than 2x mauser headshot, so headshots don't gib
 			targ->health = GIB_HEALTH - 1;
 		}
 // jpw
@@ -1372,21 +1372,21 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 		if ( targ->health <= 0 ) {
 			if ( client ) {
 				targ->flags |= FL_NO_KNOCKBACK;
+				
 				// RtcwPro - Stats			
-				// when shot by panzer the pm_type does not change to PM_DEAD so comment this out
-				//if (targ->client->ps.pm_type == PM_DEAD) {
+				if (targ->client->ps.pm_type == PM_DEAD) {
 					G_addStats(targ, attacker, take, mod);
-				//} 
+				}
+
+				if (targ->health <= GIB_HEALTH && !OnSameTeam(attacker, targ) && attacker->client)
+				{
+					attacker->client->sess.gibs++;
+					attacker->client->pers.lifeGibs++;
+				}
+				
 // JPW NERVE -- repeated shooting sends to limbo
 				if ( g_gametype.integer >= GT_WOLF ) {
-					if ( ( targ->health < FORCE_LIMBO_HEALTH ) && ( targ->health <= GIB_HEALTH ) && ( !( targ->client->ps.pm_flags & PMF_LIMBO ) ) ) {
-						// OSPx - Stats
-						if (!OnSameTeam(attacker, targ) && attacker->client)
-						{
-							attacker->client->sess.gibs++;
-							attacker->client->pers.lifeGibs++;
-						}
-						// -OSPx
+					if ( ( targ->health < FORCE_LIMBO_HEALTH ) && ( targ->health > GIB_HEALTH ) && ( !( targ->client->ps.pm_flags & PMF_LIMBO ) ) ) {
 						limbo( targ, qtrue );
 					}
 				}

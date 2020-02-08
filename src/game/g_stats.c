@@ -639,7 +639,7 @@ void G_printMatchInfo( gentity_t *ent ) {
 		tot_acc = 0;
 		tot_rev = 0;
 
-		CP(va("print \"Main Stats\"\n"));
+		CP(va("print \"Main Stats\n\""));
 
 		CP(va("sc \"%s ^7Team\n"
 			     "^7--------------------------------------------------------------------------"
@@ -723,7 +723,7 @@ void G_printMatchInfo( gentity_t *ent ) {
 		}
 		tot_acc = ((tot_shots == 0) ? 0.00 : ((float)tot_hits / (float)tot_shots) * 100.00f);
 
-		CP(va("sc \"^7----------------------------------------------------------------------\n"
+		CP(va("sc \"^7--------------------------------------------------------------------------\n"
 				"%-19s^e%4d^7%4d%4d%3d^c%4d ^7%6.2f^e%5d%6d%6d%5d%3d^7%7d\n\n\n\"",
 				"^eTotals^7",
 			tot_kills,

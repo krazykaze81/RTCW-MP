@@ -1756,7 +1756,8 @@ qboolean Cmd_CallVote_f(gentity_t *ent, qboolean fRefCommand) { // unsigned int 
 		level.voteInfo.voteYes = 1;
 		AP(va("print \"[lof]%s^7 [lon]called a vote.[lof]  Voting for: %s\n\"", ent->client->pers.netname, level.voteInfo.voteString));
 		AP(va("cp \"[lof]%s\n^7[lon]called a vote.\n\"", ent->client->pers.netname));
-		G_globalSound("sound/misc/vote.wav");
+		//G_globalSound("sound/misc/vote.wav");
+		G_globalSound("sound/match/klaxon2.wav");
 	}
 
 	level.voteInfo.voteTime = level.time;
@@ -1840,7 +1841,7 @@ void Cmd_Vote_f( gentity_t *ent ) {
 	ent->client->pers.complaintEndTime = -1;
 	ent->client->pers.complaintClient = -1;
 
-	if ( !level.voteTime ) {
+	if ( !level.voteInfo.voteTime ) {
 		trap_SendServerCommand( ent - g_entities, "print \"No vote in progress.\n\"" );
 		return;
 	}
@@ -1860,11 +1861,11 @@ void Cmd_Vote_f( gentity_t *ent ) {
 	trap_Argv( 1, msg, sizeof( msg ) );
 
 	if ( msg[0] == 'y' || msg[1] == 'Y' || msg[1] == '1' ) {
-		level.voteYes++;
-		trap_SetConfigstring( CS_VOTE_YES, va( "%i", level.voteYes ) );
+		level.voteInfo.voteYes++;
+		trap_SetConfigstring( CS_VOTE_YES, va( "%i", level.voteInfo.voteYes ) );
 	} else {
-		level.voteNo++;
-		trap_SetConfigstring( CS_VOTE_NO, va( "%i", level.voteNo ) );
+		level.voteInfo.voteNo++;
+		trap_SetConfigstring( CS_VOTE_NO, va( "%i", level.voteInfo.voteNo ) );
 	}
 
 	// a majority will be determined in G_CheckVote, which will also account

@@ -2818,9 +2818,9 @@ CheckVote
 void CheckVote( void ) {
 	if ( level.voteExecuteTime && level.voteExecuteTime < level.time ) {
 		level.voteExecuteTime = 0;
-		trap_SendConsoleCommand( EXEC_APPEND, va( "%s\n", level.voteString ) );
+		trap_SendConsoleCommand( EXEC_APPEND, va( "%s\n", level.voteInfo.voteString ) );
 	}
-	if ( !level.voteTime ) {
+	if ( !level.voteInfo.voteTime ) {
 		return;
 	}
 	if ( level.time - level.voteInfo.voteTime >= VOTE_TIME ) {
@@ -2843,7 +2843,7 @@ void CheckVote( void ) {
 			trap_SendServerCommand( -1, "print \"Vote passed.\n\"" );
 			level.voteExecuteTime = level.time + 3000;
 			level.prevVoteExecuteTime = level.time + 4000;
-			G_LogPrintf("Vote Passed: %s\n", level.voteString);
+			G_LogPrintf("Vote Passed: %s\n", level.voteInfo.voteString);
 
 // JPW NERVE
 #ifndef PRE_RELEASE_DEMO
