@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -32,8 +32,6 @@ If you have questions concerning this license or the applicable additional terms
  * desc:		definitions shared by both the server game and client game modules
  *
 */
-
-#include "../../MAIN/ui_mp/menudef.h" // For vote options
 
 // because games can change separately from the main system version, we need a
 // second version that must match between game and cgame
@@ -109,22 +107,6 @@ typedef enum {
 	CLDMG_MAX
 } clientDamage_t;
 
-// OSPx
-
-
-// -OSPx
-// Random reinforcement seed settings
-#define MAX_REINFSEEDS  8
-#define REINF_RANGE     16      // (0 to n-1 second offset)
-#define REINF_BLUEDELT  3       // Allies shift offset
-#define REINF_REDDELT   2       // Axis shift offset
-extern const unsigned int aReinfSeeds[MAX_REINFSEEDS];
-
-typedef enum popupMessageType_e {
-	PM_MESSAGE
-} popupMessageType_t;
-
-// -OSPx
 // RF
 #define MAX_TAGCONNECTS     32
 
@@ -141,11 +123,6 @@ typedef enum popupMessageType_e {
 #define MAX_OBJECTIVES      6
 #define MAX_OID_TRIGGERS    16
 // dhm
-
-// OSP Multiview settings
-#define MAX_MVCLIENTS               32
-#define MV_SCOREUPDATE_INTERVAL     5000    // in msec
-// -OSP
 
 //
 // config strings are a general means of communicating variable length strings
@@ -194,14 +171,10 @@ typedef enum popupMessageType_e {
 #define CS_TARGETEFFECT         35      //----(SA)
 
 #define CS_WOLFINFO             36      // NERVE - SMF
-// OSPx
-#define CS_REINFSEEDS           37      // Reinforcement seeds
-#define CS_READY				38		// Ready
-#define CS_PAUSED				39		// Pause
-#define CS_VERSIONINFO          40      // Versioning info for demo playback compatibility
-#define CS_SERVERTOGGLES        41      // Shows current enable/disabled settings (for voting UI)
-// -OSPx
 
+#define CS_REINFSEEDS			39
+#define CS_PAUSED				40
+#define CS_READY				41
 #define CS_MODELS               64
 #define CS_SOUNDS               ( CS_MODELS + MAX_MODELS )
 #define CS_PLAYERS              ( CS_SOUNDS + MAX_SOUNDS )
@@ -215,6 +188,7 @@ typedef enum popupMessageType_e {
 #define CS_CLIPBOARDS           ( CS_DLIGHTS + MAX_DLIGHT_CONFIGSTRINGS )
 #define CS_SPLINES              ( CS_CLIPBOARDS + MAX_CLIPBOARD_CONFIGSTRINGS )
 #define CS_TAGCONNECTS          ( CS_SPLINES + MAX_SPLINE_CONFIGSTRINGS )
+
 #define CS_MAX                  ( CS_TAGCONNECTS + MAX_TAGCONNECTS )
 
 #if ( CS_MAX ) > MAX_CONFIGSTRINGS
@@ -280,7 +254,6 @@ typedef enum {
 	WEAPON_FIRINGALT,
 	WEAPON_RELOADING    //----(SA)	added
 } weaponstate_t;
-
 
 // pmove->pm_flags	(sent as max 16 bits in msg.c)
 #define PMF_DUCKED          1
@@ -349,7 +322,6 @@ typedef struct {
 	// for fixed msec Pmove
 	int pmove_fixed;
 	int pmove_msec;
-	int fixedphysicsfps; // OSPx
 
 	// callbacks to test the world
 	// these will be different functions during game and cgame
@@ -412,9 +384,9 @@ typedef enum {
 	PERS_HWEAPON_USE,
 	// Rafael wolfkick
 	PERS_WOLFKICK,
-	// OSPx
+	// L0 - Hitsounds
 	PERS_HITHEAD,
-	PERS_HITBODY
+	PERS_HIT	
 } persEnum_t;
 
 
@@ -481,11 +453,8 @@ typedef enum {
 	PW_REDFLAG,
 	PW_BLUEFLAG,
 	PW_BALL,
-
-// OSPx	
 	PW_READY,			// Ready
 	PW_BLACKOUT = 14,	// Specklock
-// -OSPx
 
 	PW_NUM_POWERUPS
 } powerup_t;
@@ -654,7 +623,7 @@ typedef enum {
 	// -NERVE - SMF
 	WP_BINOCULARS,          // 46
 
-	WP_NUM_WEAPONS          // 48 originally 47   NOTE: this cannot be larger than 64 for AI/player weapons!
+	WP_NUM_WEAPONS          // 47   NOTE: this cannot be larger than 64 for AI/player weapons!
 
 } weapon_t;
 
@@ -663,21 +632,6 @@ extern int weapBanksMultiPlayer[MAX_WEAP_BANKS_MP][MAX_WEAPS_IN_BANK_MP];
 // jpw
 
 
-
-// OSP
-typedef struct {
-	int kills, teamkills, killedby;
-} weaponStats_t;
-
-typedef enum {
-	HR_HEAD,
-	HR_ARMS,
-	HR_BODY,
-	HR_LEGS,
-	HR_NUM_HITREGIONS,
-} hitRegion_t;
-
-// -OSP
 typedef struct ammotable_s {
 	int maxammo;            //
 	int uses;               //
@@ -725,7 +679,7 @@ typedef enum {
 	WPOS_NUM_POSITIONS
 } pose_t;
 
-// reward sounds - from Quake3
+// reward sounds
 typedef enum {
 	REWARD_BAD,
 
@@ -1140,15 +1094,16 @@ typedef struct headAnimation_s {
 
 typedef enum {
 	TEAM_FREE,
-	TEAM_RED,   // RtcwPro ET has TEAM_AXIS
-	TEAM_BLUE,  // RtcwPro ET has TEAM_ALLIED
+	TEAM_RED,
+	TEAM_BLUE,
 	TEAM_SPECTATOR,
+
 	TEAM_NUM_TEAMS
 } team_t;
 
 // Time between location updates
 #define TEAM_LOCATION_UPDATE_TIME       1000
-// Stats
+// L0 - OSP stats dump / weapon stat info: mapping between MOD_ and WP_ types 
 typedef enum extWeaponStats_s
 {
 	WS_KNIFE,               // 0
@@ -1169,7 +1124,8 @@ typedef enum extWeaponStats_s
 	WS_SMOKE,               // 15
 	WS_MG42,                // 16
 	WS_RIFLE,				// 17 - equivalent american weapon to german mauser
-	WS_VENOM,				// 18						
+	WS_VENOM,				// 18 
+	WS_POISON,				// 19							
 	WS_MAX
 } extWeaponStats_t;
 
@@ -1185,9 +1141,10 @@ typedef struct weap_ws_convert_s {
 	weapon_t iWeapon;
 	extWeaponStats_t iWS;
 } weap_ws_convert_t;
+// OSP
+
 // How many players on the overlay
 #define TEAM_MAXOVERLAY     8
-
 
 // means of death
 typedef enum {
@@ -1278,14 +1235,7 @@ typedef enum {
 	MOD_MEDIC,      // these like this or not
 //
 	MOD_BAT,
-
-// OSPx
-	MOD_ADMKILL,
-	MOD_SELFKILL,
-	MOD_ARTILLERY,	
-	MOD_SWITCHTEAM,
-	MOD_NUM_MODS
-// -OSPx
+	MOD_NUM_MODS	// OSP port
 
 } meansOfDeath_t;
 
@@ -1813,47 +1763,27 @@ int BG_GetAnimScriptEvent( playerState_t *ps, scriptAnimEventTypes_t event );
 
 extern animStringItem_t animStateStr[];
 extern animStringItem_t animBodyPartsStr[];
-// OSP
-#define MATCH_MINPLAYERS "2" // Minimum # of players needed to start a match
 
-// Multiview support
-int BG_simpleHintsCollapse( int hint, int val );
-int BG_simpleHintsExpand( int hint, int val );
-int BG_simpleWeaponState( int ws );
+// OSPx
 
-// Color escape handling
-int BG_colorstrncpyz( char *in, char *out, int str_max, int out_max );
-int BG_drawStrlen( const char *str );
-int BG_strRelPos( char *in, int index );
-int BG_cleanName( const char *pszIn, char *pszOut, unsigned int dwMaxLength, qboolean fCRLF );
-
-// Crosshair support
-void BG_setCrosshair( char *colString, float *col, float alpha, char *cvarName );
-
+// Crosshairs
+void BG_setCrosshair(char *colString, float *col, float alpha, char *cvarName);
 // Client flags for server processing
 #define CGF_AUTORELOAD      0x01
 #define CGF_STATSDUMP       0x02
 #define CGF_AUTOACTIVATE    0x04
 #define CGF_PREDICTITEMS    0x08
-
-
-// Voting
-typedef struct {
-	const char  *pszCvar;
-	int flag;
-} voteType_t;
-
-extern const voteType_t voteToggles[];
-extern int numVotesAvailable;
-
-#define VOTING_DISABLED     ( ( 1 << numVotesAvailable ) - 1 )
-
-
-// -OSP
-
-
-
+//
 extWeaponStats_t BG_WeapStatForWeapon( weapon_t iWeaponID );
+// ET Port 
+int BG_cleanName( const char *pszIn, char *pszOut, unsigned int dwMaxLength, qboolean fCRLF );
+// L0 - bg_stats.c
+//
 
-// ET Port
-int BG_cleanName(const char *pszIn, char *pszOut, unsigned int dwMaxLength, qboolean fCRLF);
+// -OSPx
+// L0 - Reinforcements offset
+#define MAX_REINFSEEDS  8
+#define REINF_RANGE     16      // (0 to n-1 second offset)
+#define REINF_BLUEDELT  3       // Allies shift offset
+#define REINF_REDDELT   2       // Axis shift offset
+extern const unsigned int aReinfSeeds[MAX_REINFSEEDS];

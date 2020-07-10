@@ -63,8 +63,7 @@ enum {
 	CGAME_EVENT_NONE,
 	CGAME_EVENT_TEAMMENU,
 	CGAME_EVENT_SCOREBOARD,
-	CGAME_EVENT_EDITHUD,
-	CGAME_EVENT_DEMO               // OSP
+	CGAME_EVENT_EDITHUD
 };
 
 
@@ -221,13 +220,8 @@ typedef enum {
 	CG_KEY_SETBINDING,
 	CG_KEY_KEYNUMTOSTRINGBUF,
 
-	CG_TRANSLATE_STRING,
+	CG_TRANSLATE_STRING
 	// -NERVE - SMF
-	// L0 - New stuff
-	CG_REQ_SS,
-	CG_HTTP_SUBMIT_CMD,		// Just Submits and bails out
-	CG_HTTP_POST_CMD,		// Submits and waits for reply
-	CG_HTTP_QUERY_CMD		// Just sends a inquiry
 } cgameImport_t;
 
 

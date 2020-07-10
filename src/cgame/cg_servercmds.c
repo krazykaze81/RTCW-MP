@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -177,7 +177,6 @@ NERVE - SMF
 ==================
 */
 void CG_ParseWolfinfo( void ) {
-	//int old_gs = cgs.gamestate;
 	const char  *info;
     int        old_gs = cgs.gamestate;
 	info = CG_ConfigString( CS_WOLFINFO );
@@ -186,22 +185,19 @@ void CG_ParseWolfinfo( void ) {
 	cgs.nextTimeLimit = atof( Info_ValueForKey( info, "g_nextTimeLimit" ) );
 	cgs.gamestate = atoi( Info_ValueForKey( info, "gamestate" ) );
 
-	// OSP - Announce game in progress if we are really playing
+		// Announce game in progress if we are really playing
 	if (old_gs != GS_PLAYING && cgs.gamestate == GS_PLAYING)
 	{
 		trap_S_StartLocalSound(cgs.media.announceFight, CHAN_ANNOUNCER);
+
 	//	Pri("^1FIGHT!\n");
-	//	CPri("^1FIGHT!\n");
+		//CPri(CG_TranslateString("^1FIGHT!\n"));
 	}
+
 
 	if ( !cgs.localServer ) {
 		trap_Cvar_Set( "gamestate", va( "%i", cgs.gamestate ) );
 	}
-
-	// OSP
-	//if (old_gs != GS_WARMUP_COUNTDOWN && cgs.gamestate == GS_WARMUP_COUNTDOWN) {
-	//	CG_ParseWarmup();
-	//}
 }
 
 /*
@@ -222,12 +218,8 @@ static void CG_ParseWarmup( void ) {
 
 	} else if ( warmup > 0 && cg.warmup <= 0 ) {
 		trap_S_StartLocalSound( cgs.media.countPrepareSound, CHAN_ANNOUNCER );
-
 		// OSPx - Auto Actions
-		if (!cg.demoPlayback &&
-			cg_autoAction.integer & AA_DEMORECORD /*&& 
-			cgs.tournamentMode < TOURNY_FULL*/ )
-		{
+		if (!cg.demoPlayback && cg_autoAction.integer & AA_DEMORECORD) {
 			CG_autoRecord_f();
 		}
 	}
@@ -296,67 +288,52 @@ static void CG_ParseFog( void ) {
 
 /*
 ================
-OSPx 
+L0 - Reinforcements offset
 
-Parse reinforcement offsets
+Parse reinforcements offset
 ================
 */
-void CG_ParseReinforcementTimes(const char *pszReinfSeedString) {
+void CG_ParseReinforcementTimes( const char *pszReinfSeedString ) {
 	const char *tmp = pszReinfSeedString, *tmp2;
 	unsigned int i, j, dwDummy, dwOffset[TEAM_NUM_TEAMS];
 
 #define GETVAL( x,y ) if ( ( tmp = strchr( tmp, ' ' ) ) == NULL ) {return;} x = atoi( ++tmp ) / y;
 
-	dwOffset[TEAM_BLUE] = atoi(pszReinfSeedString) >> REINF_BLUEDELT;
-	GETVAL(dwOffset[TEAM_RED], (1 << REINF_REDDELT));
+	dwOffset[TEAM_BLUE] = atoi( pszReinfSeedString ) >> REINF_BLUEDELT;
+	GETVAL( dwOffset[TEAM_RED], ( 1 << REINF_REDDELT ) );
 	tmp2 = tmp;
 
-	for (i = TEAM_RED; i <= TEAM_BLUE; i++) {
+	for ( i = TEAM_RED; i <= TEAM_BLUE; i++ ) {
 		tmp = tmp2;
-		for (j = 0; j < MAX_REINFSEEDS; j++) {
-			if (j == dwOffset[i]) {
-				GETVAL(cgs.aReinfOffset[i], aReinfSeeds[j]);
+		for ( j = 0; j < MAX_REINFSEEDS; j++ ) {
+			if ( j == dwOffset[i] ) {
+				GETVAL( cgs.aReinfOffset[i], aReinfSeeds[j] );
 				cgs.aReinfOffset[i] *= 1000;
 				break;
 			}
-			GETVAL(dwDummy, 1);
+			GETVAL( dwDummy, 1 );
 		}
 	}
 }
 /*
 ================
-OSPx - Ready
+L0 - Pause
+
+Parse Pause state
+================
+*/
+void CG_ParsePause( const char *pState ) {
+	cgs.pauseState = atoi( pState );
+}
+/*
+================
+L0 - Ready
 
 Parse Ready state
 ================
 */
-void CG_ParseReady(const char *pState) {
-	cgs.readyState = atoi(pState);
-}
-
-/*
-================
-OSPx - Pause
-
-Parse & Sort Pause state so client can work with it..
-================
-*/
-void CG_ParsePause(const char *pTime) {	
-	if (atoi(pTime) == 10000) {
-		cgs.match_paused = PAUSE_RESUMING;
-		cgs.match_resumes = 0;
-		cgs.match_expired = 0;
-	}
-	else if (atoi(pTime) > 0) {
-		cgs.match_paused = PAUSE_ON;
-		cgs.match_resumes = atoi(pTime);
-		cgs.match_expired = 0;
-	}
-	else {
-		cgs.match_paused = PAUSE_NONE;
-		cgs.match_resumes = 0;
-		cgs.match_expired = 0;
-	}
+void CG_ParseReady( const char *pState ) {
+	cgs.readyState = atoi( pState );
 }
 
 /*
@@ -370,31 +347,27 @@ void CG_SetConfigValues( void ) {
 #ifdef MISSIONPACK
 	const char *s;
 #endif
-	// OSPx - Pause
-	int pState = atoi(CG_ConfigString(CS_PAUSED));
-	cgs.match_resumes = (pState > 0 ? pState : 0);
-
-	if (pState && pState == 10000)
-		cgs.match_paused = PAUSE_RESUMING;
-	else if (pState && (pState > 0 && pState < 10000))
-		cgs.match_paused = PAUSE_ON;
-	else if (!pState || pState == 0)
-		cgs.match_paused = PAUSE_NONE;
-	// -OSPx
 
 	cgs.scores1 = atoi( CG_ConfigString( CS_SCORES1 ) );
 	cgs.scores2 = atoi( CG_ConfigString( CS_SCORES2 ) );
 	cgs.levelStartTime = atoi( CG_ConfigString( CS_LEVEL_START_TIME ) );
+#ifdef MISSIONPACK
+	if ( cgs.gametype == GT_CTF ) {
+		s = CG_ConfigString( CS_FLAGSTATUS );
+		cgs.redflag = s[0] - '0';
+		cgs.blueflag = s[1] - '0';
+	} else if ( cgs.gametype == GT_1FCTF )    {
+		s = CG_ConfigString( CS_FLAGSTATUS );
+		cgs.flagStatus = s[0] - '0';
+	}
+#endif
 	cg.warmup = atoi( CG_ConfigString( CS_WARMUP ) );
-
-// OSPx
-	// Reinforcements
-	CG_ParseReinforcementTimes(CG_ConfigString(CS_REINFSEEDS));
+	// L0 - Reinforcements offset
+	CG_ParseReinforcementTimes( CG_ConfigString( CS_REINFSEEDS ) );
 	// L0 - Pause
 	CG_ParsePause( CG_ConfigString( CS_PAUSED ) );
-	// Ready	
-	CG_ParseReady(CG_ConfigString(CS_READY));
-// -OSPx
+	// L0 - Ready
+	CG_ParseReady( CG_ConfigString( CS_READY ) );
 }
 
 /*
@@ -469,17 +442,6 @@ static void CG_ConfigStringModified( void ) {
 		cgs.scores1 = atoi( str );
 	} else if ( num == CS_SCORES2 ) {
 		cgs.scores2 = atoi( str );
-// OSPx 
-	// Set reinforcement times for each team
-	} else if (num == CS_REINFSEEDS) {
-		CG_ParseReinforcementTimes(str);
-	// Ready
-	} else if (num == CS_READY) {
-		CG_ParseReady(str);
-	// Pause
-	} else if (num == CS_PAUSED) {
-		CG_ParsePause(str);
-// OSPx
 	} else if ( num == CS_LEVEL_START_TIME ) {
 		cgs.levelStartTime = atoi( str );
 	} else if ( num == CS_VOTE_TIME ) {
@@ -540,7 +502,16 @@ static void CG_ConfigStringModified( void ) {
 //----(SA)
 	} else if ( num == CS_SHADERSTATE )   {
 		CG_ShaderStateChanged();
+	}
 	 // Reinforcmements offset
+	else if ( num == CS_REINFSEEDS ) {
+		CG_ParseReinforcementTimes( str );
+	}  // Pause
+	else if ( num == CS_PAUSED ) {
+		CG_ParsePause( str );
+	} // Ready
+	else if ( num == CS_READY ) {
+		CG_ParseReady( str );
 	}
 }
 
@@ -836,7 +807,7 @@ static void CG_MapRestart( void ) {
 	cg.lightstylesInited    = qfalse;
 
 	cg.mapRestart = qtrue;
-	cgs.dumpStatsTime = 0;	// OSPx - Stats
+	cgs.dumpStatsTime = 0;	// L0 - OSP Stats
 
 	CG_StartMusic();
 
@@ -875,31 +846,6 @@ static void CG_MapRestart( void ) {
 		}
 	}
 #endif
-	// OSPx - Fight Announcement 
-	if (cg.warmup == 0 && (cgs.gamestate == GS_WARMUP_COUNTDOWN))
-	{
-		// Poor man's solution...replace font one of this days as this is ridicoulus.	:C		
-		CG_AddAnnouncer("F IGH T !", cgs.media.countFightSound, 1.6f, 1200, 0.5f, 0.0f, 0.0f, ANNOUNCER_NORMAL);
-
-		/*
-		// Hooking auto demo for tournament mode..
-		if (!cg.demoPlayback &&	cgs.tournamentMode == TOURNY_FULL &&
-			cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR) 
-		{
-			CG_autoRecord_f();
-		}
-		*/
-	}
-	/*else if (cg.warmup == 0 && cgs.gamestate != GS_WARMUP_COUNTDOWN ) {
-		// Bail on the demo if we reset the match or smth..
-		if (!cg.demoPlayback &&					  
-			cgs.tournamentMode == TOURNY_FULL &&
-			cgs.clientinfo[cg.snap->ps.clientNum].team != TEAM_SPECTATOR)
-		{
-			trap_SendConsoleCommand("stoprecord\n");
-		}
-	}*/
-	// -OSPx
 	trap_Cvar_Set( "cg_thirdPerson", "0" );
 }
 
@@ -1278,10 +1224,6 @@ void CG_PlayVoiceChat( bufferedVoiceChat_t *vchat ) {
 		return;
 	}
 */
-	// OSPx - Not in demo if disabled
-	if (cg.demoPlayback && cgs.noVoice) {
-		return;
-	}
 
 	if ( !cg_noVoiceChats.integer ) {
 		trap_S_StartLocalSound( vchat->snd, CHAN_VOICE );
@@ -1319,7 +1261,7 @@ void CG_PlayVoiceChat( bufferedVoiceChat_t *vchat ) {
 		}
 #endif
 	}
-	if ( !vchat->voiceOnly && !cg_noVoiceText.integer || (cg.demoPlayback && !cgs.noVoice) ) {
+	if ( !vchat->voiceOnly && !cg_noVoiceText.integer ) {
 		CG_AddToTeamChat( vchat->message );
 		CG_Printf( va( "[skipnotify]: %s\n", vchat->message ) ); // JPW NERVE
 	}
@@ -1546,12 +1488,13 @@ const char* CG_LocalizeServerCommand( const char *buf ) {
 }
 // -NERVE - SMF
 
+// nihi added below
 /*
 =================
-OSPx
+L0
 
 Large OSP (ET port) Stats dump bellow
-NOTE: It's modifed to some extend.
+NOTE: It's modifed to suit wolfX..
 NOTE: My changes aren't commented really.
 =================
 */
@@ -1559,10 +1502,11 @@ NOTE: My changes aren't commented really.
 // Window Prints //
 ///////////////////
 
-// +wstats 
+// +wstats
 void CG_parseWeaponStats_cmd( void( txt_dump ) ( char * ) ) {
 	clientInfo_t *ci;
 	qboolean fFull = ( txt_dump != CG_printWindow );
+//	qboolean fFull = qfalse;  // nihi added
 	qboolean fHasStats = qfalse;
 	char strName[MAX_STRING_CHARS];
 	int atts, deaths, dmg_given, dmg_rcvd, hits, kills, team_dmg, headshots, gibs;
@@ -1580,16 +1524,13 @@ void CG_parseWeaponStats_cmd( void( txt_dump ) ( char * ) ) {
 		txt_dump(     "Weapon     Acrcy Hits/Atts Kills Deaths Headshots\n" );
 		txt_dump(     "-------------------------------------------------\n" );
 	} else {
-		txt_dump(     "Weapon     Acrcy Hits/Atts Kll Dth HS\n" );	
+		txt_dump(     "Weapon     Acrcy Hits/Atts Kll Dth HS\n" );
 		txt_dump(     "\n" );
 	}
 
 	if ( !dwWeaponMask ) {
-		if (fFull)
-			txt_dump( "^3No weapon info available.\n" );
-		else
-			txt_dump("^zNo weapon info available.\n");
-	} else {		
+		txt_dump( "^zNo weapon info available.\n" );
+	} else {
 		for ( i = WS_KNIFE; i < WS_MAX; i++ ) {
 			if ( dwWeaponMask & ( 1 << i ) ) {
 				hits = atoi( CG_Argv( iArg++ ) );
@@ -1598,11 +1539,7 @@ void CG_parseWeaponStats_cmd( void( txt_dump ) ( char * ) ) {
 				deaths = atoi( CG_Argv( iArg++ ) );
 				headshots = atoi( CG_Argv( iArg++ ) );
 
-				if (fFull)
-					Q_strncpyz(strName, va("^3%-9s: ", aWeaponInfo[i].pszName), sizeof(strName));
-				else
-					Q_strncpyz( strName, va( "^z%-9s: ", aWeaponInfo[i].pszName ), sizeof( strName ) );
-
+				Q_strncpyz( strName, va( "^z%-9s: ", aWeaponInfo[i].pszName ), sizeof( strName ) );
 				if ( atts > 0 || hits > 0 ) {
 					fHasStats = qtrue;
 					Q_strcat( strName, sizeof( strName ), va( "^7%5.1f ^5%4d/%-4d ",
@@ -1621,7 +1558,7 @@ void CG_parseWeaponStats_cmd( void( txt_dump ) ( char * ) ) {
 					txt_dump( va( "%s^2%3d ^1%3d%s\n", strName, kills, deaths, ( ( aWeaponInfo[i].fHasHeadShots ) ? va( " ^3%2d", headshots ) : "" ) ) );
 				}
 			}
-		}		
+		}
 
 		if ( fHasStats ) {
 			dmg_given = atoi( CG_Argv( iArg++ ) );
@@ -1633,28 +1570,23 @@ void CG_parseWeaponStats_cmd( void( txt_dump ) ( char * ) ) {
 				txt_dump( "\n" );
 			}
 
-			if (fFull) {
-				txt_dump(va("\n^3Damage Given: ^7%-6d  ^3Team Damage : ^7%d\n", dmg_given, team_dmg));
-				txt_dump(va("^3Damage Recvd: ^7%-6d  ^3Bodies Gibed: ^7%d \n", dmg_rcvd, gibs));
-			}
-			else {
-				txt_dump(va("\n^zDamage Given: ^7%-6d  ^zTeam Damage : ^7%d\n", dmg_given, team_dmg));
-				txt_dump(va("^zDamage Recvd: ^7%-6d  ^zBodies Gibed: ^7%d \n", dmg_rcvd, gibs));
-			}
-		}	
+			txt_dump( va( "\n^zDamage Given: ^7%-6d  ^zTeam Damage : ^7%d\n", dmg_given, team_dmg ) );
+			txt_dump( va(  "^zDamage Recvd: ^7%-6d  ^zBodies Gibed: ^7%d \n", dmg_rcvd, gibs ) );
+		}
 	}
 	txt_dump( "\n" );
 }
-
-// 1.0/shrub like stats (+stats) but with Window overlay
+// 1.0 like stats (+stats)
 void CG_parseClientStats_cmd (void( txt_dump ) ( char * ) ) {
 	clientInfo_t *ci;
-	qboolean fFull = ( txt_dump != CG_printWindow );	
+	qboolean fFull = ( txt_dump != CG_printWindow );
+
+//	qboolean fFull = qtrue;  // nihi added
 	char strName[MAX_STRING_CHARS];
 	int kills, headshots, deaths, team_kills, suicides, acc_shots, acc_hits, damage_giv, damage_rec;
-	int bleed, ammo_giv, med_giv, revived, gibs, kill_peak;
+	int bleed, ammo_giv, med_giv, revived, poisoned, gibs, kill_peak;
 	unsigned int iArg = 1;
-	unsigned int nClient = atoi( CG_Argv( iArg++ ) );	
+	unsigned int nClient = atoi( CG_Argv( iArg++ ) );
 	float acc;
 
 	ci = &cgs.clientinfo[nClient];
@@ -1663,14 +1595,15 @@ void CG_parseClientStats_cmd (void( txt_dump ) ( char * ) ) {
 	txt_dump( va( "^7Current game stats for: ^c%s\n\n", strName ));
 
 	if ( fFull ) {
-		txt_dump(     "Kills HS   Deaths TKs Suicides ^3DmgGiv DmgRcv TeamDmg\n" );
+		txt_dump(     "^cKills ^7HS   Deaths TKs Suicides ^eDmgGiv DmgRcv TeamDmg\n" );
 		txt_dump(     "----------------------------------------------------\n" );
 	} else {
-		txt_dump(     "^zKls  ^7HS  Dth TK Sui ^nDmGiv DmRcv TDmg\n" );
+		txt_dump(     "^cKls  ^7HS  Dth TK Sui ^eDmGiv DmRcv TDmg\n" );
 		//txt_dump(     "-------------------------------------\n");
 		txt_dump(     "\n" );
 	}
-	
+
+
 	kills = atoi( CG_Argv( iArg++ ) );
 	headshots = atoi( CG_Argv( iArg++ ) );
 	deaths = atoi( CG_Argv( iArg++ ) );
@@ -1683,47 +1616,34 @@ void CG_parseClientStats_cmd (void( txt_dump ) ( char * ) ) {
 	bleed = atoi( CG_Argv( iArg++ ) );
 	gibs = atoi( CG_Argv( iArg++ ) );
 	med_giv = atoi( CG_Argv( iArg++ ) );
-	ammo_giv = atoi( CG_Argv( iArg++ ) );	
+	ammo_giv = atoi( CG_Argv( iArg++ ) );
 	revived = atoi( CG_Argv( iArg++ ) );
+	poisoned = atoi( CG_Argv( iArg++ ) );
 	kill_peak = atoi( CG_Argv( iArg++ ) );
 
 	acc = ( acc_shots > 0 ) ? (((float)acc_hits / (float)acc_shots ) * 100.00f) : 0.00;
-	
+
 	if ( fFull ) {
-		txt_dump( va( "%-4d  %-3d  %-3d    %-2d  %-2d       ^3%-5d  %-5d  %-5d\n\n", 
-					kills, headshots, deaths, 
-					team_kills, suicides, damage_giv,	
+		txt_dump( va( "^c%-4d  ^7%-3d  %-3d    %-2d  %-2d       ^e%-5d  %-5d  %-5d\n\n",
+					kills, headshots, deaths,
+					team_kills, suicides, damage_giv,
 					damage_rec, bleed) );
 	} else {
-		txt_dump( va( "^z%-4d ^7%-3d %-3d %-2d %-2d  ^n%-5d %-5d %-4d\n\n\n", 
-					kills, headshots, deaths, 
+		txt_dump( va( "^c%-4d ^7%-3d %-3d %-2d %-2d  ^e%-5d %-5d %-4d\n\n\n",
+					kills, headshots, deaths,
 					team_kills, suicides, damage_giv,
 					damage_rec, bleed) );
 	}
-	
-	// OSPx - May look like an overkill but console can't parse 
-	// new colors and it ends up looking like rubish..
-	if (fFull) {
-		if (ammo_giv > 0 || med_giv > 0)
-			txt_dump(va("^3Ammopacks: ^7%-3d    ^3Healthpacks: ^7%d\n", ammo_giv, med_giv));
-		if (revived > 0)
-			txt_dump(va("^3Revives  : ^7%-3d    \n", revived));
-		if (kill_peak > 0 || gibs > 0)
-			txt_dump(va("^3Kill Peak: ^7%-3d    ^3Gibbed     : ^7%d\n", kill_peak, gibs));
-		if (acc_shots > 0 || acc_hits > 0)
-			txt_dump(va("^3Accuracy: ^7%-3.2f  ^3Shots-Hits : ^7%d/^n%d\n", acc, acc_shots, acc_hits));
-	}
-	else {
-		if (ammo_giv > 0 || med_giv > 0)
-			txt_dump(va("^zAmmopacks: ^7%-3d    ^zHealthpacks: ^7%d\n", ammo_giv, med_giv));
-		if (revived > 0)
-			txt_dump(va("^zRevives  : ^7%-3d    \n", revived));
-		if (kill_peak > 0 || gibs > 0)
-			txt_dump(va("^zKill Peak: ^7%-3d    ^zGibbed     : ^7%d\n", kill_peak, gibs));
-		if (acc_shots > 0 || acc_hits > 0)
-			txt_dump(va("^zAccuracy: ^7%-3.2f  ^zShots-Hits : ^7%d/^n%d\n", acc, acc_shots, acc_hits));
-	}	
-			
+
+	if (ammo_giv > 0 || med_giv > 0)
+		txt_dump( va("^cAmmopacks: ^7%-3d    ^cHealthpacks: ^7%d\n", ammo_giv, med_giv ));
+	if (revived > 0 || poisoned > 0)
+		txt_dump( va("^cRevives  : ^7%-3d    ^cPoisoned   : ^7%d\n", revived, poisoned ));
+	if (kill_peak > 0 || gibs > 0)
+		txt_dump( va("^cKill Peak: ^7%-3d    ^cGibbed     : ^7%d\n", kill_peak, gibs ));
+	if (acc_shots > 0 || acc_hits > 0)
+		txt_dump( va("^cAccouracy: ^7%-3.2f  ^cShots-Hits : ^7%d/^e%d\n", acc, acc_shots, acc_hits  ));
+
 	if ( !fFull ) {
 		txt_dump( "\n" );
 	} else {
@@ -1735,28 +1655,28 @@ void CG_parseClientStats_cmd (void( txt_dump ) ( char * ) ) {
 
 // +topshots / +bottomshots (console or window)
 void CG_parseBestShotsStats_cmd( qboolean doTop, void( txt_dump ) ( char * ) ) {
+
 	int iArg = 1;
 	qboolean fFull = ( txt_dump != CG_printWindow );
+//	qboolean fFull = qtrue;  // nihi added
+
 
 	int iWeap = atoi( CG_Argv( iArg++ ) );
 	if ( !iWeap ) {
-		if (fFull)
-			txt_dump(va("^3No qualifying %sshot info available.      \n\n", ((doTop) ? "top" : "bottom")));
-		else
-			txt_dump( va( "^zNo qualifying %sshot info available.      \n\n", ( ( doTop ) ? "top" : "bottom" ) ) );
+		txt_dump( va( "^cNo qualifying %sshot info available.      \n\n", ( ( doTop ) ? "top" : "bottom" ) ) );
 		return;
 	}
-	
+
 	if ( fFull ) {
-		txt_dump( va( "^5%s Match Accuracies:\n", ( doTop ) ? "BEST" : "WORST" ) );
-		txt_dump(  "\n^3WP   Acrcy Hits/Atts Kills Deaths\n" );
+		txt_dump( va( "^2%s Match Accuracies:\n", ( doTop ) ? "BEST" : "WORST" ) );
+		txt_dump(  "\n^cWP   Acrcy Hits/Atts Kills Deaths\n" );
 		txt_dump(    "-------------------------------------------------------------\n" );
 	} else {
-		// OSPx - Sucks I know...alternative is to patch cg_info.c 
+		// L0 - Sucks I know...alternative is to patch cg_info.c
 		// (port shit load of stuff that we'll never use besides for this) and style it there..
-		txt_dump( va( ( doTop ) ? "^dBEST Match Accuracies:                            \n\n" : 
-								  "^nWORST Match Accuracies:                           \n\n"));
-		txt_dump(    "^zWP   Acrcy Hits/Atts Kll Dth\n" );	
+		txt_dump( va( ( doTop ) ? "^dBEST Match Accuracies:                            \n\n" :
+								  "^eWORST Match Accuracies:                           \n\n"));
+		txt_dump(    "^cWP   Acrcy Hits/Atts Kll Dth\n" );
 		txt_dump(    "\n" );
 	}
 
@@ -1771,11 +1691,11 @@ void CG_parseBestShotsStats_cmd( qboolean doTop, void( txt_dump ) ( char * ) ) {
 
 		if ( fFull ) {
 			BG_cleanName( cgs.clientinfo[cnum].name, name, 30, qfalse );
-			txt_dump( va( "^3%s ^7%5.1f ^5%4d/%-4d ^2%5d ^1%6d ^7%s\n",
+			txt_dump( va( "^c%s ^7%5.1f ^5%4d/%-4d ^2%5d ^1%6d ^7%s\n",
 						  aWeaponInfo[iWeap - 1].pszCode, acc, hits, atts, kills, deaths, name ) );
 		} else {
 			BG_cleanName( cgs.clientinfo[cnum].name, name, 12, qfalse );
-			txt_dump( va( "^z%s ^7%5.1f ^5%4d/%-4d ^2%3d ^1%3d ^7%s\n",
+			txt_dump( va( "^c%s ^7%5.1f ^5%4d/%-4d ^2%3d ^1%3d ^7%s\n",
 						  aWeaponInfo[iWeap - 1].pszCode, acc, hits, atts, kills, deaths, name ) );
 		}
 
@@ -1791,23 +1711,14 @@ void CG_parseBestShotsStats_cmd( qboolean doTop, void( txt_dump ) ( char * ) ) {
 
 void CG_parseTopShotsStats_cmd( qboolean doTop, void( txt_dump ) ( char * ) ) {
 	int i, iArg = 1;
-	qboolean fFull = (txt_dump != CG_printWindow);
 	int cClients = atoi( CG_Argv( iArg++ ) );
 	int iWeap = atoi( CG_Argv( iArg++ ) );
 	int wBestAcc = atoi( CG_Argv( iArg++ ) );
 
-	if (fFull)
-		txt_dump(va("^3Weapon accuracies for: ^7%s\n",
-					  ( iWeap >= WS_KNIFE && iWeap < WS_MAX) ? aWeaponInfo[iWeap].pszName : "UNKNOWN") );
-	else
-		txt_dump( va( "Weapon accuracies for: ^z%s\n",
-					  ( iWeap >= WS_KNIFE && iWeap < WS_MAX ) ? aWeaponInfo[iWeap].pszName : "UNKNOWN" ) );
+	txt_dump( va( "Weapon accuracies for: ^3%s\n",
+				  ( iWeap >= WS_KNIFE && iWeap < WS_MAX ) ? aWeaponInfo[iWeap].pszName : "UNKNOWN" ) );
 
-	if (fFull)
-		txt_dump("\n^3  Acc Hits/Atts Kills Deaths\n");
-	else
-		txt_dump( "\n^z  Acc Hits/Atts Kills Deaths\n" );
-
+	txt_dump( "\n^3  Acc Hits/Atts Kills Deaths\n" );
 	txt_dump(    "----------------------------------------------------------\n" );
 
 	if ( !cClients ) {
@@ -1847,12 +1758,13 @@ void CG_wstatsParse_cmd( void ) {
 		cg.statsWindow->time = trap_Milliseconds();
 	}
 
-	if ( cg.statsWindow != NULL ) {			
+	if ( cg.statsWindow != NULL ) {
 		cg.statsWindow->effects |= WFX_TEXTSIZING;
 		cg.statsWindow->lineCount = 0;
 		cg.windowCurrent = cg.statsWindow;
 		CG_parseWeaponStats_cmd( CG_printWindow );
 	}
+
 }
 // +stats window
 void CG_clientParse_cmd( void ) {
@@ -1867,31 +1779,34 @@ void CG_clientParse_cmd( void ) {
 		cg.clientStatsWindow->time = trap_Milliseconds();
 	}
 
-	if ( cg.clientStatsWindow != NULL ) {			
+	if ( cg.clientStatsWindow != NULL ) {
 		cg.clientStatsWindow->effects |= WFX_TEXTSIZING;
 		cg.clientStatsWindow->lineCount = 0;
 		cg.windowCurrent = cg.clientStatsWindow;
 		CG_parseClientStats_cmd( CG_printWindow );
 	}
+
 }
 // +topshots window
-void CG_TopShotsParse_cmd( void ) {	
+void CG_TopShotsParse_cmd( void ) {
+
 	if ( cg.topshotsWindow == NULL
 		 || cg.topshotsWindow->id != WID_TOPSHOTS
 		 || cg.topshotsWindow->inuse == qfalse
-		 ) {		
+		 ) {
 		CG_createTopShotsWindow();
 	} else if ( cg.topshotsWindow->state == WSTATE_SHUTDOWN ) {
 		cg.topshotsWindow->state = WSTATE_START;
 		cg.topshotsWindow->time = trap_Milliseconds();
 	}
 
-	if ( cg.topshotsWindow != NULL ) {			
+	if ( cg.topshotsWindow != NULL ) {
 		cg.topshotsWindow->effects |= WFX_TEXTSIZING;
 		cg.topshotsWindow->lineCount = 0;
-		cg.windowCurrent = cg.topshotsWindow;				
-		CG_parseBestShotsStats_cmd(qtrue, CG_printWindow);		
+		cg.windowCurrent = cg.topshotsWindow;
+		CG_parseBestShotsStats_cmd(qtrue, CG_printWindow);
 	}
+
 }
 
 //////////////////
@@ -1900,9 +1815,9 @@ void CG_TopShotsParse_cmd( void ) {
 
 // End table / Scores table
 void CG_scores_cmd( void ) {
-	const char *str = CG_Argv( 1 );	
+	const char *str = CG_Argv( 1 );
 
-	CG_Printf( "[skipnotify]%s", str );
+	CG_Printf( "[skipnotify]%s", str );	// L0 - FIXME - this causes double prints..
 	if ( cgs.dumpStatsFile > 0 ) {
 		char s[MAX_STRING_CHARS];
 
@@ -1915,13 +1830,13 @@ void CG_scores_cmd( void ) {
 			qtime_t ct;
 
 			trap_RealTime( &ct );
-			str = va( "Stats recorded: %02d:%02d:%02d (%02d %s %d)\n",
+			str = va( "\nStats recorded: %02d:%02d:%02d (%02d %s %d)\n",
 					  ct.tm_hour, ct.tm_min, ct.tm_sec,
 					  ct.tm_mday, aMonths[ct.tm_mon], 1900 + ct.tm_year );
 
 			trap_FS_Write( str, strlen( str ), cgs.dumpStatsFile );
 
-			CG_Printf( "[cgnotify]>>> ^3Stats recorded to: ^7%s\n", cgs.dumpStatsFileName );
+			CG_Printf( "[cgnotify]\n^3>>> Stats recorded to: ^7%s\n", cgs.dumpStatsFileName );
 			trap_FS_FCloseFile( cgs.dumpStatsFile );
 			cgs.dumpStatsFile = 0;
 		}
@@ -1943,7 +1858,7 @@ void CG_dumpStats( void ) {
 	qtime_t ct;
 	qboolean fDoScores = qfalse;
 	const char *info = CG_ConfigString( CS_SERVERINFO );
-	char *s = va( ">>> ^3%s: ^7%s\n", CG_TranslateString( "Map" ), Info_ValueForKey( info, "mapname" ) );
+	char *s = va( "\n^3>>> %s: ^3%s\n\n", CG_TranslateString( "Map" ), Info_ValueForKey( info, "mapname" ) );
 
 	trap_RealTime( &ct );
 	// /me holds breath (using circular va() buffer)
@@ -1962,7 +1877,7 @@ void CG_dumpStats( void ) {
 	CG_printFile( s );
 	CG_parseWeaponStats_cmd( CG_printFile );
 	if ( cgs.dumpStatsFile == 0 ) {
-		CG_Printf( "[cgnotify]\n>>> ^3%s: %s\n", CG_TranslateString( "Could not create logfile" ), cgs.dumpStatsFileName );
+		CG_Printf( "[cgnotify]\n^3>>> %s: %s\n", CG_TranslateString( "Could not create logfile" ), cgs.dumpStatsFileName );
 	}
 
 	// Daisy-chain to scores info
@@ -1975,7 +1890,7 @@ void CG_dumpStats( void ) {
 		trap_SendClientCommand( "scores" );
 	}
 }
-/**************** OSPx - Stats dump ends here *****************/
+/**************** L0 - OSP Stats dump ends here *****************/
 
 /*
 =================
@@ -1985,7 +1900,6 @@ The string has been tokenized and can be retrieved with
 Cmd_Argc() / Cmd_Argv()
 =================
 */
-void CG_ForceTapOut_f(void); // OSPx - Tapout
 static void CG_ServerCommand( void ) {
 	const char  *cmd;
 	char text[MAX_SAY_TEXT];
@@ -2007,12 +1921,6 @@ static void CG_ServerCommand( void ) {
 		return;
 	}
 
-	if (!Q_stricmp(cmd, "cpm")) {
-		//CG_AddPMItem(PM_MESSAGE, CG_LocalizeServerCommand(CG_Argv(1)), cgs.media.voiceChatShader); // ET had a popup message
-		CG_CenterPrint(CG_LocalizeServerCommand(CG_Argv(1)), SCREEN_HEIGHT - (SCREEN_HEIGHT * 0.25), SMALLCHAR_WIDTH);  //----(SA)	modified
-		return;
-	}
-
 	if ( !strcmp( cmd, "cp" ) ) {
 		// NERVE - SMF
 		int args = trap_Argc();
@@ -2026,8 +1934,8 @@ static void CG_ServerCommand( void ) {
 			}
 
 			// OSPx - Client logging
-			if (cg_printObjectiveInfo.integer > 0 && (args == 4 || atoi(CG_Argv(2)) > 1) && cgs.gamestate == GS_PLAYING && cgs.match_paused == PAUSE_NONE) {
-				CG_Printf("[cgnotify]*** INFO: ^3%s\n", Q_CleanStr((char *)CG_LocalizeServerCommand(CG_Argv(1))));
+			if (cg_printObjectiveInfo.integer > 0 && (args == 4 || atoi(CG_Argv(2)) > 1)) {
+				CG_Printf("[cgnotify]*** ^3INFO: ^5%s\n", Q_CleanStr((char *)CG_LocalizeServerCommand(CG_Argv(1))));
 			}
 
 			CG_PriorityCenterPrint( s, SCREEN_HEIGHT - ( SCREEN_HEIGHT * 0.25 ), SMALLCHAR_WIDTH, atoi( CG_Argv( 2 ) ) );
@@ -2036,96 +1944,77 @@ static void CG_ServerCommand( void ) {
 		}
 		return;
 	}
-
-	// OSPx - Console print only..
-	if (!Q_stricmp(cmd, "@print")) {
-		CG_Printf("[skipnotify]%s\n", CG_Argv(1)); 
+	// L0 - Console print only..
+	if ( !strcmp( cmd, "@print" ) ) {
+		CG_Printf( "[skipnotify]%s\n", CG_Argv( 1 )  );  // Add to console so people can toggle it and see it again..
 		return;
 	}
-
+	// End
 	// Pop In
 	if (!Q_stricmp(cmd, "popin")) {
-		int args = trap_Argc();		
+		int args = trap_Argc();
 		qboolean fade=qfalse;
 
 		if (args >= 3) {
 			fade = qtrue;
 		}
-		CG_PopinPrint(CG_LocalizeServerCommand(CG_Argv(1)), SCREEN_HEIGHT - (SCREEN_HEIGHT * 0.25), SMALLCHAR_WIDTH, fade);		
+		CG_PopinPrint(CG_LocalizeServerCommand(CG_Argv(1)), SCREEN_HEIGHT - (SCREEN_HEIGHT * 0.25), SMALLCHAR_WIDTH, fade);
 		return;
 	}
-
-// OSPx - Stats
+// L0 - OSP's stats dump
 	// Scores
-	if (!Q_stricmp(cmd, "sc")) {
+	if ( !Q_stricmp( cmd, "sc" ) ) {
 		CG_scores_cmd();
 		return;
 	}
 	// Weapon stats (console dump)
-	if (!Q_stricmp(cmd, "ws")) {
-		if (cgs.dumpStatsTime > cg.time) {
+	if ( !Q_stricmp( cmd, "ws" ) ) {
+		if ( cgs.dumpStatsTime > cg.time ) {
 			CG_dumpStats();
 		} else {
-			CG_parseWeaponStats_cmd(CG_printConsoleString);
+			CG_parseWeaponStats_cmd( CG_printConsoleString );
 			cgs.dumpStatsTime = 0;
 		}
 		return;
 	}
-	// +wstats 
-	if (!Q_stricmp(cmd, "wws")) {
+	// +wstats
+	if ( !Q_stricmp( cmd, "wws" ) ) {
 		CG_wstatsParse_cmd();
 		return;
 	}
 	// +stats
-	if (!Q_stricmp(cmd, "cgs")) {
+	if ( !Q_stricmp( cmd, "cgs" ) ) {
 		CG_clientParse_cmd();
 		return;
 	}
 	// +topshots
-	if (!Q_stricmp(cmd, "wbstats")) {
+	if ( !Q_stricmp( cmd, "wbstats" ) ) {
 		CG_TopShotsParse_cmd();
 		return;
 	}
-	// "topshots"-related commands (prints)
-	if (!Q_stricmp(cmd, "astats")) {
-		CG_parseTopShotsStats_cmd(qtrue, CG_printConsoleString);
+	// OSP - "topshots"-related commands (prints)
+	if ( !Q_stricmp( cmd, "astats" ) ) {
+		CG_parseTopShotsStats_cmd( qtrue, CG_printConsoleString );
 		return;
 	}
-	if (!Q_stricmp(cmd, "astatsb")) {
-		CG_parseTopShotsStats_cmd(qfalse, CG_printConsoleString);
+	if ( !Q_stricmp( cmd, "astatsb" ) ) {
+		CG_parseTopShotsStats_cmd( qfalse, CG_printConsoleString );
 		return;
 	}
-	if (!Q_stricmp(cmd, "bstats")) {
-		CG_parseBestShotsStats_cmd(qtrue, CG_printConsoleString);
+	if ( !Q_stricmp( cmd, "bstats" ) ) {
+		CG_parseBestShotsStats_cmd( qtrue, CG_printConsoleString );
 		return;
 	}
-	if (!Q_stricmp(cmd, "bstatsb")) {
-		CG_parseBestShotsStats_cmd(qfalse, CG_printConsoleString);
+	if ( !Q_stricmp( cmd, "bstatsb" ) ) {
+		CG_parseBestShotsStats_cmd( qfalse, CG_printConsoleString );
 		return;
 	}
-	// /stats (1.0/shrub alike..)
-	if (!Q_stricmp(cmd, "cgsp")) {
-		CG_parseClientStats_cmd(CG_printConsoleString);
+	// /stats (to console like in good old 1.0 days)
+	if ( !Q_stricmp( cmd, "cgsp" ) ) {
+		CG_parseClientStats_cmd( CG_printConsoleString );
 		return;
 	}
-
-	// Force instant tapout 
-	// NOTE: cg_forceTapout prevails if enabled..
-	if (!Q_stricmp(cmd, "reqforcespawn")) {
-		if (cg_instantTapout.integer && !cg_forceTapout.integer) {
-			CG_ForceTapOut_f();
-		} 		
-		return;
-	}
-
-	// Force tapout on respawn (reuse instant tapout..)
-	if (!Q_stricmp(cmd, "reqforcetapout")) {
-		 if (cg_forceTapout.integer) {
-			CG_ForceTapOut_f();
-		}
-		return;
-	}
-// -OSPx
+// L0 -End OSP Stats dump
 
 	if ( !strcmp( cmd, "cs" ) ) {
 		CG_ConfigStringModified();
@@ -2160,10 +2049,6 @@ static void CG_ServerCommand( void ) {
 			return;
 		}
 
-		// OSPx - Not in demo if it's off..
-		if (cg.demoPlayback && cgs.noChat) {
-			return;
-		}
 		if ( atoi( CG_Argv( 2 ) ) ) {
 			s = CG_LocalizeServerCommand( CG_Argv( 1 ) );
 		} else {
@@ -2173,10 +2058,10 @@ static void CG_ServerCommand( void ) {
 		trap_S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 		Q_strncpyz( text, s, MAX_SAY_TEXT );
 		CG_RemoveChatEscapeChar( text );
-		
+
 		// OSPx - No chat if it's disabled..
 		if (!cg_noChat.integer)
-			CG_AddToTeamChat(text); // JPW NERVE
+			CG_AddToTeamChat( text ); // JPW NERVE
 
 		CG_Printf( "[skipnotify]%s\n", text ); // JPW NERVE
 
@@ -2197,20 +2082,13 @@ static void CG_ServerCommand( void ) {
 			s = CG_Argv( 1 );
 		}
 
-		// OSPx - Not in demo if it's off..
-		if (cg.demoPlayback && cgs.noChat) {
-			return;
-		}
-
-		// OSPx - No voice prints
-		if  (cg_noVoice.integer < 2)
-			trap_S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
+		trap_S_StartLocalSound( cgs.media.talkSound, CHAN_LOCAL_SOUND );
 		Q_strncpyz( text, s, MAX_SAY_TEXT );
 		CG_RemoveChatEscapeChar( text );
-		
+
 		// OSPx - No chat if it's disabled..
 		if (!cg_noChat.integer)
-			CG_AddToTeamChat(text);
+			CG_AddToTeamChat( text );
 
 		CG_Printf( "[skipnotify]%s\n", text ); // JPW NERVE
 
@@ -2236,10 +2114,6 @@ static void CG_ServerCommand( void ) {
 		if (cg_noVoice.integer == 2 || cg_noVoice.integer == 3)
 			return;
 
-		// OSPx - Not in demo if it's off..
-		if (cg.demoPlayback && cgs.noVoice) {
-			return;
-		}
 		CG_VoiceChat( SAY_TEAM );           // NERVE - SMF - enabled support
 		return;
 	}
@@ -2248,10 +2122,6 @@ static void CG_ServerCommand( void ) {
 		// OSPx - No voice prints
 		if (cg_noVoice.integer)
 			return;
-		// OSPx - Not in demo if it's off..
-		if (cg.demoPlayback && cgs.noVoice) {
-			return;
-		}
 
 		CG_VoiceChat( SAY_TELL );           // NERVE - SMF - enabled support
 		return;
@@ -2322,17 +2192,6 @@ static void CG_ServerCommand( void ) {
 		return;
 	}
 
-	// L0 - New stuff
-	if (!strcmp(cmd, "ssreq")) {
-		// Not on map loads..
-		if (!cg.snap) {
-			return;
-		}
-
-		CG_Printf("^nServer requested screenshot..sending.\n");
-		trap_ReqSS(atoi(CG_Argv(1)));		
-		return;
-	}
 	CG_Printf( "Unknown client game command: %s\n", cmd );
 }
 

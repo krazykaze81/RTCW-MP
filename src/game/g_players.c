@@ -1,149 +1,38 @@
-﻿/*
+/*
 ===========================================================================
 
-Return to Castle Wolfenstein multiplayer GPL Source Code
+wolfX GPL Source Code
 Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
+This file is part of wolfX source code.
 
-RTCW MP Source Code is free software: you can redistribute it and/or modify
+wolfX Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-RTCW MP Source Code is distributed in the hope that it will be useful,
+wolfX Source Code is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with RTCW MP Source Code.  If not, see <http://www.gnu.org/licenses/>.
+along with wolfX Source Code.  If not, see <http://www.gnu.org/licenses/>.
 
-In addition, the RTCW MP Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the RTCW MP Source Code.  If not, please request a copy in writing from id Software at the address below.
+In addition, the wolfX Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the wolfX Source Code.  If not, please request a copy in writing from id Software at the address below.
 
 If you have questions concerning this license or the applicable additional terms, you may contact in writing id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 
 ===========================================================================
-OSPx - g_players.c
+L0 - g_players.c
 
-Various player's commands
+Player's commands and features.
 
-Created: 5 May/14
+Created: 23. Oct / 2012
+Last Updated: 28. Apr / 2013
 ===========================================================================
 */
 #include "g_local.h"
-
-
-/*
-=================
-Drop objective
-
-Port from NQ
-=================
-*/
-void Cmd_DropObj(gentity_t *self)
-{
-	gitem_t *item= NULL;
-
-	// drop flag regardless
-	if (self->client->ps.powerups[PW_REDFLAG]) {
-		item = BG_FindItem("Red Flag");
-		if (!item)
-			item = BG_FindItem("Objective");
-
-		self->client->ps.powerups[PW_REDFLAG] = 0;
-	}
-	if (self->client->ps.powerups[PW_BLUEFLAG]) {
-		item = BG_FindItem("Blue Flag");
-		if (!item)
-			item = BG_FindItem("Objective");
-
-		self->client->ps.powerups[PW_BLUEFLAG] = 0;
-	}
-
-	if (item) {
-		vec3_t launchvel = { 0, 0, 0 };
-		vec3_t forward;
-		vec3_t origin;
-		vec3_t angles;
-		gentity_t *flag;
-
-		VectorCopy(self->client->ps.origin, origin);
-		// tjw: if the player hasn't died, then assume he's
-		//      throwing objective per g_dropObj
-		if(self->health > 0) {
-			VectorCopy(self->client->ps.viewangles, angles);
-			if(angles[PITCH] > 0)
-				angles[PITCH] = 0;
-			AngleVectors(angles, forward, NULL, NULL);
-			VectorMA(self->client->ps.velocity,
-				96, forward, launchvel);
-			VectorMA(origin, 36, forward, origin);
-			origin[2] += self->client->ps.viewheight;
-		}
-
-		flag = LaunchItem(item, origin, launchvel, self->s.number);
-
-		flag->s.modelindex2 = self->s.otherEntityNum2;// JPW NERVE FIXME set player->otherentitynum2 with old modelindex2 from flag and restore here
-		flag->message = self->message;	// DHM - Nerve :: also restore item name
-		// Clear out player's temp copies
-		self->s.otherEntityNum2 = 0;
-		self->message = NULL;
-		self->droppedObj = qtrue;
-	} 
-	/*else
-	{
-		Cmd_ThrowKnives( self );
-	}*/
-}
-
-/*
-===================
-Drag players 
-
-From BOTW/S4NDMoD 
-===================
-*/
-void Cmd_Drag( gentity_t *ent) {
-	gentity_t *target;
-	vec3_t start,dir,end;
-	trace_t tr;
-	target = NULL;
-
-	if (!g_dragBodies.integer)
-		return;
-
-	if (level.time < (ent->lastDragTime + 20))		
-		return;
-
-	if (ent->client->ps.stats[STAT_HEALTH] <= 0)	
-		return;
-
-	AngleVectors(ent->client->ps.viewangles, dir, NULL, NULL);
-
-	VectorCopy(ent->s.pos.trBase, start);	
-	start[2] += ent->client->ps.viewheight;
-	VectorMA (start, 100, dir, end);
-
-	trap_Trace (&tr, start, NULL, NULL, end, ent->s.number, CONTENTS_CORPSE);
-
-	if (tr.entityNum >= MAX_CLIENTS)
-		return;
-
-	target = &(g_entities[tr.entityNum]);
-
-    if ((!target->inuse) || (!target->client))
-	return;		
-
-	VectorCopy(target->r.currentOrigin, start); 
-	VectorCopy(ent->r.currentOrigin, end); 
-	VectorSubtract(end, start, dir); 
-	VectorNormalize(dir); 
-	VectorScale(dir,100, target->client->ps.velocity);
-	VectorCopy(dir, target->movedir); 
-       
-	ent->lastDragTime = level.time;		
-}
 
 // ************** PLAYERS
 //
@@ -185,7 +74,7 @@ void pCmd_players(gentity_t *ent, qboolean fParam) {
 		cl = &level.clients[idnum];
 		cl_ent = g_entities + idnum;
 
-		SanitizeString(cl->pers.netname, n1, qtrue);
+		SanitizeString(cl->pers.netname, n1);
 		Q_CleanStr(n1);
 		n1[26] = 0;
 		ref[0] = 0;
@@ -219,8 +108,8 @@ void pCmd_players(gentity_t *ent, qboolean fParam) {
 				strcpy(ready, ((ent) ? "NOTREADY^1 :" : "NOTREADY :"));
 			}
 		}
-		
-		if (cl->sess.referee && !cl->sess.incognito) {			
+
+		if (cl->sess.admin && !cl->sess.incognito) {
 			strcpy(ref, sortTag(ent));
 		}
 		/*
@@ -268,162 +157,404 @@ void pCmd_players(gentity_t *ent, qboolean fParam) {
 		}
 	}
 }
-
 /*
 ===========
-Getstatus
+Get client number from name
 ===========
 */
-void pCmd_getstatus(gentity_t *ent, qboolean fParam) {
-	int	j;
-	// uptime
-	int secs = level.time / 1000;
-	int mins = (secs / 60) % 60;
-	int hours = (secs / 3600) % 24;
-	int days = (secs / (3600 * 24));
-	qboolean teamSpecLocked = qfalse;	
+/* // nihi commented out below
+int ClientNumberFromNameMatch(char *name, int *matches){
+	int i, textLen;
+	char nm[32];
+	char c;
+	int index = 0;
 
-	if (teamInfo[TEAM_RED].spec_lock || teamInfo[TEAM_BLUE].spec_lock)
-		teamSpecLocked = qtrue;
+	Q_strncpyz(nm, name, sizeof(nm));
+	Q_CleanStr(nm);
+	textLen = strlen(nm);
+	c = *nm;
 
-	CP(va("print \"\n^7Server: %s    %s\n\"", sv_hostname.string, getTime()));
-	// N/c..
-	if (teamInfo[TEAM_BLUE].spec_lock || teamInfo[TEAM_RED].spec_lock)
-		CP(va("print \"Speclocked: %s^7\n\"",
-		((teamInfo[TEAM_BLUE].spec_lock && teamInfo[TEAM_RED].spec_lock) ? "^3Both" :
-				((teamInfo[TEAM_BLUE].spec_lock ? "^3Allied" : "^1Axis"))
-			)));
-	if (teamInfo[TEAM_BLUE].team_lock || teamInfo[TEAM_RED].team_lock)
-		CP(va("print \"Teamlocked: %s^7\n\"",
-				( (teamInfo[TEAM_BLUE].team_lock && teamInfo[TEAM_RED].team_lock) ? "^3Both" :
-					( (teamInfo[TEAM_BLUE].team_lock ? "^3Allied" : "^1Axis") )
-				)));
-	CP("print \"^3-----------------------------------------------------------------------------\n\"");
-	CP("print \"^7Slot : Team : Name       : IP              ^7: ^3Nudge  MaxPkts ^7: Status \n\"");
-	CP("print \"^3-----------------------------------------------------------------------------\n\"");
+	for (i = 0; i < level.maxclients; i++)
+	{
+		int j, len;
+		char playerName[32];
 
-	for (j = 0; j <= (MAX_CLIENTS - 1); j++) {
+		if ((!g_entities[i].client) || (g_entities[i].client->pers.connected != CON_CONNECTED) )
+			continue;
 
-		if (g_entities[j].client) {
-			char *team, *slot, *ip, *tag = {""};
-			char n1[MAX_NETNAME];
+		Q_strncpyz(playerName, g_entities[i].client->pers.netname, sizeof(playerName));
+		Q_CleanStr(playerName);
+		len = strlen(playerName);
 
-			SanitizeString(ent->client->pers.netname, n1, qtrue);
-			Q_CleanStr(n1);
-			n1[26] = 0;
-
-			// player is connecting
-			if (g_entities[j].client->pers.connected == CON_CONNECTING) {
-				CP(va("print \"%3d  : >><< : %-10s : ^d>>Connecting<<  ^7:\n\"", j, n1));
-			}
-
-			// player is connected
-			if (g_entities[j].client->pers.connected == CON_CONNECTED) {
-
-				// Sort it :C				
-				slot = va("%3d", j);
-				team = (g_entities[j].client->sess.sessionTeam == TEAM_SPECTATOR) ? "^3SPEC^7" :
-					(g_entities[j].client->sess.sessionTeam == TEAM_RED ? "^1Axis^7" : "^4Alld^7");
-								
-				ip = (ent->client->sess.admin == USER_REGULAR) ?
-					va("%s", clientIP(&g_entities[j], qfalse)) :
-					va("%s", clientIP(&g_entities[j], qtrue));
-
-				if (g_entities[j].client->sess.admin && !g_entities[j].client->sess.incognito)
-					tag = sortTag(&g_entities[j]);
-				else if (g_entities[j].client->sess.admin && !g_entities[j].client->sess.incognito && ent->client->sess.admin)
-					tag = va("%s^3*", sortTag(&g_entities[j]));
-				else if (!g_entities[j].client->sess.admin && g_entities[j].client->sess.ignored)
-					tag = "^1Ignored";				
-								
-				// Specing speclocked team (This will override ignored tag but so be it..).
-				if (g_entities[j].client->sess.sessionTeam == TEAM_SPECTATOR &&
-					!g_entities[j].client->sess.admin &&
-					teamSpecLocked) {
-					if (g_entities[j].client->sess.specInvited == 1)
-						tag = "Spec. Axis";
-					else if (g_entities[j].client->sess.specInvited == 2)
-						tag = "Spec. Allies";
-					else if (g_entities[j].client->sess.specInvited == 3)
-						tag = "Spec. Both";
-					else if (teamSpecLocked > 0 && !g_entities[j].client->sess.specInvited)
-						tag = "^3Speclocked";
-					// Hidden admins
+		for (j = 0; j < len; j++)
+		{
+			if (tolower(c) == tolower(playerName[j]))
+			{
+				if (!Q_stricmpn(nm, playerName+j, textLen))
+				{
+					matches[index] = i;
+					index++;
+					break;
 				}
-				else if (g_entities[j].client->sess.sessionTeam == TEAM_SPECTATOR &&
-					g_entities[j].client->sess.admin &&
-					g_entities[j].client->sess.incognito) {
-					tag = "^3Spec. Both";
-				}
-
-				// Print it now
-				CP(va("print \"%-4s : %s : %-10s : %-15s ^7: ^3%5d  %7d ^7%-12s \n\"",
-					slot,
-					team,
-					n1,
-					ip,	
-					g_entities[j].client->pers.clientTimeNudge, 
-					g_entities[j].client->pers.clientMaxPackets,
-					(tag ? va(": %s", tag) : "")
-					));
 			}
 		}
 	}
-	CP("print \"^3-----------------------------------------------------------------------------\n\"");
-	CP(va("print \"^7Uptime: ^3%d ^7day%s ^3%d ^7hours ^3%d ^7minutes\n\"", days, (days != 1 ? "s" : ""), hours, mins));
-	CP("print \"\n\"");
+return index;
+}
+*/
+/*
+================
+Private messages
+================
+*/
+void cmd_pmsg(gentity_t *ent)
+{
+	char cmd[MAX_TOKEN_CHARS];
+	char name[MAX_STRING_CHARS];
+	char nameList[MAX_STRING_CHARS];
+	char *msg;
+	int matchList[MAX_CLIENTS];
+	int count, i;
+
+	if (!g_allowPMs.integer)	{
+		CP("print \"Private messages are Disabled^1!\n\"");
+		return;
+	}
+
+	if (trap_Argc() < 3) {
+		trap_Argv(0, cmd, sizeof(cmd));
+		CP(va("print \"^dUsage:^7  %s <match> <message>\n\"", cmd));
 	return;
+	}
+
+	if (ent->client->sess.ignored) {
+		if (ent->client->sess.ignored == 1)
+			CP( "cp \"You are ignored^1!\n\"2" );
+		else
+			CP( "print \"You are ^zpermanently ^7ignored^1!\n\"" );
+	return;
+	}
+
+	trap_Argv(1, name, sizeof(name));
+	if (strlen(name) < 2) {
+		CP("print \"You must match at least ^32 ^7characters of the name^3!\n\"");
+	return;
+	}
+
+	count = ClientNumberFromNameMatch(name, matchList);
+	if (count == 0) {
+		CP("print \"No matching clients found\n\"");
+	return;
+	}
+
+	msg = ConcatArgs(2);
+    if( strlen(msg) >= 700 ){
+		G_LogPrintf( "NUKER(pmsg >= 700): %s IP: %i.%i.%i.%i\n", ent->client->pers.netname, ent->client->sess.ip[0], ent->client->sess.ip[1], ent->client->sess.ip[2], ent->client->sess.ip[3] );
+	    trap_DropClient( ent-g_entities, "^7Player Kicked: ^3Nuking" );
+	return;
+    }
+
+	Q_strncpyz ( nameList, "", sizeof( nameList ) );
+	for (i = 0; i < count; i++)	{
+		strcat(nameList, g_entities[matchList[i]].client->pers.netname);
+		if (i != (count-1))
+			strcat(nameList, "^7, ");
+
+			// Pop in
+			CPx(matchList[i], va("popin \"Message from %s^j!\n\"", ent->client->pers.netname));
+			// Print in console..
+			CPx(matchList[i], va("@print \"^zMessage from ^7%s^7: \n^3%.99s\n\"", ent->client->pers.netname, msg));
+
+	}
+	//let the sender know his message went to
+	CP(va("@print \"^zMessage was sent to: ^7%s \n^zMessage: ^3%.99s\n\"", nameList, msg));
+}
+
+// Actual command
+void cmd_throwKnives( gentity_t *ent ) {
+	vec3_t velocity, angles, offset, org, mins, maxs;
+	trace_t tr;
+	gentity_t *ent2;
+	gitem_t *item = BG_FindItemForWeapon( WP_KNIFE );
+
+//	if ( g_throwKnives.integer == 0 ) {
+	//	return;
+//	}
+
+//	if ( level.time < ( ent->thrownKnifeTime + 800 ) ) {
+//		return;
+//	}
+
+	// If out or -1/unlimited
+	//if ( ( ent->client->pers.throwingKnives == 0 ) &&
+	//	 ( g_throwKnives.integer != -1 ) ) {
+	//return;
+	//}
+/*
+	AngleVectors( ent->client->ps.viewangles, velocity, NULL, NULL );
+	VectorScale( velocity, 64, offset );
+	offset[2] += ent->client->ps.viewheight / 2;
+	VectorScale( velocity, 800, velocity );
+	velocity[2] += 50 + random() * 35;
+	VectorAdd( ent->client->ps.origin, offset, org );
+	VectorSet( mins, -ITEM_RADIUS, -ITEM_RADIUS, 0 );
+	VectorSet( maxs, ITEM_RADIUS, ITEM_RADIUS, 2 * ITEM_RADIUS );
+	trap_Trace( &tr, ent->client->ps.origin, mins, maxs, org, ent->s.number, MASK_SOLID );
+	VectorCopy( tr.endpos, org );
+
+	G_Sound( ent, G_SoundIndex( "sound/weapons/knife/knife_slash1.wav" ) );
+	ent2 = LaunchItem( item, org, velocity, ent->client->ps.clientNum );
+	VectorCopy( ent->client->ps.viewangles, angles );
+	angles[1] += 90;
+	G_SetAngle( ent2, angles );
+	ent2->touch = Touch_Knife;
+	ent2->parent = ent;
+
+	if ( g_throwKnives.integer > 0 ) {
+		ent->client->pers.throwingKnives--;
+	}
+
+	//only show the message if throwing knives are enabled
+	if ( g_throwKnives.integer > 0 ) {
+		CP(va( "chat \"^zKnives left:^7 %d\" %i", ent->client->pers.throwingKnives, qfalse ));
+	}
+
+ent->thrownKnifeTime = level.time;
+*/
+
+}
+
+/*
+===================
+Invite player to spectate
+
+NOTE: Admin can still be invited..so in case logout occurs..
+===================
+*/
+void cmd_specInvite( gentity_t *ent ) {
+	int	target;
+	gentity_t	*player;
+	char arg[MAX_TOKEN_CHARS];
+	int team=ent->client->sess.sessionTeam;
+
+	if ( team == TEAM_RED || team == TEAM_BLUE ) {
+		if ( !teamInfo[team].spec_lock ) {
+			CP( "print \"Your team isn't locked from spectators!\n\"" );
+			return;
+		}
+
+		trap_Argv( 1, arg, sizeof( arg ) );
+		if ( ( target = ClientNumberFromString( ent, arg ) ) == -1 ) {
+			return;
+		}
+
+		player = g_entities + target;
+
+		// Can't invite self
+		if ( player->client == ent->client ) {
+			CP( "print \"You can't specinvite yourself!\n\"" );
+			return;
+		}
+
+		// Can't invite an active player.
+		if ( player->client->sess.sessionTeam != TEAM_SPECTATOR ) {
+			CP( "print \"You can't specinvite a non-spectator!\n\"" );
+			return;
+		}
+
+		// If player it not viewing anyone, force them..
+		if (!player->client->sess.specInvited &&
+			!(player->client->sess.spectatorClient == SPECTATOR_FOLLOW)) {
+			player->client->sess.spectatorClient = ent->client->ps.clientNum;
+			player->client->sess.spectatorState = SPECTATOR_FOLLOW;
+		}
+
+		player->client->sess.specInvited |= team;
+
+		// Notify sender/recipient
+		CP( va( "print \"%s^7 has been sent a spectator invitation.\n\"", player->client->pers.netname ) );
+		CPx(player-g_entities, va("cp \"%s ^7invited you to spec the %s team.\n\"2",
+			ent->client->pers.netname, aTeams[team]));
+
+	} else {CP( "print \"Spectators can't specinvite players!\n\"" );}
+}
+/*
+=================
+Hitsounds
+
+Do it like in shrub just permanently
+(A hack tied to color so one doesn't need to type it all the time..)
+=================
+*/
+void Cmd_hitsounds(gentity_t *ent) {
+	char *action = (ent->client->sess.clientFlags & CFLAGS_HITSOUNDS ? "^3Disable^7" : "^3Enable^7");
+	int	flag = (ent->client->sess.clientFlags & CFLAGS_HITSOUNDS ? 0 : 1);
+
+	CP(va("print \"Bit flag to %s Hitsounds is /color %d \nType ^3/commands bitflags^7 for explanation.\n\"", action, flag));
+	return;
+}
+
+/*
+===================
+unInvite player from spectating
+===================
+*/
+void cmd_specUnInvite( gentity_t *ent ) {
+	int	target;
+	gentity_t	*player;
+	char arg[MAX_TOKEN_CHARS];
+	int team=ent->client->sess.sessionTeam;
+
+	if ( team == TEAM_RED || team == TEAM_BLUE ) {
+		if ( !teamInfo[team].spec_lock ) {
+			CP( "print \"Your team isn't locked from spectators!\n\"" );
+			return;
+		}
+
+		trap_Argv( 1, arg, sizeof( arg ) );
+		if ( ( target = ClientNumberFromString( ent, arg ) ) == -1 ) {
+			return;
+		}
+
+		player = g_entities + target;
+
+		// Can't uninvite self
+		if ( player->client == ent->client ) {
+			CP( "print \"You can't specuninvite yourself!\n\"" );
+			return;
+		}
+
+		// Can't uninvite an active player.
+		if ( player->client->sess.sessionTeam != TEAM_SPECTATOR ) {
+			CP( "print \"You can't specuninvite a non-spectator!\n\"" );
+			return;
+		}
+
+		// Can't uninvite a already speclocked player
+		if (player->client->sess.specInvited < team) {
+			CP(va("print \"%s ^7already can't spectate your team!\n\"", ent->client->pers.netname));
+			return;
+		}
+
+		player->client->sess.specInvited &= ~team;
+		G_updateSpecLock(team, qtrue);
+
+		// Notify sender/recipient
+		CP( va( "print \"%s^7 can't any longer spectate your team.\n\"", player->client->pers.netname ) );
+		CPx(player->client->ps.clientNum, va("print \"%s ^7has revoked your ability to spectate the %s team.\n\"",
+			ent->client->pers.netname, aTeams[team]));
+
+	} else {CP( "print \"Spectators can't specuninvite players!\n\"" );}
+}
+
+/*
+===================
+Revoke ability from all players to spectate
+===================
+*/
+void cmd_uninviteAll( gentity_t *ent) {
+	int team = ent->client->sess.sessionTeam;
+
+	if ( team == TEAM_RED || team == TEAM_BLUE ) {
+		if ( !teamInfo[team].spec_lock ) {
+			CP( "print \"Your team isn't locked from spectators!\n\"" );
+			return;
+		}
+
+		// Remove all specs
+		G_removeSpecInvite(team);
+
+		// Notify that team only that specs lost privilage
+		//TP(team, "chat",  va("^3TEAM NOTICE: ^7%s ^7has revoked ALL spec's invites for your team.", ent->client->pers.netname));
+		// Inform specs..
+		//TP(TEAM_SPECTATOR, "print", va("%s ^7revoked ALL spec invites from %s team", ent->client->pers.netname, aTeams[team]));
+
+	} else {CP( "print \"Spectators can't specuninviteall!\n\"" );}
+
+}
+
+/*
+===================
+Spec lock/unlock team
+===================
+*/
+void cmd_speclock( gentity_t *ent, qboolean lock ) {
+	int team = ent->client->sess.sessionTeam;
+
+
+	if (!team_commands.integer ) {
+		CP("print \"Team commands are disabled!\n\"");
+	return;
+	}
+
+	if ( team == TEAM_RED || team == TEAM_BLUE ) {
+		if ( (lock && teamInfo[team].spec_lock) || (!lock && !teamInfo[team].spec_lock) ) {
+			CP( va("print \"Your team is already %s spectators!\n\"",
+				(!lock ? "unlocked for" : "locked from" ) ));
+			return;
+		}
+
+		G_updateSpecLock( team, lock );
+		AP(va("cp \"%s is now SPEC%s\"2", aTeams[team], (lock ? "LOCKED" : "UNLOCKED" ) ));
+
+	} else {CP( va("print \"Spectators can't use spec%s command!\n\"", (lock ? "lock" : "unlock" )) );}
+
 }
 
 /*
 ===================
 READY / NOTREADY
 
+Sets a player's "ready" status.
+
 Tardo - rewrote this because the parameter handling to the function is different in rtcw.
 ===================
 */
-void pCmd_ready(gentity_t *ent, qboolean state) {
-	char *status[2] = { "NOT READY", "READY" };
+void G_readyHandle( gentity_t* ent, qboolean ready ) {
+	ent->client->pers.ready = ready;
+}
 
-	if (!g_doWarmup.integer) {
+void G_ready_cmd( gentity_t *ent, qboolean state ) {
+	char *status[2] = { "^zNOT READY^7", "^nREADY^7" };
+
+	if (!g_tournament.integer) {
 		return;
 	}
-	// Just swallow it...
-	if (g_gamestate.integer == GS_PLAYING) {		
+
+	if ( g_gamestate.integer == GS_PLAYING || g_gamestate.integer == GS_INTERMISSION ) {
+		CP( "@print \"Match is already in progress!\n\"" );
 		return;
 	}
-	if (!state && g_gamestate.integer == GS_WARMUP_COUNTDOWN) {
-		CP("print \"Countdown started, ^3notready^7 ignored.\n\"");
+
+	if ( !state && g_gamestate.integer == GS_WARMUP_COUNTDOWN ) {
+		CP( "print \"Countdown started..^znotready^7 ignored!\n\"" );
 		return;
 	}
-	if (ent->client->sess.sessionTeam == TEAM_SPECTATOR) {
-		CP(va("print \"Specs cannot use ^3%s ^7command.\n\"", status[state]));
+
+	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
+		CP( va("print \"Specs cannot use %s ^7command!\n\"", status[state] ));
 		return;
 	}
 	if (level.readyTeam[ent->client->sess.sessionTeam] == qtrue && !state) { // Doesn't cope with unreadyteam but it's out anyway..
 		CP(va("print \"%s ^7ignored. Your team has issued ^3TEAM READY ^7command..\n\"", status[state]));
 		return;
 	}
-
 	// Move them to correct ready state
-	if (ent->client->pers.ready == state) {
-		CP(va("print \"You are already ^3%s^7!\n\"", status[state]));
-	}
-	else {
+	if ( ent->client->pers.ready == state ) {
+		CP( va( "print \"You are already %s!\n\"", status[state] ) );
+	} else {
 		ent->client->pers.ready = state;
-		if (!level.intermissiontime) {
-			if (state) {
+		if ( !level.intermissiontime ) {
+			if ( state ) {
 				ent->client->pers.ready = qtrue;
 				ent->client->ps.powerups[PW_READY] = INT_MAX;
-			}
-			else {
+			} else {
 				ent->client->pers.ready = qfalse;
 				ent->client->ps.powerups[PW_READY] = 0;
 			}
 
 			// Doesn't rly matter..score tab will show slow ones..
-			AP(va("popin \"%s ^7is %s%s!\n\"", ent->client->pers.netname, (state ? "^n" : "^z"), status[state]));
-			AP(va("@print \"%s ^7is %s%s.\n\"", ent->client->pers.netname, (state ? "^n" : "^z"), status[state]));
+			AP( va( "cp \"\n%s \n^7is %s!\n\"", ent->client->pers.netname, status[state] ) );
 		}
 	}
 }
@@ -434,7 +565,7 @@ TEAM-READY / NOTREADY
 ===================
 */
 void pCmd_teamReady(gentity_t *ent, qboolean ready) {
-	char *status[2] = { "NOT READY", "READY" };	
+	char *status[2] = { "NOT READY", "READY" };
 	int i, p = { 0 };
 	int team = ent->client->sess.sessionTeam;
 	gentity_t *cl;
@@ -476,418 +607,100 @@ void pCmd_teamReady(gentity_t *ent, qboolean ready) {
 	if (!p) {
 		CP(va("print \"Your team is already ^3%s^7!\n\"", status[ready]));
 	}
-	else {	
+	else {
 		AP(va("popin \"%s ^7team is %s%s!\n\"", aTeams[team], (ready ? "^n" : "^z"), status[ready]));
 		level.readyTeam[team] = ready;
 	}
 }
-
-/*
-===================
-Invite player to spectate
-
-NOTE: Admin can still be invited..so in case logout occurs..
-===================
-*/
-void pCmd_specInvite(gentity_t *ent, qboolean fParam) {
-	int	target;
-	gentity_t	*player;
-	char arg[MAX_TOKEN_CHARS];
-	int team = ent->client->sess.sessionTeam;
-
-	if (team_nocontrols.integer) {
-		CP("print \"Team commands are not enabled on this server.\n\"");
-		return;
-	}
-
-	if (team == TEAM_RED || team == TEAM_BLUE) {
-		if (!teamInfo[team].spec_lock) {
-			CP("print \"Your team isn't locked from spectators!\n\"");
-			return;
-		}
-
-		trap_Argv(1, arg, sizeof(arg));
-		if ((target = ClientNumberFromString(ent, arg)) == -1) {
-			return;
-		}
-
-		player = g_entities + target;
-
-		// Can't invite self
-		if (player->client == ent->client) {
-			CP("print \"You can't specinvite yourself!\n\"");
-			return;
-		}
-
-		// Can't invite an active player.
-		if (player->client->sess.sessionTeam != TEAM_SPECTATOR) {
-			CP("print \"You can't specinvite a non-spectator!\n\"");
-			return;
-		}
-
-		// If player it not viewing anyone, force them..
-		if (!player->client->sess.specInvited &&
-			!(player->client->sess.spectatorClient == SPECTATOR_FOLLOW)) {
-			player->client->sess.spectatorClient = ent->client->ps.clientNum;
-			player->client->sess.spectatorState = SPECTATOR_FOLLOW;
-		}
-
-		player->client->sess.specInvited |= team;
-
-		// Notify sender/recipient
-		CP(va("print \"%s^7 has been sent a spectator invitation.\n\"", player->client->pers.netname));
-		CPx(player - g_entities, va("cp \"%s ^7invited you to spec the %s team.\n\"2",
-			ent->client->pers.netname, aTeams[team]));
-	}
-	else { CP("print \"Spectators can't specinvite players!\n\""); }
-}
-
-/*
-===================
-unInvite player from spectating
-===================
-*/
-void pCmd_specUnInvite(gentity_t *ent, qboolean fParam) {
-	int	target;
-	gentity_t	*player;
-	char arg[MAX_TOKEN_CHARS];
-	int team = ent->client->sess.sessionTeam;
-
-	if (team_nocontrols.integer) {
-		CP("print \"Team commands are not enabled on this server.\n\"");
-		return;
-	}
-
-	if (team == TEAM_RED || team == TEAM_BLUE) {
-		if (!teamInfo[team].spec_lock) {
-			CP("print \"Your team isn't locked from spectators!\n\"");
-			return;
-		}
-
-		trap_Argv(1, arg, sizeof(arg));
-		if ((target = ClientNumberFromString(ent, arg)) == -1) {
-			return;
-		}
-
-		player = g_entities + target;
-
-		// Can't uninvite self
-		if (player->client == ent->client) {
-			CP("print \"You can't specuninvite yourself!\n\"");
-			return;
-		}
-
-		// Can't uninvite an active player.
-		if (player->client->sess.sessionTeam != TEAM_SPECTATOR) {
-			CP("print \"You can't specuninvite a non-spectator!\n\"");
-			return;
-		}
-
-		// Can't uninvite a already speclocked player
-		if (player->client->sess.specInvited < team) {
-			CP(va("print \"%s ^7already can't spectate your team!\n\"", ent->client->pers.netname));
-			return;
-		}
-
-		player->client->sess.specInvited &= ~team;
-		G_updateSpecLock(team, qtrue);
-
-		// Notify sender/recipient
-		CP(va("print \"%s^7 can't any longer spectate your team.\n\"", player->client->pers.netname));
-		CPx(player->client->ps.clientNum, va("print \"%s ^7has revoked your ability to spectate the %s team.\n\"",
-			ent->client->pers.netname, aTeams[team]));
-
-	}
-	else { CP("print \"Spectators can't specuninvite players!\n\""); }
-}
-
-/*
-===================
-Revoke ability from all players to spectate
-===================
-*/
-void pCmd_uninviteAll(gentity_t *ent, qboolean fParam) {
-	int team = ent->client->sess.sessionTeam;
-
-	if (team_nocontrols.integer) {
-		CP("print \"Team commands are not enabled on this server.\n\"");
-		return;
-	}
-
-	if (team == TEAM_RED || team == TEAM_BLUE) {
-		if (!teamInfo[team].spec_lock) {
-			CP("print \"Your team isn't locked from spectators!\n\"");
-			return;
-		}
-
-		// Remove all specs
-		G_removeSpecInvite(team);
-
-		// Notify that team only that specs lost privilage
-		TP(team, va("chat \"^3TEAM NOTICE: ^7%s ^7has revoked ALL spec's invites for your team.\n\"", ent->client->pers.netname));
-		// Inform specs..
-		TP(TEAM_SPECTATOR, va("print \"%s ^7revoked ALL spec invites from %s team.\n\"", ent->client->pers.netname, aTeams[team]));
-	}
-	else { CP("print \"Spectators can't specuninviteall!\n\""); }
-}
-
-/*
-===================
-Spec lock/unlock team
-===================
-*/
-void pCmd_speclock(gentity_t *ent, qboolean lock) {
-	int team = ent->client->sess.sessionTeam;
-
-	if (team_nocontrols.integer) {
-		CP("print \"Team commands are not enabled on this server.\n\"");
-		return;
-	}
-
-	if (team == TEAM_RED || team == TEAM_BLUE) {
-		if ((lock && teamInfo[team].spec_lock) || (!lock && !teamInfo[team].spec_lock)) {
-			CP(va("print \"Your team is already %s spectators!\n\"",
-				(!lock ? "unlocked for" : "locked from")));
-			return;
-		}
-
-		G_updateSpecLock(team, lock);
-		AP(va("cp \"%s is now ^3SPEC%s\"2", aTeams[team], (lock ? "LOCKED" : "UNLOCKED")));
-
-		if (lock) {
-			CP("print \"Use ^3specinvite^7 to invite people to spectate.\n\"");
-		}
-	}
-	else { CP(va("print \"Spectators can't use ^3spec%s ^7command!\n\"", (lock ? "lock" : "unlock"))); }
-}
-
 /*
 ===================
 Pause/Unpause
 ===================
 */
 void pCmd_pauseHandle(gentity_t *ent, qboolean dPause) {
-	int team = ent->client->sess.sessionTeam;
-	char *status[2] = { "^3UN", "^3" };
-	char tName[MAX_NETNAME];
-
+    int team = ent->client->sess.sessionTeam;
+    char tName[MAX_NETNAME];
+	char *tag, *log, *action;
 	if (team_nocontrols.integer) {
 		CP("print \"Team commands are not enabled on this server.\n\"");
 		return;
 	}
 
-	if ((!level.alliedPlayers || !level.axisPlayers) && dPause) {		
-		CP("print \"^1Error^7: Pause can only be used when both teams have players!\n\"");
+
+
+	if ( g_gamestate.integer != GS_PLAYING ) {
+		CP("print \"^jError: ^7Pause can only be issued during a match!\n\"");
 		return;
 	}
 
-	if ((PAUSE_UNPAUSING >= level.match_pause && !dPause) || (PAUSE_NONE != level.match_pause && dPause)) {
-		CP(va("print \"The match is already %sPAUSED^7!\n\"", status[dPause]));
+	if (level.numPlayingClients == 0) {
+		CP("print \"^jError: ^7You cannot use pause feature with no playing clients..\n\"");
+	return;
+	}
+	DecolorString(aTeams[team], tName);
+
+	if (!dPause) {
+		level.paused = !PAUSE_NONE;
+		trap_SetConfigstring( CS_PAUSED, va( "%i", level.paused ));
+		AP(va("chat \"^zconsole: ^7%s has ^3Paused ^7a match!\n\"", tName));
+		AAPS("sound/world/klaxon1.wav");
+	} else if (level.paused != PAUSE_UNPAUSING){
+		if (level.paused == PAUSE_NONE) {
+			CP("print \"^jError: ^7Match is not paused^j!\n\"");
 		return;
-	}
-
-	Q_decolorString(aTeams[team], tName);
-
-	// Trigger the auto-handling of pauses
-	if (dPause) {
-		if (!teamInfo[team].timeouts) {
-			CP("print \"^3Denied^7: Your team has no more timeouts remaining!\n\"");
-			return;
 		}
-		else {
-			teamInfo[team].timeouts--;
-			level.match_pause = team + 128;		
-			G_spawnPrintf(DP_PAUSEINFO, level.time + 15000, NULL);
-			AP(va("chat \"console: %s ^3Paused ^7the match.\n\"", tName));
-			AP(va("cp \"[%s^7] %d Timeouts Remaining\n\"3", aTeams[team], teamInfo[team].timeouts));
-			
-		}
-	}
-	else if (team + 128 != level.match_pause) {
-		CP("print \"^3Denied^7: Your team didn't call the timeout!\n\"");
-		return;
-	}
-	else {
-		AP(va("chat \"console: %s ^7have ^3UNPAUSED^7 the match!\n\"", tName));
-		level.match_pause = PAUSE_UNPAUSING;
-		G_spawnPrintf(DP_UNPAUSING, level.time + 10, NULL);
-	}
-}
 
-/*------------------------------------------------------------------------------*/
-
-/*
-// OSP-specific Commands
-qboolean G_commandCheck(gentity_t *ent, char *cmd, qboolean fDoAnytime) {
-	unsigned int i, cCommands = sizeof(pCmd_reference_t) / sizeof(pCmd_reference_t[0]);
-	const pCmd_reference_t *pCR;
-
-	for (i = 0; i < cCommands; i++) {
-		pCR = &pCmd_reference_t[i];
-		if (NULL != pCR->pCommand && pCR->fAnytime == fDoAnytime && 0 == Q_stricmp(cmd, pCR->pszCommandName)) {
-			if (!G_commandHelp(ent, cmd, i)) {
-				pCR->pCommand(ent, i, pCR->fValue);
-			}
-			return(qtrue);
-		}
+		level.CNstart = 0; // Resets countdown if it was aborted before
+		level.paused = PAUSE_UNPAUSING;
+		AP(va("chat \"^zconsole: ^7%s has ^3Unpaused ^7a match!\n\"", tName));
 	}
 
-	return(G_smvCommands(ent, cmd));
-}
 
-
-// Prints specific command help info.
-qboolean G_commandHelp(gentity_t *ent, char *pszCommand, unsigned int dwCommand) {
-	char arg[MAX_TOKEN_CHARS];
-
-	if (!ent) {
-		return(qfalse);
-	}
-	trap_Argv(1, arg, sizeof(arg));
-	if (!Q_stricmp(arg, "?")) {
-		CP(va("print \"\n^3%s%s\n\n\"", pszCommand, aCommandInfo[dwCommand].pszHelpInfo));
-		return(qtrue);
-	}
-
-	return(qfalse);
-}
-
-// ************** COMMANDS / ?
-//
-// Lists server commands.
-void G_commands_cmd(gentity_t *ent, unsigned int dwCommand, qboolean fValue) {
-	int i, rows, num_cmds = sizeof(aCommandInfo) / sizeof(aCommandInfo[0]) - 1;
-
-	rows = num_cmds / HELP_COLUMNS;
-	if (num_cmds % HELP_COLUMNS) {
-		rows++;
-	}
-	if (rows < 0) {
-		return;
-	}
-
-	CP("cpm \"^5\nAvailable OSP Game-Commands:\n----------------------------\n\"");
-	for (i = 0; i < rows; i++) {
-		if (i + rows * 3 + 1 <= num_cmds) {
-			CP(va("print \"^3%-17s%-17s%-17s%-17s\n\"", aCommandInfo[i].pszCommandName,
-				aCommandInfo[i + rows].pszCommandName,
-				aCommandInfo[i + rows * 2].pszCommandName,
-				aCommandInfo[i + rows * 3].pszCommandName));
-		}
-		else if (i + rows * 2 + 1 <= num_cmds) {
-			CP(va("print \"^3%-17s%-17s%-17s\n\"", aCommandInfo[i].pszCommandName,
-				aCommandInfo[i + rows].pszCommandName,
-				aCommandInfo[i + rows * 2].pszCommandName));
-		}
-		else if (i + rows + 1 <= num_cmds) {
-			CP(va("print \"^3%-17s%-17s\n\"", aCommandInfo[i].pszCommandName, aCommandInfo[i + rows].pszCommandName));
-		}
-		else {
-			CP(va("print \"^3%-17s\n\"", aCommandInfo[i].pszCommandName));
-		}
-	}
-
-	CP("cpm \"\nType: ^3\\command_name ?^7 for more information\n\"");
-}
-*/
-
-// ************** LOCK / UNLOCK
-//
-// Locks/unlocks a player's team.
-void pCmd_Lock(gentity_t *ent, qboolean fLock) { //unsigned int dwCommand,
-	char *lock_status[2] = { "unlock", "lock" };
-	int tteam;
-
-	/*if (team_nocontrols.integer) {
-		G_noTeamControls(ent); return;
-	}
-	if (!G_cmdDebounce(ent, pCmd[dwCommand].command)) {
-		return;
-	}*/
-
-	tteam = G_teamID(ent);
-	if (tteam == TEAM_RED || tteam == TEAM_BLUE) {
-		if (teamInfo[tteam].team_lock == fLock) {
-			CP(va("print \"^3Your team is already %sed!\n\"", lock_status[fLock]));
-		}
-		else {
-			char *info = va("\"The %s team is now %sed!\n\"", aTeams[tteam], lock_status[fLock]);
-
-			teamInfo[tteam].team_lock = fLock;
-			AP(va("print %s", info));
-			AP(va("cp %s", info));
-		}
-	}
-	else { CP(va("print \"Spectators can't %s a team!\n\"", lock_status[fLock])); }
 }
 
 /*
-===========
-Player's structure
-===========
+===================
+OSP's stats
+===================
 */
-typedef struct {
-	char *command;
-	void(*pCommand)(gentity_t *ent, qboolean fParam);
-	qboolean fParam;
-	qboolean nWarmup;		// Not allowed in warmup
-	qboolean jWarmup;		// Allowed only in warmup
-	qboolean nIntermission;	// Not allowed during intermission..
-} pCmd_reference_t;
-
-static const pCmd_reference_t pCmd[] = {					// Properties..
-	{ "players",			pCmd_players,		qfalse,		qfalse,	qfalse,	qfalse },
-	{ "getstatus",			pCmd_getstatus,		qfalse,		qfalse,	qfalse,	qfalse },
-	{ "ready",				pCmd_ready,			qtrue,		qfalse,	qtrue,	qtrue },
-	{ "notready",			pCmd_ready,			qfalse,		qfalse,	qtrue,	qtrue },
-	{ "readyteam",			pCmd_teamReady,		qtrue,		qfalse,	qtrue,	qtrue },
-	//{ "unreadyteam",		pCmd_teamReady,		qfalse,		qfalse,	qtrue,	qtrue }, // It's there if needed..
-	{ "speclock",			pCmd_speclock,		qtrue,		qfalse,	qfalse,	qtrue },
-	{ "specunlock",			pCmd_speclock,		qfalse,		qfalse,	qfalse,	qtrue },
-	{ "specinvite",			pCmd_specInvite,	qtrue,		qfalse,	qfalse,	qtrue },
-	{ "specuninvite",		pCmd_specUnInvite,	qtrue,		qfalse,	qfalse,	qtrue },
-	{ "specuninviteall",	pCmd_uninviteAll,	qtrue,		qfalse,	qfalse,	qtrue },
-	{ "pause",				pCmd_pauseHandle,	qtrue,		qtrue,	qfalse,	qtrue },
-	{ "timeout",			pCmd_pauseHandle,	qtrue,		qtrue,	qfalse, qtrue },
-	{ "unpause",			pCmd_pauseHandle,	qfalse,		qtrue,	qfalse,	qtrue },
-	{ "timein",				pCmd_pauseHandle,	qfalse,		qtrue,	qfalse, qtrue },
-	{ "lock",				pCmd_Lock,			qtrue,		qtrue,	qfalse, qtrue },
-	{ "unlock",				pCmd_Lock,			qfalse,		qtrue,	qfalse, qtrue },
-	{ "ref",				G_ref_cmd,			qtrue,		qtrue,	qfalse, qtrue },
-	{ 0,					NULL,				qfalse,		qtrue,	qtrue,	qtrue }
-};
-
-/*
-===========
-Player commands..no help with this one..
-===========
-*/
-qboolean playerCommandsExt(gentity_t *ent, char *cmd) {
-	unsigned int i, \
-		uCmd = ARRAY_LEN(pCmd);
-	const pCmd_reference_t *uCM;
-	qboolean wasUsed = qfalse;
-
-	for (i = 0; i < uCmd; i++) {
-		uCM = &pCmd[i];
-		if (NULL != uCM->command && 0 == Q_stricmp(cmd, uCM->command)) {
-
-			// Warmup check
-			if (level.warmupTime && uCM->nWarmup)
-				CP(va("@print \"%s command cannot be used during warmup!\n\"", uCM->command));
-			// Vice versa
-			else if (g_gamestate.integer != GS_WARMUP && uCM->jWarmup)
-				CP(va("@print \"%s command can only be used during warmup!\n\"", uCM->command));
-			// Intermission
-			else if (level.intermissiontime && uCM->nIntermission)
-				CP(va("print \"%s command cannot be used during intermission!\n\"", uCM->command));
-			// We're fine with it...so go for it..
-			else
-				uCM->pCommand(ent, uCM->fParam);
-
-			wasUsed = qtrue;
-		}
-	}
-	return wasUsed;
+void G_scores_cmd( gentity_t *ent ) {
+	G_printMatchInfo( ent );
+}
+// Shows a player's stats to the requesting client.
+void G_weaponStats_cmd( gentity_t *ent ) {
+	G_statsPrint( ent, 0 );
 }
 
+
+/******************* Client commands *******************/
+qboolean playerCmds (gentity_t *ent, char *cmd ) {
+
+	if(!Q_stricmp(cmd, "pm")
+		 || !Q_stricmp(cmd, "msg"))					{ cmd_pmsg(ent);	return qtrue;}
+//	else if(!Q_stricmp(cmd, "smoke"))				{ cmd_pSmoke(ent);			return qtrue;}
+	else if(!Q_stricmp(cmd, "readyteam"))			{ pCmd_teamReady(ent, qtrue);	return qtrue;}
+	else if(!Q_stricmp(cmd, "speclock"))			{ cmd_speclock(ent, qtrue);	return qtrue;}
+	else if(!Q_stricmp(cmd, "players"))			    { pCmd_players(ent, qfalse);	return qtrue;}
+	else if(!Q_stricmp(cmd, "specunlock"))			{ cmd_speclock(ent, qfalse);return qtrue;}
+	else if(!Q_stricmp(cmd, "specinvite"))			{ cmd_specInvite(ent);		return qtrue;}
+	else if(!Q_stricmp(cmd, "specuninvite"))		{ cmd_specUnInvite(ent);	return qtrue;}
+	else if(!Q_stricmp(cmd, "specuninviteall"))		{ cmd_uninviteAll(ent);		return qtrue;}
+	else if(!Q_stricmp(cmd, "wstats"))				{ G_statsPrint( ent, 1 );	return qtrue;}
+	else if(!Q_stricmp(cmd, "cstats"))				{ G_clientStatsPrint( ent, 1, qtrue );	return qtrue;}
+	else if(!Q_stricmp(cmd, "stats"))				{ G_clientStatsPrint( ent, 1, qfalse );	return qtrue;}
+	else if(!Q_stricmp(cmd, "sgstats"))				{ G_statsPrint( ent, 2 );	return qtrue;}
+	else if(!Q_stricmp(cmd, "stshots"))				{ G_weaponStatsLeaders_cmd( ent, qtrue, qtrue );	return qtrue;}
+	else if(!Q_stricmp(cmd, "scores"))				{ G_scores_cmd(ent);	return qtrue;}
+	else if(!Q_stricmp(cmd, "statsall"))			{ G_statsall_cmd( ent, 0, qfalse );	return qtrue;}
+	else if(!Q_stricmp(cmd, "bottomshots"))			{ G_weaponRankings_cmd( ent, qtrue, qfalse );	return qtrue;}
+	else if(!Q_stricmp(cmd, "topshots"))			{ G_weaponRankings_cmd( ent, qtrue, qtrue );	return qtrue;}
+	else if(!Q_stricmp(cmd, "weaponstats"))			{ G_weaponStats_cmd( ent );	return qtrue;}
+	//Tardo Ready/Unready
+    else if(!Q_stricmp(cmd, "pause"))				{ pCmd_pauseHandle( ent, qfalse ); return qtrue;}
+    else if(!Q_stricmp(cmd, "unpause"))				{ pCmd_pauseHandle( ent, qtrue ); return qtrue;}
+	else if(!Q_stricmp(cmd, "ready"))				{ G_ready_cmd( ent, qtrue ); return qtrue;}
+	else if(!Q_stricmp(cmd, "unready") ||
+			!Q_stricmp(cmd, "notready"))			{ G_ready_cmd( ent, qfalse ); return qtrue;}
+	else
+		return qfalse;
+}

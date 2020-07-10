@@ -420,19 +420,17 @@ void CG_CheckLocalSounds( playerState_t *ps, playerState_t *ops ) {
 			CG_PainEvent( &cg.predictedPlayerEntity, ps->stats[STAT_HEALTH], qfalse );
 		}
 	}
-
-	// OSPx - Hitsounds
+ 	// L0 - Hitsounds
 	if (cg_hitsounds.integer) {
-		if (ops->persistant[PERS_HITBODY] != ps->persistant[PERS_HITBODY]) {
-			if (ps->persistant[PERS_HITBODY] < ops->persistant[PERS_HITBODY])
-				trap_S_StartSound(NULL, ps->clientNum, CHAN_AUTO, cgs.media.teamShot);
+		if (ops->persistant[PERS_HIT] != ps->persistant[PERS_HIT]) {
+			if ( ps->persistant[PERS_HIT] < ops->persistant[PERS_HIT] ) 
+				trap_S_StartSound (NULL, ps->clientNum, CHAN_AUTO, cgs.media.teamShot );
 			else if (ps->persistant[PERS_HITHEAD] > ops->persistant[PERS_HITHEAD])
-				trap_S_StartSound(NULL, ps->clientNum, CHAN_AUTO, cgs.media.headShot);
-			else
-				trap_S_StartSound(NULL, ps->clientNum, CHAN_AUTO, cgs.media.bodyShot);
+				trap_S_StartSound (NULL, ps->clientNum, CHAN_AUTO, cgs.media.headShot );
+			else 
+				trap_S_StartSound (NULL, ps->clientNum, CHAN_AUTO, cgs.media.bodyShot );
 		}
-	}
-
+	} // End
 /*	// NERVE - SMF - don't do this in wolfMP
 	// if we are going into the intermission, don't start any voices
 	if ( cg.intermissionStarted ) {

@@ -49,12 +49,12 @@ extern vmCvar_t g_gametype;
 // NOTE: weapons that share ammo (ex. colt/thompson) need to share max ammo, but not necessarily uses or max clip
 #define MAX_AMMO_45     300
 #define MAX_AMMO_9MM    300
-#define MAX_AMMO_SMG	608		// L0 - Increases the ammo for SMGs but cvars will be clamped to 18..
 #define MAX_AMMO_VENOM  1000
 #define MAX_AMMO_MAUSER 50
 #define MAX_AMMO_GARAND 1000
 #define MAX_AMMO_FG42   500
 #define MAX_AMMO_BAR    500
+
 
 // these defines are matched with the character torso animations
 #define DELAY_LOW       100 // machineguns, tesla, spear, flame
@@ -105,7 +105,7 @@ ammotable_t ammoTable[] = {
 	{   999,            0,      999,    0,      50,             200,    0,      0,      MOD_KNIFE               },  //	WP_KNIFE				// 1
 
 	{   MAX_AMMO_9MM,   1,      8,      1500,   DELAY_PISTOL,   400,    0,      0,      MOD_LUGER               },  //	WP_LUGER				// 2	// NOTE: also 32 round 'snail' magazine
-	{	MAX_AMMO_SMG,	1,		32,		2600,	DELAY_LOW,		100,	0,		0,		MOD_MP40				},	//	WP_MP40					// 3
+	{   MAX_AMMO_9MM,   1,      32,     2600,   DELAY_LOW,      100,    0,      0,      MOD_MP40                },  //	WP_MP40					// 3
 	{   MAX_AMMO_MAUSER,1,      10,     2500,   DELAY_HIGH,     1200,   0,      0,      MOD_MAUSER              },  //	WP_MAUSER				// 4	// NOTE: authentic clips are 5/10/25 rounds
 	{   MAX_AMMO_FG42,  1,      20,     2000,   DELAY_LOW,      200,    0,      0,      MOD_FG42                },  //	WP_FG42					// 5
 	{   15,             1,      15,     1000,   DELAY_THROW,    1600,   0,      0,      MOD_GRENADE_LAUNCHER    },  //	WP_GRENADE_LAUNCHER		// 6
@@ -118,7 +118,7 @@ ammotable_t ammoTable[] = {
 
 	{   999,            0,      999,    0,      50,             200,    0,      0,      MOD_KNIFE2              },  //	WP_KNIFE2				// 12
 	{   MAX_AMMO_45,    1,      8,      1500,   DELAY_PISTOL,   400,    0,      0,      MOD_COLT                },  //	WP_COLT					// 13
-	{	MAX_AMMO_SMG,	1,		30,		2400,	DELAY_LOW,		120,	0,		0,		MOD_THOMPSON			},	//	WP_THOMPSON				// 14	// NOTE: also 50 round drum magazine
+	{   MAX_AMMO_45,    1,      30,     2400,   DELAY_LOW,      120,    0,      0,      MOD_THOMPSON            },  //	WP_THOMPSON				// 14	// NOTE: also 50 round drum magazine
 	{   MAX_AMMO_GARAND,1,      5,      2500,   DELAY_HIGH,     1200,   0,      0,      MOD_GARAND              },  //	WP_GARAND				// 15	// NOTE: always 5 round clips
 	{   MAX_AMMO_BAR,   1,      20,     2000,   DELAY_LOW,      200,    0,      0,      MOD_BAR                 },  //	WP_BAR					// 16
 	{   15,             1,      15,     1000,   DELAY_THROW,    1600,   0,      0,      MOD_GRENADE_PINEAPPLE   },  //	WP_GRENADE_PINEAPPLE	// 17
@@ -862,8 +862,7 @@ model="models/weapons2/knife/knife.md3"
 			"models/multiplayer/knife/v_knife.md3",
 			0,
 			"models/multiplayer/knife/v_knife_axis.md3",
-			0
-		},
+			0},
 
 		"icons/iconw_knife_1",   // icon
 		"icons/ammo2",           // ammo icon
@@ -1370,8 +1369,7 @@ weapon_class_special (.3 .3 1) (-16 -16 -16) (16 16 16) suspended
 			"models/multiplayer/pliers/v_pliers.md3",
 			0,
 			"models/multiplayer/pliers/v_pliers_axis.md3",
-			""
-		},
+			""},
 
 		"icons/iconw_pliers_1",  // icon
 		"icons/ammo2",           // ammo icon
@@ -1396,8 +1394,7 @@ weapon_arty (.3 .3 1) (-16 -16 -16) (16 16 16) suspended
 			"models/multiplayer/syringe/v_syringe.md3",
 			0,
 			0,
-			""
-		},
+			""},
 
 		"icons/iconw_syringe_1", // icon
 		"icons/ammo2",           // ammo icon
@@ -1422,8 +1419,7 @@ weapon_medic_syringe (.3 .3 1) (-16 -16 -16) (16 16 16) suspended
 			"models/multiplayer/syringe/v_syringe.md3",
 			0,
 			"models/multiplayer/syringe/v_syringe_axis.md3",
-			""
-		},
+			""},
 
 		"icons/iconw_syringe_1", // icon
 		"icons/ammo2",           // ammo icon
@@ -3366,16 +3362,7 @@ This needs to be the same for client side prediction and server use.
 qboolean    BG_CanItemBeGrabbed( const entityState_t *ent, const playerState_t *ps ) {
 	gitem_t *item;
 	int ammoweap,weapbank;     // JPW NERVE
-// L0 - unlockWeapons
-#ifdef GAMEDLL
-		extern vmCvar_t g_unlockWeapons;
-		extern vmCvar_t g_disableSMGPickup;
-		int unlockWeapons = g_unlockWeapons.integer;
-		int disableSMGPickup = g_disableSMGPickup.integer;
-#else
-		int unlockWeapons = 0;
-		int disableSMGPickup = 0;
-#endif
+
 
 	if ( ent->modelindex < 1 || ent->modelindex >= bg_numItems ) {
 		Com_Error( ERR_DROP, "BG_CanItemBeGrabbed: index out of range" );
@@ -3385,34 +3372,13 @@ qboolean    BG_CanItemBeGrabbed( const entityState_t *ent, const playerState_t *
 
 	switch ( item->giType ) {
 	case IT_WEAPON:
-// L0 - disable SMG Pickup if client already has a SMG
-		if (disableSMGPickup)
-		{
-			// We only check for SMG's
-			if ((item->giTag == WP_MP40) ||
-				(item->giTag == WP_THOMPSON) ||
-				(item->giTag == WP_STEN))
-			{
-				// If client has it, do not pick it up..
-				if (COM_BitCheck(ps->weapons, item->giTag))
-					return qfalse;
-			}
-		}
-// End
 // JPW NERVE -- medics & engineers can only pick up same weapon type
 		if ( item->giTag == WP_AMMO ) { // magic ammo for any two-handed weapon
 			return qtrue;
 		}
 		if ( ( ps->stats[STAT_PLAYER_CLASS] == PC_MEDIC ) || ( ps->stats[STAT_PLAYER_CLASS] == PC_ENGINEER ) ) {
 			if ( !COM_BitCheck( ps->weapons, item->giTag ) ) {
-// L0 - unlockWeapons
-				// if this cvar is disabled, then behave like normal	
-				if (unlockWeapons == 0)				
-					return qfalse;					
-				// If it's 1, meds and engs can pickup smg's
-				else if ((unlockWeapons == 1) && ((item->giTag != WP_MP40) && (item->giTag != WP_THOMPSON) && (item->giTag != WP_STEN)))
-					return qfalse;	
-// L0 - end
+				return qfalse;
 			} else {
 				return qtrue;
 			}
@@ -3420,9 +3386,7 @@ qboolean    BG_CanItemBeGrabbed( const entityState_t *ent, const playerState_t *
 
 		if ( ps->stats[STAT_PLAYER_CLASS] == PC_LT ) {
 			if ( ( item->giTag != WP_MP40 ) && ( item->giTag != WP_THOMPSON ) && ( item->giTag != WP_STEN ) ) {
-				// L0 - allow picking any weapons for all classes if it's set to 2.. includes -> snipers, panzer, flamer..
-				if (unlockWeapons < 2) 
-					return qfalse;
+				return qfalse;
 			}
 		}
 
@@ -3804,9 +3768,6 @@ char *eventnames[] = {
 	"EV_GRENADE_BOUNCE",     // eventParm will be the soundindex
 	"EV_GENERAL_SOUND",
 	"EV_GLOBAL_SOUND",       // no attenuation
-// OSPx
-	"EV_ANNOUNCER_SOUND",	// Deals with countdown
-// -OSPx
 	"EV_BULLET_HIT_FLESH",
 	"EV_BULLET_HIT_WALL",
 	"EV_MISSILE_HIT",
@@ -4119,6 +4080,15 @@ void BG_PlayerStateToEntityStateExtraPolate( playerState_t *ps, entityState_t *s
 	s->teamNum = ps->teamNum;
 	s->aiState = ps->aiState;
 }
+
+//
+// OSPx Stuff Below
+//
+
+//
+// Crosshairs
+//
+
 // Only used locally
 typedef struct {
 	char *colorname;
@@ -4128,124 +4098,106 @@ typedef struct {
 // Colors for crosshairs
 colorTable_t OSP_Colortable[] =
 {
-	{ "white",       &colorWhite },
-	{ "red",     &colorRed },
-	{ "green",       &colorGreen },
-	{ "blue",        &colorBlue },
-	{ "yellow",      &colorYellow },
+	{ "white", &colorWhite },
+	{ "red", &colorRed },
+	{ "green", &colorGreen },
+	{ "blue", &colorBlue },
+	{ "yellow", &colorYellow },
 	{ "magenta", &colorMagenta },
-	{ "cyan",        &colorCyan },
-	{ "orange",      &colorOrange },
-	{ "mdred",       &colorMdRed },
+	{ "cyan", &colorCyan },
+	{ "orange", &colorOrange },
+	{ "mdred", &colorMdRed },
 	{ "mdgreen", &colorMdGreen },
 	{ "dkgreen", &colorDkGreen },
-	{ "mdcyan",      &colorMdCyan },
-	{ "mdyellow",    &colorMdYellow },
-	{ "mdorange",    &colorMdOrange },
-	{ "mdblue",      &colorMdBlue },
-	{ "ltgrey",      &colorLtGrey },
-	{ "mdgrey",      &colorMdGrey },
-	{ "dkgrey",      &colorDkGrey },
-	{ "black",       &colorBlack },
-	{ NULL,         NULL }
+	{ "mdcyan", &colorMdCyan },
+	{ "mdyellow", &colorMdYellow },
+	{ "mdorange", &colorMdOrange },
+	{ "mdblue", &colorMdBlue },
+	{ "ltgrey", &colorLtGrey },
+	{ "mdgrey", &colorMdGrey },
+	{ "dkgrey", &colorDkGrey },
+	{ "black", &colorBlack },
+	{ NULL, NULL }
 };
+
 extern void trap_Cvar_Set(const char *var_name, const char *value);
-void BG_setCrosshair( char *colString, float *col, float alpha, char *cvarName ) {
+void BG_setCrosshair(char *colString, float *col, float alpha, char *cvarName) {
 	char *s = colString;
 
 	col[0] = 1.0f;
 	col[1] = 1.0f;
 	col[2] = 1.0f;
-	col[3] = ( alpha > 1.0f ) ? 1.0f : ( alpha < 0.0f ) ? 0.0f : alpha;
+	col[3] = (alpha > 1.0f) ? 1.0f : (alpha < 0.0f) ? 0.0f : alpha;
 
-	if ( *s == '0' && ( *( s + 1 ) == 'x' || *( s + 1 ) == 'X' ) ) {
+	if (*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')) {
 		s += 2;
 		//parse rrggbb
-		if ( Q_IsHexColorString( s ) ) {
-			col[0] = ( (float)( gethex( *( s ) ) * 16 + gethex( *( s + 1 ) ) ) ) / 255.00;
-			col[1] = ( (float)( gethex( *( s + 2 ) ) * 16 + gethex( *( s + 3 ) ) ) ) / 255.00;
-			col[2] = ( (float)( gethex( *( s + 4 ) ) * 16 + gethex( *( s + 5 ) ) ) ) / 255.00;
+		if (Q_IsHexColorString(s)) {
+			col[0] = ((float)(gethex(*(s)) * 16 + gethex(*(s + 1)))) / 255.00;
+			col[1] = ((float)(gethex(*(s + 2)) * 16 + gethex(*(s + 3)))) / 255.00;
+			col[2] = ((float)(gethex(*(s + 4)) * 16 + gethex(*(s + 5)))) / 255.00;
 			return;
 		}
 	}
 	else {
 		int i = 0;
-		while ( OSP_Colortable[i].colorname != NULL ) {
-			if ( Q_stricmp( s, OSP_Colortable[i].colorname ) == 0 ) {
-				col[0] = ( *OSP_Colortable[i].color )[0];
-				col[1] = ( *OSP_Colortable[i].color )[1];
-				col[2] = ( *OSP_Colortable[i].color )[2];
+		while (OSP_Colortable[i].colorname != NULL) {
+			if (Q_stricmp(s, OSP_Colortable[i].colorname) == 0) {
+				col[0] = (*OSP_Colortable[i].color)[0];
+				col[1] = (*OSP_Colortable[i].color)[1];
+				col[2] = (*OSP_Colortable[i].color)[2];
 				return;
 			}
 			i++;
 		}
 	}
 
-	trap_Cvar_Set( cvarName, "White" );
+	trap_Cvar_Set(cvarName, "White");
 }
 
-const voteType_t voteToggles[] =
-{
-	{ "vote_allow_comp",         CV_SVF_COMP },
-	{ "vote_allow_gametype",     CV_SVF_GAMETYPE },
-	{ "vote_allow_kick",         CV_SVF_KICK },
-	{ "vote_allow_map",              CV_SVF_MAP },
-	{ "vote_allow_matchreset",       CV_SVF_MATCHRESET },
-	{ "vote_allow_mutespecs",        CV_SVF_MUTESPECS },
-	{ "vote_allow_nextmap",          CV_SVF_NEXTMAP },
-	{ "vote_allow_pub",              CV_SVF_PUB },
-	{ "vote_allow_referee",          CV_SVF_REFEREE },
-	{ "vote_allow_shuffleteamsxp",   CV_SVF_SHUFFLETEAMS },
-	{ "vote_allow_swapteams",        CV_SVF_SWAPTEAMS },
-	{ "vote_allow_friendlyfire", CV_SVF_FRIENDLYFIRE },
-	{ "vote_allow_timelimit",        CV_SVF_TIMELIMIT },
-	{ "vote_allow_warmupdamage", CV_SVF_WARMUPDAMAGE },
-	{ "vote_allow_antilag",          CV_SVF_ANTILAG },
-	{ "vote_allow_balancedteams",    CV_SVF_BALANCEDTEAMS },
-	{ "vote_allow_muting",           CV_SVF_MUTING }
-};
-
-int numVotesAvailable = sizeof(voteToggles) / sizeof(voteType_t);
-
-// consts to offset random reinforcement seeds
+// L0 - Reinforcements offset
 const unsigned int aReinfSeeds[MAX_REINFSEEDS] = { 11, 3, 13, 7, 2, 5, 1, 17 };
-
-// OSPx - Stats (It matches extWeaponStats_t in bg_public.h)
+// L0 - Stats (It matches extWeaponStats_t in bg_public.h)
 // I think i'm missing few...sniper?
 //
+// EDIT: 
+// Added Sniper (scoped) & venom
+// 
+// TODO: 
+// Add poison & FG42 Scope
 //
 // Weapon full names + headshot capability
 const weap_ws_t aWeaponInfo[WS_MAX] = {
-	{ qfalse, "KNIF", "Knife" },  // 0
-	{ qtrue, "LUGR", "Luger" },  // 1
-	{ qtrue, "COLT", "Colt" },  // 2
-	{ qtrue, "MP40", "MP-40" },  // 3
-	{ qtrue, "TMPS", "Thompson" },  // 4
-	{ qtrue, "STEN", "Sten" },  // 5
-	{ qtrue, "FG42", "FG-42" },  // 6
-	{ qtrue, "PNZR", "Panzer" },      // 7
-	{ qtrue, "FLAM", "F.Thrower" },  // 8
-	{ qfalse, "GRND", "Grenade" },  // 9
-	{ qfalse, "MRTR", "Mortar" },	  // 10
-	{ qfalse, "DYNA", "Dynamite" },  // 11
-	{ qfalse, "ARST", "Airstrike" },  // 12
-	{ qfalse, "ARTY", "Artillery" },  // 13
-	{ qfalse, "SRNG", "Syringe" },  // 14
-	{ qfalse, "SMOK", "SmokeScrn" },  // 15
-	{ qtrue, "MG42", "MG-42 Gun" },  // 16
-	{ qtrue, "RIFL", "Mauser" },	  // 17
-	{ qtrue, "VENM", "Venom" },		  // 18
+	{ qfalse,   "KNIF",  "Knife"      },  // 0
+	{ qtrue,    "LUGR",  "Luger"      },  // 1
+	{ qtrue,    "COLT",  "Colt"       },  // 2
+	{ qtrue,    "MP40",  "MP-40"      },  // 3
+	{ qtrue,    "TMPS",  "Thompson"   },  // 4
+	{ qtrue,    "STEN",  "Sten"       },  // 5
+	{ qtrue,    "FG42",  "FG-42"      },  // 6
+	{ qtrue,    "PNZR",  "Panzer" },      // 7
+	{ qtrue,    "FLAM",  "F.Thrower"  },  // 8
+	{ qfalse,   "GRND",  "Grenade"    },  // 9
+	{ qfalse,   "MRTR",  "Mortar" },	  // 10
+	{ qfalse,   "DYNA",  "Dynamite"   },  // 11
+	{ qfalse,   "ARST",  "Airstrike"  },  // 12
+	{ qfalse,   "ARTY",  "Artillery"  },  // 13
+	{ qfalse,   "SRNG",  "Syringe"    },  // 14
+	{ qfalse,   "SMOK", "SmokeScrn"   },  // 15
+	{ qtrue,    "MG42",  "MG-42 Gun"  },  // 16
+	{ qtrue,    "RIFL",  "Mauser" },	  // 17
+	{ qtrue,    "VENM",  "Venom" },		  // 18
+	{ qfalse,   "POIS",  "Poison" },	  // 19
 };
-
 // strip colors and control codes, copying up to dwMaxLength-1 "good" chars and nul-terminating
 // returns the length of the cleaned string
-int BG_cleanName(const char *pszIn, char *pszOut, unsigned int dwMaxLength, qboolean fCRLF) {
+int BG_cleanName( const char *pszIn, char *pszOut, unsigned int dwMaxLength, qboolean fCRLF ) {
 	const char *pInCopy = pszIn;
 	const char *pszOutStart = pszOut;
 
-	while (*pInCopy && (pszOut - pszOutStart < dwMaxLength - 1)) {
-		if (*pInCopy == '^') {
-			pInCopy += ((pInCopy[1] == 0) ? 1 : 2);
+	while ( *pInCopy && ( pszOut - pszOutStart < dwMaxLength - 1 ) ) {
+		if ( *pInCopy == '^' ) {
+			pInCopy += ( ( pInCopy[1] == 0 ) ? 1 : 2 );
 		} else if ( ( *pInCopy < 32 && ( !fCRLF || *pInCopy != '\n' ) ) || ( *pInCopy > 126 ) )    {
 			pInCopy++;
 		} else {
@@ -4254,5 +4206,5 @@ int BG_cleanName(const char *pszIn, char *pszOut, unsigned int dwMaxLength, qboo
 	}
 
 	*pszOut = 0;
-	return(pszOut - pszOutStart);
+	return( pszOut - pszOutStart );
 }

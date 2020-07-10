@@ -82,7 +82,6 @@ const char  *CG_PlaceString( int rank ) {
 	return str;
 }
 
-
 /*
 =============
 CG_Obituary
@@ -96,8 +95,8 @@ static void CG_Obituary( entityState_t *ent ) {
 	char        *message2;
 	const char  *targetInfo;
 	const char  *attackerInfo;
-	char targetName[MAX_NETNAME];
-	char attackerName[MAX_NETNAME];
+	char targetName[32];
+	char attackerName[32];
 	clientInfo_t    *ci, *ca; // JPW NERVE ca = attacker
 
 	// Ridah, no obituaries in single player
@@ -167,11 +166,6 @@ static void CG_Obituary( entityState_t *ent ) {
 	case MOD_TRIGGER_HURT:
 		message = "was killed";
 		break;
-// OSPx
-	case MOD_ADMKILL:
-		message = "was killed";
-		break;
-// -OSPx
 	default:
 		message = NULL;
 		break;
@@ -200,20 +194,7 @@ static void CG_Obituary( entityState_t *ent ) {
 		case MOD_EXPLOSIVE:
 			message = "died in his own explosion";
 			break;
-// OSPx - MODs
-		case MOD_ARTY:			
-			message = "obliterated himself";
-			break;
-		case MOD_SWITCHTEAM:
-			return;
-		case MOD_SUICIDE:
-			message = "committed suicide";
-			break;
-		case MOD_SELFKILL:
-			message = "slit his own throat";
-			break;			
-// -OSPx
-		default:			
+		default:
 			message = "killed himself";
 			break;
 		}
@@ -377,12 +358,6 @@ static void CG_Obituary( entityState_t *ent ) {
 			message = "was blasted by";
 			message2 = "'s support fire"; // JPW NERVE changed since it gets called for both air strikes and artillery
 			break;
-// OSPx
-		case MOD_ARTY:
-			message = "stood under";
-			message2 = "'s air strike";			
-			break;
-// -OSPx
 // jpw
 // (SA) leaving a sample of two part obit's
 //		case MOD_ROCKET:
@@ -1907,6 +1882,11 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 			CG_OutOfAmmoChange(qtrue);
 		}
 		break;
+	/*	if ( es->number == cg.snap->ps.clientNum  &&
+			(cg_noAmmoAutoSwitch.integer > 0 && !CG_WeaponSelectable(cg.weaponSelect)) ) {
+			CG_OutOfAmmoChange(event == EV_NOAMMO ? qfalse : qtrue);
+		}
+		break;*/
 	case EV_CHANGE_WEAPON:
 	{
 
@@ -2287,6 +2267,7 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		}
 		break;
 // -OSPx
+
 	case EV_PAIN:
 		// local player sounds are triggered in CG_CheckLocalSounds,
 		// so ignore events on the player

@@ -49,12 +49,6 @@ If you have questions concerning this license or the applicable additional terms
 #define WOLF_CP_PROTECT_RADIUS  600     // wolf capture protect radius
 #define WOLF_AMMO_UP            1       // pt for giving ammo not to self
 #define WOLF_HEALTH_UP          1       // pt for giving health not to self
-
-typedef enum { WOLF_CAPTURE_BONUS_STAT, WOLF_STEAL_OBJ_BONUS_STAT,WOLF_SECURE_OBJ_BONUS_STAT, WOLF_REPAIR_BONUS_STAT, 
-WOLF_DYNAMITE_BONUS_STAT, WOLF_FRAG_CARRIER_BONUS_STAT, WOLF_FLAG_DEFENSE_BONUS_STAT, WOLF_CP_CAPTURE_STAT, WOLF_CP_RECOVER_STAT, 
-WOLF_SP_CAPTURE_STAT, WOLF_SP_RECOVER_STAT, WOLF_CP_PROTECT_BONUS_STAT, WOLF_SP_PROTECT_BONUS_STAT, WOLF_DYNAMITE_PLANT_STAT, 
-WOLF_DYNAMITE_DIFFUSE_STAT, WOLF_OTHER_STAT } WOLF_OBJECTIVE_STATS; // enum for passing in correct stats into AddScore method
-
 #define AXIS_OBJECTIVE      1
 #define ALLIED_OBJECTIVE    2
 #define OBJECTIVE_DESTROYED 4
@@ -98,7 +92,7 @@ void Team_ReturnFlag( int team );
 void Team_FreeEntity( gentity_t *ent );
 gentity_t *SelectCTFSpawnPoint( team_t team, int teamstate, vec3_t origin, vec3_t angles, int spawnObjective );
 gentity_t *Team_GetLocation( gentity_t *ent );
-qboolean Team_GetLocationMsg(gentity_t *ent, char *loc, int loclen, qboolean sanitized);
+qboolean Team_GetLocationMsg( gentity_t *ent, char *loc, int loclen );
 void TeamplayInfoMessage( gentity_t *ent );
 void CheckTeamStatus( void );
 

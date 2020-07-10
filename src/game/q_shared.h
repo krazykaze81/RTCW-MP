@@ -289,21 +289,13 @@ typedef int clipHandle_t;
 #define     SND_CUTOFF_ALL      0x008   // Cut off all sounds on this channel
 #define     SND_NOCUT           0x010   // Don't cut off.  Always let finish (overridden by SND_CUTOFF_ALL)
 
-// L0 
-#define PAD(base, alignment)	(((base)+(alignment)-1) & ~((alignment)-1))
-#define PADLEN(base, alignment)	(PAD((base), (alignment)) - (base))
 
-#define PADP(base, alignment)	((void *) PAD((intptr_t) (base), (alignment)))
-// ~L0
 #ifndef NULL
 #define NULL ( (void *)0 )
 #endif
 
 #define MAX_QINT            0x7fffffff
 #define MIN_QINT            ( -MAX_QINT - 1 )
-// L0 - Ported this
-#define ARRAY_LEN(x)			(sizeof(x) / sizeof(*(x)))
-#define STRARRAY_LEN(x)			(ARRAY_LEN(x) - 1)
 
 // TTimo gcc: was missing, added from Q3 source
 #ifndef max
@@ -518,10 +510,10 @@ extern vec4_t colorMdBlue;
 #define COLOR_CYAN      '5'
 #define COLOR_MAGENTA   '6'
 #define COLOR_WHITE     '7'
+// OSPx - New colors
 #define COLOR_ORANGE    '8'
 #define COLOR_MDGREY    '9'
 #define COLOR_LTGREY    ':'
-//#define COLOR_LTGREY	';'
 #define COLOR_MDGREEN   '<'
 #define COLOR_MDYELLOW  '='
 #define COLOR_MDBLUE    '>'
@@ -535,18 +527,18 @@ extern vec4_t colorMdBlue;
 #define ColorIndex( c )   ( ( ( c ) - '0' ) & COLOR_BITS )
 // -OSPx
 
-#define S_COLOR_BLACK   "^0"
-#define S_COLOR_RED     "^1"
-#define S_COLOR_GREEN   "^2"
-#define S_COLOR_YELLOW  "^3"
-#define S_COLOR_BLUE    "^4"
-#define S_COLOR_CYAN    "^5"
-#define S_COLOR_MAGENTA "^6"
-#define S_COLOR_WHITE   "^7"
+#define S_COLOR_BLACK		"^0"
+#define S_COLOR_RED			"^1"
+#define S_COLOR_GREEN		"^2"
+#define S_COLOR_YELLOW		"^3"
+#define S_COLOR_BLUE		"^4"
+#define S_COLOR_CYAN		"^5"
+#define S_COLOR_MAGENTA		"^6"
+#define S_COLOR_WHITE		"^7"
+// OSPx - New colors
 #define S_COLOR_ORANGE      "^8"
 #define S_COLOR_MDGREY      "^9"
 #define S_COLOR_LTGREY      "^:"
-//#define S_COLOR_LTGREY		"^;"
 #define S_COLOR_MDGREEN     "^<"
 #define S_COLOR_MDYELLOW    "^="
 #define S_COLOR_MDBLUE      "^>"
@@ -557,9 +549,8 @@ extern vec4_t colorMdBlue;
 #define S_COLOR_NULL        "^*"
 
 extern vec4_t g_color_table[32];
+
 // Hex Color string support
-#define	MAKERGB( v, r, g, b ) v[0]=r;v[1]=g;v[2]=b
-#define	MAKERGBA( v, r, g, b, a ) v[0]=r;v[1]=g;v[2]=b;v[3]=a
 #define gethex( ch ) ( ( ch ) > '9' ? ( ( ch ) >= 'a' ? ( ( ch ) - 'a' + 10 ) : ( ( ch ) - '7' ) ) : ( ( ch ) - '0' ) )
 #define ishex( ch )  ( ( ch ) && ( ( ( ch ) >= '0' && ( ch ) <= '9' ) || ( ( ch ) >= 'A' && ( ch ) <= 'F' ) || ( ( ch ) >= 'a' && ( ch ) <= 'f' ) ) )
 
@@ -568,6 +559,8 @@ extern vec4_t g_color_table[32];
 #define Q_HexColorStringHasAlpha( p ) ( ishex( *( ( p ) + 6 ) ) && ishex( *( ( p ) + 7 ) ) )
 // -OSPx
 
+#define MAKERGB( v, r, g, b ) v[0] = r; v[1] = g; v[2] = b
+#define MAKERGBA( v, r, g, b, a ) v[0] = r; v[1] = g; v[2] = b; v[3] = a
 
 #define DEG2RAD( a ) ( ( ( a ) * M_PI ) / 180.0F )
 #define RAD2DEG( a ) ( ( ( a ) * 180.0f ) / M_PI )

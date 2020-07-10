@@ -1,25 +1,25 @@
-﻿/*
+/*
 ===========================================================================
 
-Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
+wolfX GPL Source Code
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
+This file is part of wolfX source code.  
 
-RTCW MP Source Code is free software: you can redistribute it and/or modify
+wolfX Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-RTCW MP Source Code is distributed in the hope that it will be useful,
+wolfX Source Code is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with RTCW MP Source Code.  If not, see <http://www.gnu.org/licenses/>.
+along with wolfX Source Code.  If not, see <http://www.gnu.org/licenses/>.
 
-In addition, the RTCW MP Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the RTCW MP Source Code.  If not, please request a copy in writing from id Software at the address below.
+In addition, the wolfX Source Code is also subject to certain additional terms. You should have received a copy of these additional terms immediately following the terms and conditions of the GNU General Public License which accompanied the wolfX Source Code.  If not, please request a copy in writing from id Software at the address below.
 
 If you have questions concerning this license or the applicable additional terms, you may contact in writing id Software LLC, c/o ZeniMax Media Inc., Suite 120, Rockville, Maryland 20850 USA.
 
@@ -30,9 +30,10 @@ If you have questions concerning this license or the applicable additional terms
  * name:			cg_window.c
  *
  * desc:			OSP port of cgame window handling
- * Author:			OSPx/Nate 'L0 (original Author: rhea@OrangeSmoothie.org)
- * created:			3 May / 2014 
- * OSPx Notes:		I've added missing effects / added stats window handling / 
+ * Author:			Nate 'L0 (original Author: rhea@OrangeSmoothie.org)
+ * created:			14 Jan / 2013
+ * Last updated:	31 Jan / 2013
+ * Notes:			I've added missing effects / added stats window handling / 
  *					truetype effect font is set to fixed site (for now) / few tweaks up and there.
  */
 
@@ -41,80 +42,6 @@ If you have questions concerning this license or the applicable additional terms
 
 extern pmove_t cg_pmove;        // cg_predict.c
 extern displayContextDef_t cgDC;// L0 - Makes more sense here..	
-
-/*
-	Closes any existing window
-*/
-void CG_closeDemoPopWindow(void) {	
-	if (cgs.demoPopUpInfo.show == SHOW_ON) {
-		if (cg.time < cgs.demoPopUpInfo.fadeTime) {
-			cgs.demoPopUpInfo.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.demoPopUpInfo.fadeTime;
-		}
-		else {
-			cgs.demoPopUpInfo.fadeTime = cg.time + STATS_FADE_TIME;
-		}
-		CG_windowFree(cg.demoPopupWindow);
-		cg.demoPopupWindow = NULL;
-	}
-}
-
-/*
-	Pops up for few seconds
-*/
-void CG_createDemoPopUpWindow( char *str, int sec) {
-
-	if (!demo_popupWindow.integer) {
-		return;
-	}
-	else {
-		vec4_t colorGeneralFill = { 0.1f, 0.1f, 0.1f, 0.8f };
-		cg_window_t *sw = CG_windowAlloc(WFX_TEXTSIZING | WFX_FADEIN | WFX_SCROLLUP, 120);
-
-		// Close any existing..
-		CG_closeDemoPopWindow();
-
-		cg.demoPopupWindow = sw;
-		if (sw == NULL) {
-			return;
-		}
-
-		// Window specific
-		sw->id = WID_DEMOPOPUP;
-		sw->fontScaleX = 1 * 0.7f;
-		sw->fontScaleY = 1 * 0.8f;
-		sw->x = 0;
-		sw->y = 470;
-		sw->flashPeriod = 1500;
-		sw->flashMidpoint = sw->flashPeriod * 0.7f;
-		memcpy(&sw->colorBackground2, colorGeneralFill, sizeof(vec4_t));
-
-		// Mark it so it can fade away..
-		cgs.demoPopUpInfo.requestTime = cg.time + (sec * 1000);
-
-		cg.windowCurrent = sw;
-		CG_printWindow((char*)str);
-	}
-}
-
-/*
-	Destroys pop up window 
-*/
-void CG_destroyDemoPopUpWindow(void) {
-	if (!cg.demoPlayback) {
-		return;
-	}
-
-	if (cgs.demoPopUpInfo.show == SHOW_ON && cg.time > cgs.demoPopUpInfo.requestTime) {
-		if (cg.time < cgs.demoPopUpInfo.fadeTime) {
-			cgs.demoPopUpInfo.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.demoPopUpInfo.fadeTime;
-		}
-		else {
-			cgs.demoPopUpInfo.fadeTime = cg.time + STATS_FADE_TIME;
-		}
-		CG_windowFree(cg.demoPopupWindow);
-		cg.demoPopupWindow = NULL;
-	}
-}
 
 void CG_createStatsWindow( void ) {
 	cg_window_t *sw = CG_windowAlloc( WFX_TEXTSIZING | WFX_FADEIN | WFX_SCROLLUP| WFX_TRUETYPE, 110 );
@@ -132,7 +59,7 @@ void CG_createStatsWindow( void ) {
 	sw->y = ( cg.snap->ps.pm_type == PM_INTERMISSION ) ? -20 : -100;  // Align from bottom minus offset and height
 }
 
-// OSPx - Adding this for 1.0/1.4 Shrub alike stats
+// L0 - Adding this for 1.0 alike stats
 void CG_createClientStatsWindow( void ) {
 	cg_window_t *sw = CG_windowAlloc( WFX_TEXTSIZING | WFX_FADEIN | WFX_SCROLLLEFT | WFX_TRUETYPE, 110 );
 
@@ -149,7 +76,8 @@ void CG_createClientStatsWindow( void ) {
 	sw->y = ( cg.snap->ps.pm_type == PM_INTERMISSION ) ? -20 : -100;  // Align from bottom minus offset and height
 }
 
-void CG_createTopShotsWindow( void ) {	
+void CG_createTopShotsWindow( void ) {
+	// L0 - Made it dark so it matches wolfX
 	vec4_t colorGeneralFill   = { 0.1f, 0.1f, 0.1f, 0.8f };
 
 	cg_window_t *sw = CG_windowAlloc( WFX_TEXTSIZING | WFX_FLASH | WFX_FADEIN | WFX_SCROLLUP | WFX_TRUETYPE, 190 );
@@ -194,13 +122,12 @@ void CG_windowInit( void ) {
 	cg.statsWindow = NULL;
 	cg.topshotsWindow = NULL;
 	cg.clientStatsWindow = NULL;
-	cg.demoControlsWindow = NULL;
-	cg.demoPopupWindow = NULL;
 }
 
 
 // Window stuct "constructor" with some common defaults
-void CG_windowReset( cg_window_t *w, int fx, int startupLength ) {	
+void CG_windowReset( cg_window_t *w, int fx, int startupLength ) {
+	// L0 - Made it more darker to match wolfX
 	vec4_t colorGeneralBorder = { 0.4f, 0.4f, 0.4f, 0.5f };
 	vec4_t colorGeneralFill   = { 0.1f, 0.1f, 0.1f, 0.8f };
 
@@ -304,24 +231,15 @@ void CG_windowDraw( void ) {
 	vec4_t *bg;
 	vec4_t textColor, borderColor, bgColor;
 
-	// OSPx
-	CG_demoView();
-
+// L0 - Demo ports - FINISH ME
+/*
 	if ( cg.winHandler.numActiveWindows == 0 ) {
-		// OSPx - Pre-set some stuff
-		if (demo_controlsWindow.integer && cg.demoPlayback) {
-			cgs.demoControlInfo.show = SHOW_ON;
-			CG_createControlsWindow();
-		}
-
-		if (demo_popupWindow.integer && cg.demoPlayback && !cg.advertisementDone && !demo_noAdvertisement.integer) {
-			cgs.demoPopUpInfo.show = SHOW_ON;
-			CG_createDemoPopUpWindow("Upload this demo: ^n/demoupload current <optional: comment>", 10);
-			cg.advertisementDone = qtrue;
-		}
-		// ~OSPx
+		// Draw these for demoplayback no matter what
+		CG_demoAviFPSDraw();
+		CG_demoTimescaleDraw();
 		return;
 	}
+*/
 
 	milli = trap_Milliseconds();
 	memcpy( textColor, colorWhite, sizeof( vec4_t ) );
@@ -360,7 +278,7 @@ void CG_windowDraw( void ) {
 
 				w->curY = y;
 			}
-			// OSPx - New ones (unsued)
+			// L0 - New ones (unsued)
 			// NOTE -> Scroll right = (start) right and animate to (end) left and then back..
 			//         Side indicates from which corner it pops in and pops out.
 			if ( w->effects & WFX_SCROLLRIGHT ) {
@@ -378,7 +296,7 @@ void CG_windowDraw( void ) {
 					w->state = WSTATE_COMPLETE;
 				}
 				w->curX = x;
-			} // -OSPx
+			} // End
 			if ( w->effects & WFX_FADEIN ) {
 				if ( tmp > 0 ) {
 					textColor[3] = (float)( (float)t_offset / (float)w->targetTime );
@@ -396,7 +314,7 @@ void CG_windowDraw( void ) {
 					continue;
 				}
 			}	
-			// OSPx - New effects
+			// L0 - New effects
 			if ( w->effects & WFX_SCROLLRIGHT ) {
 				if ( tmp > 0 ) {
 					x = w->curX + ( 680 - w->x ) * t_offset / w->targetTime;
@@ -416,7 +334,7 @@ void CG_windowDraw( void ) {
 					fCleanup = qtrue;
 					continue;
 				}
-			} // -OSPx
+			} // End
 			if ( w->effects & WFX_FADEIN ) {
 				if ( tmp > 0 ) {
 					textColor[3] -= (float)( (float)t_offset / (float)w->targetTime );
@@ -438,7 +356,7 @@ void CG_windowDraw( void ) {
 
 		for ( j = w->lineCount - 1; j >= 0; j-- ) {
 			if ( w->effects & WFX_TRUETYPE ) {
-				// OSPx - If i'll ever port the font..this can be restored..
+				// L0 - If i'll ever port the font..this can be restored..
 				//CG_Text_Paint_Ext( x, y + h, w->fontScaleX, w->fontScaleY, textColor,
 				//				   (char*)w->lineText[j], 0.0f, 0, 0, &cgDC.Assets.textFont );
 
@@ -455,10 +373,9 @@ void CG_windowDraw( void ) {
 		}
 	}
 
-// OSPx 
-	// Track this..
-	CG_destroyDemoPopUpWindow();
-// ~OSPx
+	// Extra rate info
+//	CG_demoAviFPSDraw();
+//	CG_demoTimescaleDraw();
 
 	if ( fCleanup ) {
 		CG_windowCleanup();

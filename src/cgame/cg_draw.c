@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -58,62 +58,6 @@ void Controls_GetConfig( void );
 ///////////////////////
 ///////////////////////
 
-/*
-	OSPx - HUD names ETpro port
-*/
-int	numnames = 0;
-
-typedef struct {
-	float x;
-	float y;
-	float dist;
-	char name[MAX_NAME_LENGTH + 1];
-} etpro_name_t;
-
-etpro_name_t hudnames[128];
-
-void VP_ResetNames(void) {
-	numnames = 0;
-}
-int RealStrLen(char *s){
-	int ret = strlen(s);
-	for (; *s; s++) {
-		if (Q_IsColorString(s))
-			ret -= 2;
-	}
-	return ret < 50 ? ret : 50;
-}
-void VP_DrawNames(void) {
-	int i;
-	float fontsize;
-	float dist;
-
-	for (i = 0; i < numnames; i++) 
-	{
-		//need to come up with better scaler
-		fontsize = cgs.media.charsetShader;
-		dist = hudnames[i].dist > 1000.0f ? 1000.0f : hudnames[i].dist;
-		dist /= 2000.0f;
-		fontsize -= (dist * fontsize);
-
-		CG_DrawStringExt((hudnames[i].x - ((RealStrLen(hudnames[i].name) * 6) >> 1)),
-			hudnames[i].y, hudnames[i].name, colorWhite, qfalse, qfalse, 6, 12, 50);
-	}
-}
-void VP_AddName(int x, int y, float dist, int clientNum) {
-
-	if (clientNum == cg.clientNum)
-		return;
-
-	hudnames[numnames].x = x;
-	hudnames[numnames].y = y;
-	hudnames[numnames].dist = dist;
-	Q_strncpyz(hudnames[numnames].name, cgs.clientinfo[clientNum].name, sizeof(hudnames[numnames].name));
-	numnames++;
-
-}
-
-// -OSPx 
 int CG_Text_Width( const char *text, float scale, int limit ) {
 	int count,len;
 	float out;
@@ -797,7 +741,7 @@ static float CG_DrawTeamOverlay( float y ) {
 		w = ( pwidth + lwidth + 8 ) * TINYCHAR_WIDTH; // JPW NERVE was +4+7
 
 	}
-	x = 640 - w - 6; // JPW was -32
+	x = 640 - w - 4; // JPW was -32
 	h = plyrs * TINYCHAR_HEIGHT;
 
 	// DHM - Nerve :: Set the max characters that can be printed before the left edge
@@ -824,8 +768,6 @@ static float CG_DrawTeamOverlay( float y ) {
 	for ( i = 0; i < numSortedTeamPlayers; i++ ) {
 		ci = cgs.clientinfo + sortedTeamPlayers[i];
 		if ( ci->infoValid && ci->team == cg.snap->ps.persistant[PERS_TEAM] ) {
-			// OSPx - Add * in front or revivable players..
-			char *isRevivable = " ";
 
 			// NERVE - SMF
 			// determine class type
@@ -842,38 +784,35 @@ static float CG_DrawTeamOverlay( float y ) {
 				classType[0] = 'S';
 			}
 
-			Com_sprintf(st, sizeof(st), "%s", CG_TranslateString(classType));
+			Com_sprintf( st, sizeof( st ), "%s", CG_TranslateString( classType ) );
 
-			// JPW NERVE
-			if (ci->health > 80) {
-				pcolor = hcolor;
-			}
-			else if (ci->health > 0) {
-				pcolor = damagecolor;
-			}
-			else {
-				pcolor = deathcolor;
-				// OSPx - *
-				if (!(cg.snap->ps.pm_flags & PMF_LIMBO))
-					isRevivable = "*";
-			}
-			// jpw
-
-			xx = x + 1; // * TINYCHAR_WIDTH;
+			xx = x + TINYCHAR_WIDTH;
 
 			hcolor[0] = hcolor[1] = 1.0;
 			hcolor[2] = 0.0;
 			hcolor[3] = cg_hudAlpha.value;
 
-			// RtcwPro put IsRevivable in front of class type
-			CG_DrawStringExt( xx, y, va("%s%s", isRevivable, st), pcolor, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 5 );
+			CG_DrawStringExt( xx, y,
+							  st, hcolor, qtrue, qfalse,
+							  TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 1 );
 
 			hcolor[0] = hcolor[1] = hcolor[2] = 1.0;
 			hcolor[3] = cg_hudAlpha.value;
 
 			xx = x + 3 * TINYCHAR_WIDTH;
 
-			CG_DrawStringExt( xx + 1, y, ci->name, pcolor, qtrue, qfalse, // RtcwPro moved IsRevivable above
+			// JPW NERVE
+			if ( ci->health > 80 ) {
+				pcolor = hcolor;
+			} else if ( ci->health > 0 ) {
+				pcolor = damagecolor;
+			} else {
+				pcolor = deathcolor;
+			}
+			// jpw
+
+			CG_DrawStringExt( xx, y,
+							  ci->name, pcolor, qtrue, qfalse,
 							  TINYCHAR_WIDTH, TINYCHAR_HEIGHT, TEAM_OVERLAY_MAXNAME_WIDTH );
 
 			if ( lwidth ) {
@@ -914,48 +853,67 @@ static float CG_DrawTeamOverlay( float y ) {
 	return y;
 }
 
-
-
-
 /*
 =================
-OSPx 
-
-Reinforcement Offset
+OSPx
+Reinforcements Offset
 =================
+char *CG_CalculateReinfTime( void ) {
+	int msec, mins, seconds, tens;
+	char *s = "0.00";
+
+	if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED) {
+		msec = cg_redlimbotime.integer - (cg.time % cg_redlimbotime.integer);
+	}
+	else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_BLUE)     {
+		msec = cg_bluelimbotime.integer - (cg.time % cg_bluelimbotime.integer);
+	}
+	else {
+		msec = 0;
+	}
+
+	if (msec) {
+		seconds = msec / 1000;
+		mins = seconds / 60;
+		seconds -= mins * 60;
+		tens = seconds / 10;
+		seconds -= tens * 10;
+
+		s = va("%2.0f:%i%i", (float)mins, tens, seconds + 1);
+	}
+	return s;
+}
 */
+
 float CG_CalculateReinfTime_Float( void ) {
 	team_t team;
 	int dwDeployTime;
-	
+
 	team = cgs.clientinfo[cg.snap->ps.clientNum].team;
 
 	dwDeployTime = (team == TEAM_RED) ? cg_redlimbotime.integer : cg_bluelimbotime.integer;
-	return (1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
-	//return (1 + (dwDeployTime - ((cg.time) % dwDeployTime)) * 0.001f);    //nihi added -cg.pauseTime
+//	return (1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
+//	return (1 + (dwDeployTime - ((1000+cg.time  - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
+  //  if (cgs.pauseState) {
+   //	cg.pauseTime += 1000;
+  //  }   //nihi added
+   // else {
+	return (1 + (dwDeployTime - ((cg.time) % dwDeployTime)) * 0.001f);    //nihi added -cg.pauseTime
+	//}
 }
 
 int CG_CalculateReinfTime( void ) {
 	return((int)CG_CalculateReinfTime_Float());
 }
 
-/*
-=================
-L0
 
-Reinforcement Timer for Specs in tournament mode
-=================
-*/
-float CG_CalculateReinfTimeSpecs(team_t team) {
-	int dwDeployTime;
 
-	dwDeployTime = (team == TEAM_RED) ? cg_redlimbotime.integer : cg_bluelimbotime.integer;
-	return ((1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f));
-}
+
+
 
 /*
 ========================
-OSPx 
+OSPx
 Respawn Timer
 ========================
 */
@@ -982,9 +940,10 @@ static float CG_DrawRespawnTimer(float y) {
 
 	w = CG_DrawStrlen(str) * TINYCHAR_WIDTH;
 
+//	x = 46 + 6;
 	x = 46 + 40;
-	y = 480 - 390;
-	//y = 480 - 410;
+//	y = 480 - 245;
+	y = 480 - 410;
 
 	if (cgs.gamestate != GS_PLAYING) {
 		CG_DrawStringExt((x + 4) - w, y, str, colorYellow, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
@@ -1023,6 +982,7 @@ static void CG_DrawUpperRight( void ) {
 //		y = CG_DrawAttacker( y );
 //	}
 //----(SA)	end
+
 	// OSPx - Respawn Timer
 	if (cg_drawReinforcementTime.integer) {
 		y = CG_DrawRespawnTimer(y);
@@ -1048,7 +1008,6 @@ static void CG_DrawTeamInfo( void ) {
 	vec4_t hcolor;
 	int chatHeight;
 	float alphapercent;
-	float chatAlpha = (float)cg_chatAlpha.value;
 
 #define CHATLOC_Y 385 // bottom end
 #define CHATLOC_X 0
@@ -1103,22 +1062,11 @@ static void CG_DrawTeamInfo( void ) {
 				hcolor[0] = 0;
 				hcolor[1] = 1;
 				hcolor[2] = 0;
-			}
 //			hcolor[3] = 0.33;
-
-// L0 - Wanted to do this for years..
-			if (chatAlpha > 1.0f) {
-				chatAlpha = 1.0f;
-			}
-			else if (chatAlpha < 0.f) {
-				chatAlpha = 0.f;
 			}
 
-			if (!Q_stricmp(cg_chatBackgroundColor.string, ""))
-				hcolor[3] = chatAlpha * alphapercent;
-			else // Abuse this..
-				BG_setCrosshair(cg_chatBackgroundColor.string, hcolor, chatAlpha * alphapercent, "cg_chatBackgroundColor");
-// End
+			hcolor[3] = 0.33f * alphapercent;
+
 			trap_R_SetColor( hcolor );
 			CG_DrawPic( CHATLOC_X, CHATLOC_Y - ( cgs.teamChatPos - i ) * TINYCHAR_HEIGHT, 640, TINYCHAR_HEIGHT, cgs.media.teamStatusBar );
 
@@ -1335,6 +1283,7 @@ static void CG_DrawDisconnect( void ) {
 	if (cg.demoPlayback && cg_timescale.value != 1.0f) {
 		return;
 	}
+
 	// draw the phone jack if we are completely past our buffers
 	cmdNum = trap_GetCurrentCmdNumber() - CMD_BACKUP + 1;
 	trap_GetUserCmd( cmdNum, &cmd );
@@ -1374,10 +1323,6 @@ static void CG_DrawLagometer( void ) {
 	float ax, ay, aw, ah, mid, range;
 	int color;
 	float vscale;
-	// OSPx - Bail out in demo..
-	if (cg.demoPlayback) {
-		return;
-	}
 
 	if ( !cg_lagometer.integer || cgs.localServer ) {
 //	if(0) {
@@ -1652,6 +1597,7 @@ static void CG_DrawCenterString( void ) {
 	trap_R_SetColor( NULL );
 }
 
+
 /*
 ===================
 OSPx - Cg_PopinPrint
@@ -1768,6 +1714,7 @@ static void CG_DrawPopinString(void) {
 	}
 	trap_R_SetColor(NULL);
 }
+
 
 /*
 ================================================================================
@@ -1985,13 +1932,14 @@ static void CG_DrawCrosshair( void ) {
 		CG_ColorForHealth( hcolor );
 		trap_R_SetColor( hcolor );
 	} else {
+		// OSPx - Crosshair (patched)
 		trap_R_SetColor(cg.xhairColor);
 	}
 
 	w = h = cg_crosshairSize.value;
 
 	// RF, crosshair size represents aim spread
-	// OSPx - Patched for Solid crosshair 
+	// OSPx - Patched for Solid crosshair
 	f = (float)((cg_crosshairPulse.integer == 0) ? 0 : cg.snap->ps.aimSpreadScale / 255.0);
 	w *= ( 1 + f * 2.0 );
 	h *= ( 1 + f * 2.0 );
@@ -2018,6 +1966,7 @@ static void CG_DrawCrosshair( void ) {
 		x = cg_crosshairX.integer;
 		y = cg_crosshairY.integer;
 		CG_AdjustFrom640( &x, &y, &w, &h );
+
 		// OSPx - Crosshairs
 		if (!cg_crosshairHealth.integer) {
 			trap_R_SetColor(cg.xhairColorAlt);
@@ -2351,13 +2300,7 @@ static void CG_DrawCrosshairNames( void ) {
 	w = CG_DrawStrlen( s ) * SMALLCHAR_WIDTH;
 
 	// draw the name and class
-	// OSPx - Colored names
-	if (cg_coloredCrosshairNames.integer) {
-		CG_DrawStringExt(320 - w / 2, 170, s, color, qfalse, qfalse, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 40);
-	}
-	else {
-		CG_DrawSmallStringColor(320 - w / 2, 170, s, color);
-	}
+	CG_DrawSmallStringColor( 320 - w / 2, 170, s, color );
 
 	// draw the health bar
 	playerHealth = cg.identifyClientHealth;
@@ -2428,7 +2371,7 @@ static void CG_DrawVote( void ) {
 			s = "Server Host cannot be complained against";
 			CG_DrawStringExt( 8, 200, CG_TranslateString( s ), color, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 80 );
 			return;
-		}
+		}							  // OSPx - Complaint popup
 		if (cgs.complaintClient == -4 && cg_complaintPopUp.integer) {
 			s = "You were team-killed by the Server Host";
 			CG_DrawStringExt( 8, 200, CG_TranslateString( s ), color, qtrue, qfalse, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 80 );
@@ -2514,10 +2457,10 @@ static void CG_DrawIntermission( void ) {
 			// Some instantly open console to check the stats..
 			if (cg_autoAction.integer & AA_SCREENSHOT) {
 				doScreenshot = cg.time + 250;
-			}			
+			}
 			if (cg_autoAction.integer & AA_STATSDUMP) {
 				CG_dumpStats_f();
-			}			
+			}
 			if ((cg_autoAction.integer & AA_DEMORECORD) &&
 				((cgs.gametype == GT_WOLF_STOPWATCH && cgs.currentRound == 0) ||
 				cgs.gametype != GT_WOLF_STOPWATCH)) {
@@ -2534,9 +2477,8 @@ static void CG_DrawIntermission( void ) {
 			trap_SendConsoleCommand("stoprecord\n");
 			doDemostop = 0;
 		}
-	} 
+	}
 // -OSPx
-
 	cg.scoreFadeTime = cg.time;
 	CG_DrawScoreboard();
 }
@@ -2626,10 +2568,6 @@ static void CG_DrawSpectatorMessage( void ) {
 		return;
 	}
 
-	// OSPx - Never during demo..
-	if (cg.demoPlayback) {
-		return;
-	}
 	trap_Cvar_VariableStringBuffer( "ui_limboMode", buf, sizeof( buf ) );
 	if ( atoi( buf ) ) {
 		return;
@@ -2658,7 +2596,6 @@ static void CG_DrawSpectatorMessage( void ) {
 	CG_DrawStringExt( x, y, str, color, qtrue, 0, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0 );
 	y += TINYCHAR_HEIGHT;
 }
-
 
 /*
 =================
@@ -2698,31 +2635,22 @@ static void CG_DrawLimboMessage( void ) {
 		CG_DrawSmallStringColor( INFOTEXT_STARTX, 86, str, color );
 	}
 
-	/*
-	// original
-	if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
-		str = CG_TranslateString( "No more reinforcements this round." );
-	} else {
-		// OSPx - Reinforcement Offset
-		str = va(CG_TranslateString("Reinforcements deploy in %d seconds."), CG_CalculateReinfTime());
-	}*/
-	
 	// JPW NERVE
 	if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
 		str = CG_TranslateString( "No more reinforcements this round." );
-	}
-	else {
-		// OSPx - Reinforcement Offset
-		str = va(CG_TranslateString("Reinforcements deploy in %d seconds."), CG_CalculateReinfTime());
+	} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
+		str = va( CG_TranslateString( "Reinforcements deploy in %d seconds." ),
+				  (int)( 1 + (float)( cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer ) ) * 0.001f ) );
+	} else {
+		str = va( CG_TranslateString( "Reinforcements deploy in %d seconds." ),
+				  (int)( 1 + (float)( cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer ) ) * 0.001f ) );
 	}
 
 	CG_DrawSmallStringColor( INFOTEXT_STARTX, 104, str, color );
 	// jpw
 
 	trap_R_SetColor( NULL );
-	
 }
-
 // -NERVE - SMF
 
 /*
@@ -2748,12 +2676,14 @@ static qboolean CG_DrawFollow( void ) {
 	if ( cg.snap->ps.pm_flags & PMF_LIMBO ) {
 		color[1] = 0.0;
 		color[2] = 0.0;
-		if (cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0) { // fixed from xMod
-			sprintf(deploytime, CG_TranslateString("No more deployments this round"));
-		}
-		else {
-			// OSPx - Reinforcement Offset
-			sprintf(deploytime, CG_TranslateString("Deploying in %d seconds"), CG_CalculateReinfTime());
+		if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
+			sprintf( deploytime, CG_TranslateString( "No more deployments this round" ) );
+		} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
+			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
+					 (int)( 1 + (float)( cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer ) ) * 0.001f ) );
+		} else {
+			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
+					 (int)( 1 + (float)( cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer ) ) * 0.001f ) );
 		}
 
 		CG_DrawStringExt( INFOTEXT_STARTX, 68, deploytime, color, qtrue, qfalse, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 80 );
@@ -2776,54 +2706,36 @@ static qboolean CG_DrawFollow( void ) {
 
 /*
 =================
-OSPx - CG_DrawPause
+L0 - CG_DrawPause
 
 Deals with client views/prints when paused.
 =================
 */
-static void CG_PausePrint(void) {
-	const char  *s, *s2;
-	float color[4];
+static void CG_PausePrint( void ) {
+	const char  *s;
 	int w;
 
+	// There's no plans for SP but one never knows..
+	if ( cgs.gametype == GT_SINGLE_PLAYER )
+		return;
 	// Not in warmup...
 	if (cg.warmup)
 		return;
 
-	if (cgs.match_paused == PAUSE_ON) {
-		s = va("%s", CG_TranslateString("^nMatch is Paused!"));
-		s2 = va("%s", CG_TranslateString(va("Timeout expires in ^n%i ^7seconds", cgs.match_resumes - cgs.match_expired)));
-
-		color[3] = fabs(sin(cg.time * 0.001)) * cg_hudAlpha.value;
-
+	if (cgs.pauseState) {
+		s = va( "%s", CG_TranslateString( "Match is ^1PAUSED^7!" ));
+		// Fade it (When SDL is ported it can be changed to grayscale)
 		if (cg.time > cgs.match_stepTimer) {
-			cgs.match_expired++;
+			//cgs.match_expired++;
 			cgs.match_stepTimer = cg.time + 1000;
 		}
-		//cgs.fadeAlpha = .1;
-	}
-	else if (cgs.match_paused == PAUSE_RESUMING) {
-		s = va("%s", CG_TranslateString("^3Prepare to fight!"));
-		s2 = va("%s", CG_TranslateString(va("Resuming Match in ^3%d", 8 - cgs.match_expired)));		
-		
-		color[3] = fabs(sin(cg.time * 0.002)) * cg_hudAlpha.value;
-
-		if (cg.time > cgs.match_stepTimer) {
-			cgs.match_expired++;
-			cgs.match_stepTimer = cg.time + 1000;
-		}
-	}
-	else {
+		cgs.fadeAlpha = .4;
+	} else {
 		return;
 	}
 
-	color[0] = color[1] = color[2] = 1.0;
-
-	w = CG_DrawStrlen(s);
-	CG_DrawStringExt(320 - w * 6, 100, s, color, qfalse, qtrue, 12, 18, 0);
-
-	w = CG_DrawStrlen(s2);
-	CG_DrawStringExt(320 - w * 6, 120, s2, colorWhite, qfalse, qtrue, 12, 18, 0);
+	w = CG_DrawStrlen( s );
+	CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
 }
 
 /*
@@ -2842,45 +2754,53 @@ static void CG_DrawWarmup( void ) {
 		return;     // (SA) don't bother with this stuff in sp
 	}
 
-	// OSPx - Ready
+	// L0 - Ready
 	if (cgs.gamestate == GS_WARMUP && cgs.readyState != CREADY_NONE) {
 		cw = 10;
 
+		// Account for g_minGameClients if it's present
 		if (cgs.readyState == CREADY_PENDING) {
 
-			s = CG_TranslateString( "^nWARMUP: ^7Waiting for players to ready up" );
-		w = CG_DrawStrlen(s);
-		CG_DrawStringExt(320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0);
+			s = CG_TranslateString( "^nGame Stopped ^7- Waiting for players to ready up" );
+			w = CG_DrawStrlen( s );
+			CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
+
 
 			s1 = va( CG_TranslateString( "Waiting for at least ^n%i ^7%s to ready" ), cgs.minclients, cgs.minclients == 1 ? "player" : "players" );
 			s2 = CG_TranslateString( "Type ^n\\ready ^7in the console to start" );
+
 			w = CG_DrawStrlen( s1 );
 			CG_DrawStringExt( 320 - w * cw / 2, 160, s1, colorWhite,
 							  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
+
 			w = CG_DrawStrlen( s2 );
 			CG_DrawStringExt( 320 - w * cw / 2, 180, s2, colorWhite,
 							  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
+
 		} else {
+
 			// No need to bother with count..scoreboard gives info..
-			s = CG_TranslateString( "^nWARMUP: ^7Waiting for players to ready up" );
+			s = CG_TranslateString( "^nGame Stopped ^7- Waiting for players to ready up" );
 			w = CG_DrawStrlen( s );
 			CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
-			if (!cg.demoPlayback && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR &&
-				   ( !( cg.snap->ps.pm_flags & PMF_FOLLOW ) || ( cg.snap->ps.pm_flags & PMF_LIMBO ) ) ) {
-				s1 = CG_TranslateString("Type ^n\\ready ^7in the console to start");
-				w = CG_DrawStrlen(s1);
-				CG_DrawStringExt(320 - w * cw / 2, 160, s1, colorWhite,
-					qfalse, qtrue, cw, (int)(cw * 1.5), 0);
+
+			if ( !cg.demoPlayback && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR &&
+			   ( !( cg.snap->ps.pm_flags & PMF_FOLLOW ) || ( cg.snap->ps.pm_flags & PMF_LIMBO ) ) ) {
+				s1 = CG_TranslateString( "Type ^n\\ready ^7in the console to start" );
+				w = CG_DrawStrlen( s1 );
+				CG_DrawStringExt( 320 - w * cw / 2, 160, s1, colorWhite,
+								  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
 			}
 		}
-		return;
+
+	return;
 	}
 	sec = cg.warmup;
 	if ( !sec ) {
 		if ( cgs.gamestate == GS_WAITING_FOR_PLAYERS ) {
 			cw = 10;
 
-			s = CG_TranslateString( "^3WARMUP: ^7Waiting for more players" );
+			s = CG_TranslateString( "^3Game Stopped ^7- Waiting for more players" );
 
 			w = CG_DrawStrlen( s );
 			CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
@@ -2916,9 +2836,12 @@ static void CG_DrawWarmup( void ) {
 
 	w = CG_DrawStrlen( s );
 	CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
+	// nihi added
+
     if (sec == 10 && !announced)
 	{
 		trap_S_StartLocalSound(cgs.media.prepFight, CHAN_ANNOUNCER);
+
 		announced = qtrue;
 	}
 	else if (sec != 10)
@@ -2983,16 +2906,16 @@ static void CG_DrawWarmup( void ) {
 
 		cw = 10;
 
-		w = CG_DrawStrlen( s );
-		CG_DrawStringExt(320 - w * cw / 2, 160, s, colorWhite,
+		w = CG_DrawStrlen( s ); // OSPx - Pushed all lower for 20
+		CG_DrawStringExt( 320 - w * cw / 2, 160, s, colorWhite,
 						  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
 
 		w = CG_DrawStrlen( s1 );
-		CG_DrawStringExt(320 - w * cw / 2, 180, s1, colorWhite,
+		CG_DrawStringExt( 320 - w * cw / 2, 180, s1, colorWhite,
 						  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
 
 		w = CG_DrawStrlen( s2 );
-		CG_DrawStringExt(320 - w * cw / 2, 200, s2, colorWhite,
+		CG_DrawStringExt( 320 - w * cw / 2, 200, s2, colorWhite,
 						  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
 	}
 }
@@ -3008,7 +2931,7 @@ static void CG_DrawFlashFade( void ) {
 	static int lastTime;
 	int elapsed, time;
 	vec4_t col;
-	qboolean fBlackout = (int_ui_blackout.integer > 0); // OSPx - Speclock
+	qboolean fBlackout = ( int_ui_blackout.integer > 0 );
 
 	if ( cgs.fadeStartTime + cgs.fadeDuration < cg.time ) {
 		cgs.fadeAlphaCurrent = cgs.fadeAlpha;
@@ -3029,43 +2952,42 @@ static void CG_DrawFlashFade( void ) {
 			}
 		}
 	}
-	// OSPx - Speclock
-	if (int_ui_blackout.integer == 0) {
-		if (cg.snap->ps.powerups[PW_BLACKOUT] > 0) {
-			trap_Cvar_Set("ui_blackout", va("%d", cg.snap->ps.powerups[PW_BLACKOUT]));
+	// OSP - ugh, have to inform the ui that we need to remain blacked out (or not)
+	if ( int_ui_blackout.integer == 0 ) {
+		if ( cg.snap->ps.powerups[PW_BLACKOUT] > 0 ) {
+			trap_Cvar_Set( "ui_blackout", va( "%d", cg.snap->ps.powerups[PW_BLACKOUT] ) );
 		}
 	} else if ( cg.snap->ps.powerups[PW_BLACKOUT] == 0 ) {
-		trap_Cvar_Set("ui_blackout", "0");
+		trap_Cvar_Set( "ui_blackout", "0" );
 	}
-
-	// now draw the fade		   // OSPx - Speclock
-	if (cgs.fadeAlphaCurrent > 0.0 || fBlackout) {
+	// now draw the fade
+	if ( cgs.fadeAlphaCurrent > 0.0 || fBlackout ) {
 		VectorClear( col );
-		col[3] = (fBlackout) ? 1.0f : cgs.fadeAlphaCurrent; // OSPx - Speclock
+		col[3] = ( fBlackout ) ? 1.0f : cgs.fadeAlphaCurrent;
 		CG_FillRect( -10, -10, 650, 490, col );
-
 		//bani - #127 - bail out if we're a speclocked spectator with cg_draw2d = 0
-		if (cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR && !cg_draw2D.integer) {
+		if ( cgs.clientinfo[ cg.clientNum ].team == TEAM_SPECTATOR && !cg_draw2D.integer ) {
 			return;
 		}
 
-		// OSPx - Speclocked
-		if (fBlackout) {
+		// OSP - Show who is speclocked
+		if ( fBlackout ) {
 			int i, nOffset = 90;
 			char *str, *format = "The %s team is speclocked!";
-			char *teams[TEAM_NUM_TEAMS] = { "??", "AXIS", "ALLIED", "???" };	
+			char *teams[TEAM_NUM_TEAMS] = { "??", "AXIS", "ALLIED", "???" };
 			float color[4] = { 1, 1, 0, 1 };
 
-			for (i = TEAM_RED; i <= TEAM_BLUE; i++) {
-				if (cg.snap->ps.powerups[PW_BLACKOUT] & i) {
-					str = va(format, teams[i]);
-					CG_DrawStringExt(INFOTEXT_STARTX, nOffset, str, color, qtrue, qfalse, 10, 10, 0);
+			for ( i = TEAM_RED; i <= TEAM_BLUE; i++ ) {
+				if ( cg.snap->ps.powerups[PW_BLACKOUT] & i ) {
+					str = va( format, teams[i] );
+					CG_DrawStringExt( INFOTEXT_STARTX, nOffset, str, color, qtrue, qfalse, 10, 10, 0 );
 					nOffset += 12;
 				}
 			}
 		}
 	}
 }
+
 
 
 /*
@@ -3469,6 +3391,7 @@ void CG_DrawObjectiveIcons() {
 	seconds -= mins * 60;
 	tens = seconds / 10;
 	seconds -= tens * 10;
+
 	// OSPx - Print fancy warmup in corner..
 	if (cgs.gamestate != GS_PLAYING) {
 		fade = fabs(sin(cg.time * 0.002)) * cg_hudAlpha.value;
@@ -3698,60 +3621,6 @@ static void CG_ScreenFade( void ) {
 	}
 }
 
-// OSPx - Draw HUD Names
-void CG_DrawOnScreenNames(void)
-{
-	static vec3_t	mins = { -1, -1, -1 };
-	static vec3_t	maxs = { 1, 1, 1 };
-	vec4_t			white = { 1.0f, 1.0f, 1.0f, 1.0f };
-	specName_t		*spcNm;
-	trace_t			tr;
-	int				clientNum;
-	int				FadeOut = 0;
-	int				FadeIn = 0;
-
-	for (clientNum = 0; clientNum < cgs.maxclients; clientNum++) {
-
-		if (!cgs.clientinfo[clientNum].infoValid)
-			continue;
-
-		spcNm = &cg.specOnScreenNames[clientNum];
-		if (!spcNm || !spcNm->visible)
-			continue;
-
-		CG_Trace(&tr, cg.refdef.vieworg, mins, maxs, spcNm->origin, -1, CONTENTS_SOLID);
-
-		if (tr.fraction < 1.0f) {
-			spcNm->lastInvisibleTime = cg.time;
-		}
-		else {
-			spcNm->lastVisibleTime = cg.time;
-		}
-
-		FadeOut = cg.time - spcNm->lastVisibleTime;
-		FadeIn = cg.time - spcNm->lastInvisibleTime;
-
-		if (FadeIn) {
-			white[3] = (FadeIn > 500) ? 1.0 : FadeIn / 500.0f;
-			if (white[3] < spcNm->alpha)
-				white[3] = spcNm->alpha;
-		}
-		if (FadeOut) {
-			white[3] = (FadeOut > 500) ? 0.0 : 1.0 - FadeOut / 500.0f;
-			if (white[3] > spcNm->alpha)
-				white[3] = spcNm->alpha;
-		}
-		if (white[3] > 1.0)
-			white[3] = 1.0;
-
-		spcNm->alpha = white[3];
-		if (spcNm->alpha <= 0.0) continue;	// no alpha = nothing to draw..
-
-		CG_Text_Paint_ext2(spcNm->x, spcNm->y, spcNm->scale, white, spcNm->text, 0, 0, 0);
-		// expect update next frame again
-		spcNm->visible = qfalse;
-	}
-}
 // JPW NERVE
 void CG_Draw2D2( void ) {
 	qhandle_t weapon;
@@ -3959,12 +3828,6 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
-	// OSPx - Hud Names
-	if (vp_drawnames.integer)
-		VP_DrawNames();
-
-	VP_ResetNames();
-	// -OSPx
 	CG_DrawFlashBlendBehindHUD();
 
 #ifndef PRE_RELEASE_DEMO
@@ -3978,11 +3841,7 @@ static void CG_Draw2D( void ) {
 	if ( cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR ) {
 		CG_DrawSpectator();
 		CG_DrawCrosshair();
-		// OSPx - Draw Hud Names
-		if (cg_drawNames.integer)
-			CG_DrawOnScreenNames();
-		else
-			CG_DrawCrosshairNames();
+		CG_DrawCrosshairNames();
 
 		// NERVE - SMF - we need to do this for spectators as well
 		if ( cgs.gametype >= GT_TEAM ) {
@@ -4000,9 +3859,7 @@ static void CG_Draw2D( void ) {
 			// DHM - Nerve :: Don't draw icon in upper-right when switching weapons
 			//CG_DrawWeaponSelect();
 
-			// OSPx - In warmup we print ready intel there..
-			if (!cgs.gamestate == GS_WARMUP || cg_drawPickupItems.integer )
-				CG_DrawPickupItem();
+			CG_DrawPickupItem();
 		}
 		if ( cgs.gametype >= GT_TEAM ) {
 			CG_DrawTeamInfo();
@@ -4024,8 +3881,7 @@ static void CG_Draw2D( void ) {
 	// don't draw center string if scoreboard is up
 	if ( !CG_DrawScoreboard() ) {
 		CG_DrawCenterString();
-
-		// OSPx - Pause		
+		// Pause print
 		CG_PausePrint();
 
 		// OSPx - Pop in print..
@@ -4050,9 +3906,6 @@ static void CG_Draw2D( void ) {
 		// -NERVE - SMF
 	}
 
-	// OSPx - Announcer
-	CG_DrawAnnouncer();
-
 	// OSPx - window updates
 	CG_windowDraw();
 	// Ridah, draw flash blends now
@@ -4068,7 +3921,7 @@ void CG_StartShakeCamera( float p ) {
 	cg.cameraShakePhase = crandom() * M_PI; // start chain in random dir
 }
 
-void CG_ShakeCamera( void ) {
+void CG_ShakeCamera() {
 	float x, val;
 
 	if ( cg.time > cg.cameraShakeTime ) {
@@ -4185,58 +4038,60 @@ void CG_DrawActive( stereoFrame_t stereoView ) {
 	CG_Draw2D();
 }
 
-/*
 
-	OSPx - New stuff below
-
-	Various ports from ET, wolfX..
-
-*/
 /*
 =====================
-CG_Text_PaintChar_Ext
+L0 - CG_Text_PaintChar_Ext
+
+Ported from ET
 =====================
 */
 void CG_Text_PaintChar_Ext(float x, float y, float w, float h, float scalex, float scaley, float s, float t, float s2, float t2, qhandle_t hShader) {
 	w *= scalex;
 	h *= scaley;
-	CG_AdjustFrom640(&x, &y, &w, &h);
-	trap_R_DrawStretchPic(x, y, w, h, s, t, s2, t2, hShader);
+	CG_AdjustFrom640( &x, &y, &w, &h );
+	trap_R_DrawStretchPic( x, y, w, h, s, t, s2, t2, hShader );
 }
 
 /*
 =====================
-CG_Text_Paint_ext2
+L0 - CG_Text_Paint_ext2
+
+Ported from S4NDMoD
 =====================
 */
 void CG_Text_Paint_ext2(float x, float y, float scale, vec4_t color, const char *text, float adjust, int limit, int style) {
-	int len, count;
+  int len, count;
 	vec4_t newColor;
 	glyphInfo_t *glyph;
 	float useScale;
 	fontInfo_t *font = &cgDC.Assets.textFont;
-	
-	font = &cgDC.Assets.bigFont;
-
+	//if (scale <= cg_smallFont.value) {
+	//	font = &cgDC.Assets.smallFont;
+	//} else if (scale > cg_bigFont.value) {
+		font = &cgDC.Assets.bigFont;
+	//}
 	useScale = scale * font->glyphScale;
 
 	color[3] *= cg_hudAlpha.value;	// (SA) adjust for cg_hudalpha
 
-	if (text) {
+  if (text) {
 		const char *s = text;
-		trap_R_SetColor(color);
+		trap_R_SetColor( color );
 		memcpy(&newColor[0], &color[0], sizeof(vec4_t));
-		len = strlen(text);
+    len = strlen(text);
 		if (limit > 0 && len > limit) {
 			len = limit;
 		}
 		count = 0;
 		while (s && *s && count < len) {
-			glyph = &font->glyphs[(int)*s];			
-			if (Q_IsColorString(s)) {
-				memcpy(newColor, g_color_table[ColorIndex(*(s + 1))], sizeof(newColor));
+			glyph = &font->glyphs[(int)*s];
+      //int yadj = Assets.textFont.glyphs[text[i]].bottom + Assets.textFont.glyphs[text[i]].top;
+      //float yadj = scale * (Assets.textFont.glyphs[text[i]].imageHeight - Assets.textFont.glyphs[text[i]].height);
+			if ( Q_IsColorString( s ) ) {
+				memcpy( newColor, g_color_table[ColorIndex(*(s+1))], sizeof( newColor ) );
 				newColor[3] = color[3];
-				trap_R_SetColor(newColor);
+				trap_R_SetColor( newColor );
 				s += 2;
 				continue;
 			} else {
@@ -4244,44 +4099,47 @@ void CG_Text_Paint_ext2(float x, float y, float scale, vec4_t color, const char 
 				if (style == ITEM_TEXTSTYLE_SHADOWED || style == ITEM_TEXTSTYLE_SHADOWEDMORE) {
 					int ofs = style == ITEM_TEXTSTYLE_SHADOWED ? 1 : 2;
 					colorBlack[3] = newColor[3];
-					trap_R_SetColor(colorBlack);
+					trap_R_SetColor( colorBlack );
 					CG_Text_PaintChar(x + ofs, y - yadj + ofs,
-						glyph->imageWidth,
-						glyph->imageHeight,
-						useScale,
-						glyph->s,
-						glyph->t,
-						glyph->s2,
-						glyph->t2,
-						glyph->glyph);
+														glyph->imageWidth,
+														glyph->imageHeight,
+														useScale,
+														glyph->s,
+														glyph->t,
+														glyph->s2,
+														glyph->t2,
+														glyph->glyph);
 					colorBlack[3] = 1.0;
-					trap_R_SetColor(newColor);
+					trap_R_SetColor( newColor );
 				}
 				CG_Text_PaintChar(x, y - yadj,
-					glyph->imageWidth,
-					glyph->imageHeight,
-					useScale,
-					glyph->s,
-					glyph->t,
-					glyph->s2,
-					glyph->t2,
-					glyph->glyph);				
+													glyph->imageWidth,
+													glyph->imageHeight,
+													useScale,
+													glyph->s,
+													glyph->t,
+													glyph->s2,
+													glyph->t2,
+													glyph->glyph);
+				// CG_DrawPic(x, y - yadj, scale * cgDC.Assets.textFont.glyphs[text[i]].imageWidth, scale * cgDC.Assets.textFont.glyphs[text[i]].imageHeight, cgDC.Assets.textFont.glyphs[text[i]].glyph);
 				x += (glyph->xSkip * useScale) + adjust;
 				s++;
 				count++;
 			}
-		}
-		trap_R_SetColor(NULL);
-	}
+    }
+	  trap_R_SetColor( NULL );
+  }
 }
 
 /*
 =====================
-CG_Text_Width_ext2
+L0 - CG_Text_Width_ext2
+
+Ported from S4NDMoD
 =====================
 */
 int CG_Text_Width_ext2(const char *text, float scale, int limit) {
-	int count, len;
+  int count,len;
 	float out;
 	glyphInfo_t *glyph;
 	float useScale;
@@ -4291,15 +4149,15 @@ int CG_Text_Width_ext2(const char *text, float scale, int limit) {
 	font = &cgDC.Assets.bigFont;
 
 	useScale = scale * font->glyphScale;
-	out = 0;
-	if (text) {
-		len = strlen(text);
+  out = 0;
+  if (text) {
+    len = strlen(text);
 		if (limit > 0 && len > limit) {
 			len = limit;
 		}
 		count = 0;
 		while (s && *s && count < len) {
-			if (Q_IsColorString(s)) {
+			if ( Q_IsColorString(s) ) {
 				s += 2;
 				continue;
 			} else {
@@ -4308,18 +4166,20 @@ int CG_Text_Width_ext2(const char *text, float scale, int limit) {
 				s++;
 				count++;
 			}
-		}
-	}
-	return out * useScale;
+    }
+  }
+  return out * useScale;
 }
 
 /*
 =====================
-CG_Text_Height_ext2
+L0 - CG_Text_Height_ext2
+
+Ported from S4NDMoD
 =====================
 */
 int CG_Text_Height_ext2(const char *text, float scale, int limit) {
-	int len, count;
+  int len, count;
 	float max;
 	glyphInfo_t *glyph;
 	float useScale;
@@ -4329,36 +4189,39 @@ int CG_Text_Height_ext2(const char *text, float scale, int limit) {
 	font = &cgDC.Assets.bigFont;
 
 	useScale = scale * font->glyphScale;
-	max = 0;
-	if (text) {
-		len = strlen(text);
+  max = 0;
+  if (text) {
+    len = strlen(text);
 		if (limit > 0 && len > limit) {
 			len = limit;
 		}
 		count = 0;
 		while (s && *s && count < len) {
-			if (Q_IsColorString(s)) {
+			if ( Q_IsColorString(s) ) {
 				s += 2;
 				continue;
 			} else {
 				glyph = &font->glyphs[(int)*s];
-				if (max < glyph->height) {
-					max = glyph->height;
-				}
+	      if (max < glyph->height) {
+		      max = glyph->height;
+			  }
 				s++;
 				count++;
 			}
-		}
-	}
-	return max * useScale;
+    }
+  }
+  return max * useScale;
 }
 
 /*
 =====================
-CG_Text_Paint_Ext
+L0 - CG_Text_Paint_Ext
+
+Ported from ET
 =====================
 */
-void CG_Text_Paint_Ext(float x, float y, float scalex, float scaley, vec4_t color, const char *text, float adjust, int limit, int style, fontInfo_t* font) {
+
+void CG_Text_Paint_Ext( float x, float y, float scalex, float scaley, vec4_t color, const char *text, float adjust, int limit, int style, fontInfo_t* font ) {
 	int len, count;
 	vec4_t newColor;
 	glyphInfo_t *glyph;
@@ -4368,7 +4231,7 @@ void CG_Text_Paint_Ext(float x, float y, float scalex, float scaley, vec4_t colo
 
 	if (text) {
 		const char *s = text;
-		trap_R_SetColor(color);
+		trap_R_SetColor( color );
 		memcpy(&newColor[0], &color[0], sizeof(vec4_t));
 		len = strlen(text);
 		if (limit > 0 && len > limit) {
@@ -4377,14 +4240,14 @@ void CG_Text_Paint_Ext(float x, float y, float scalex, float scaley, vec4_t colo
 		count = 0;
 		while (s && *s && count < len) {
 			glyph = &font->glyphs[(unsigned char)*s];
-			if (Q_IsColorString(s)) {
-				if (*(s + 1) == COLOR_NULL) {
-					memcpy(newColor, color, sizeof(newColor));
+			if ( Q_IsColorString( s ) ) {
+				if( *(s+1) == COLOR_NULL ) {
+					memcpy( newColor, color, sizeof(newColor) );
 				} else {
-					memcpy(newColor, g_color_table[ColorIndex(*(s + 1))], sizeof(newColor));
+					memcpy( newColor, g_color_table[ColorIndex(*(s+1))], sizeof( newColor ) );
 					newColor[3] = color[3];
 				}
-				trap_R_SetColor(newColor);
+				trap_R_SetColor( newColor );
 				s += 2;
 				continue;
 			} else {
@@ -4392,10 +4255,10 @@ void CG_Text_Paint_Ext(float x, float y, float scalex, float scaley, vec4_t colo
 				if (style == ITEM_TEXTSTYLE_SHADOWED || style == ITEM_TEXTSTYLE_SHADOWEDMORE) {
 					int ofs = style == ITEM_TEXTSTYLE_SHADOWED ? 1 : 2;
 					colorBlack[3] = newColor[3];
-					trap_R_SetColor(colorBlack);
+					trap_R_SetColor( colorBlack );
 					CG_Text_PaintChar_Ext(x + (glyph->pitch * scalex) + ofs, y - yadj + ofs, glyph->imageWidth, glyph->imageHeight, scalex, scaley, glyph->s, glyph->t, glyph->s2, glyph->t2, glyph->glyph);
 					colorBlack[3] = 1.0;
-					trap_R_SetColor(newColor);
+					trap_R_SetColor( newColor );
 				}
 				CG_Text_PaintChar_Ext(x + (glyph->pitch * scalex), y - yadj, glyph->imageWidth, glyph->imageHeight, scalex, scaley, glyph->s, glyph->t, glyph->s2, glyph->t2, glyph->glyph);
 				x += (glyph->xSkip * scalex) + adjust;
@@ -4403,17 +4266,19 @@ void CG_Text_Paint_Ext(float x, float y, float scalex, float scaley, vec4_t colo
 				count++;
 			}
 		}
-		trap_R_SetColor(NULL);
+		trap_R_SetColor( NULL );
 	}
 }
 
 /*
 =====================
-CG_Text_Height_Ext
+L0 - CG_Text_Height_Ext
+
+Ported from ET
 =====================
 */
-int CG_Text_Height_Ext(const char *text, float scale, int limit, fontInfo_t* font) {
-	int len, count;
+int CG_Text_Height_Ext( const char *text, float scale, int limit, fontInfo_t* font ) {
+ int len, count;
 	float max;
 	glyphInfo_t *glyph;
 	float useScale;
@@ -4428,14 +4293,14 @@ int CG_Text_Height_Ext(const char *text, float scale, int limit, fontInfo_t* fon
 		}
 		count = 0;
 		while (s && *s && count < len) {
-			if (Q_IsColorString(s)) {
+			if ( Q_IsColorString(s) ) {
 				s += 2;
 				continue;
 			} else {
 				glyph = &font->glyphs[(unsigned char)*s];
-				if (max < glyph->height) {
-					max = glyph->height;
-				}
+	      if (max < glyph->height) {
+		      max = glyph->height;
+			  }
 				s++;
 				count++;
 			}
@@ -4446,24 +4311,27 @@ int CG_Text_Height_Ext(const char *text, float scale, int limit, fontInfo_t* fon
 
 /*
 =====================
-CG_Text_Width_Ext
+L0 - CG_Text_Width_Ext
+
+Ported from ET
 =====================
 */
-int CG_Text_Width_Ext(const char *text, float scale, int limit, fontInfo_t* font) {
+
+int CG_Text_Width_Ext( const char *text, float scale, int limit, fontInfo_t* font ) {
 	int count, len;
 	glyphInfo_t *glyph;
 	const char *s = text;
 	float out, useScale = scale * font->glyphScale;
 
 	out = 0;
-	if (text) {
-		len = strlen(text);
+	if( text ) {
+		len = strlen( text );
 		if (limit > 0 && len > limit) {
 			len = limit;
 		}
 		count = 0;
 		while (s && *s && count < len) {
-			if (Q_IsColorString(s)) {
+			if ( Q_IsColorString(s) ) {
 				s += 2;
 				continue;
 			} else {
@@ -4474,69 +4342,70 @@ int CG_Text_Width_Ext(const char *text, float scale, int limit, fontInfo_t* font
 			}
 		}
 	}
+
 	return out * useScale;
 }
 
 /*
 =====================
-CG_DrawAnnouncer
+L0 - CG_DrawAnnouncer
 
 Ported from ET
 =====================
-*/
 
-void CG_DrawAnnouncer(void)
+
+void CG_DrawAnnouncer( void )
 {
 	int		x, y, w, h;
 	float	scale, fade;
 	vec4_t	color;
 
-	if (!cg_announcer.integer || cg.centerPrintAnnouncerTime <= cg.time)
+	if(  !cg_announcer.integer ||  cg.centerPrintAnnouncerTime <= cg.time )
 		return;
 
-	fade = (float)(cg.centerPrintAnnouncerTime - cg.time) / cg.centerPrintAnnouncerDuration;
+	fade = (float)(cg.centerPrintAnnouncerTime - cg.time)/cg.centerPrintAnnouncerDuration;
 
 	color[0] = cg.centerPrintAnnouncerColor[0];
 	color[1] = cg.centerPrintAnnouncerColor[1];
 	color[2] = cg.centerPrintAnnouncerColor[2];
 
-	switch (cg.centerPrintAnnouncerMode){
-	default:
-	case ANNOUNCER_NORMAL:
-		color[3] = fade;
-		break;
-	case ANNOUNCER_SINE:
-		color[3] = sin(M_PI * fade);
-		break;
-	case ANNOUNCER_INVERSE_SINE:
-		color[3] = 1 - sin(M_PI * fade);
-		break;
-	case ANNOUNCER_TAN:
-		color[3] = tan(M_PI * fade);
+	switch( cg.centerPrintAnnouncerMode ){
+		default:
+		case ANNOUNCER_NORMAL:
+			color[3] = fade;
+			break;
+		case ANNOUNCER_SINE:
+			color[3] = sin( M_PI * fade );
+			break;
+		case ANNOUNCER_INVERSE_SINE:
+			color[3] = 1-sin( M_PI * fade );
+			break;
+		case ANNOUNCER_TAN:
+			color[3] = tan( M_PI * fade );
 	}
 
 	scale = (1.1f - color[3]) * cg.centerPrintAnnouncerScale;
 
-	h = CG_Text_Height_Ext(cg.centerPrintAnnouncer, scale, 0, &cgDC.Assets.textFont);
+	h = CG_Text_Height_Ext( cg.centerPrintAnnouncer, scale, 0, &cgDC.Assets.textFont );
 
 	y = (SCREEN_HEIGHT - h) / 2;
 
-	w = CG_Text_Width_Ext(cg.centerPrintAnnouncer, scale, 0, &cgDC.Assets.textFont);
+	w = CG_Text_Width_Ext(cg.centerPrintAnnouncer, scale, 0, &cgDC.Assets.textFont );
 
-	x = (SCREEN_WIDTH - w) / 2;
+	x = ( SCREEN_WIDTH - w ) / 2;
 
-	CG_Text_Paint_Ext(x, y, scale, scale, color, cg.centerPrintAnnouncer, 0, 0, 0, &cgDC.Assets.textFont);
+	CG_Text_Paint_Ext( x, y, scale, scale , color, cg.centerPrintAnnouncer, 0, 0, 0, &cgDC.Assets.textFont );
 }
 
 void CG_AddAnnouncer(char *text, sfxHandle_t sound, float scale, int duration, float r, float g, float b, int mode)
 {
-	if (!cg_announcer.integer)
+	if ( !cg_announcer.integer )
 		return;
 
-	if (sound)
-		trap_S_StartLocalSound(sound, CHAN_ANNOUNCER);
+	if ( sound )
+		trap_S_StartLocalSound( sound, CHAN_ANNOUNCER );
 
-	if (text){
+	if ( text ){
 		cg.centerPrintAnnouncer = text;
 		cg.centerPrintAnnouncerTime = cg.time + duration;
 		cg.centerPrintAnnouncerScale = scale;
@@ -4547,3 +4416,4 @@ void CG_AddAnnouncer(char *text, sfxHandle_t sound, float scale, int duration, f
 		cg.centerPrintAnnouncerMode = mode;
 	}
 }
+*/

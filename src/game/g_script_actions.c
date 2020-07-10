@@ -1472,9 +1472,7 @@ qboolean G_ScriptAction_Announce( gentity_t *ent, char *params ) {
 		G_Error( "G_ScriptAction_Announce: statement parameter required\n" );
 	}
 
-	// OSPx - Use prints instead of cp..
-	//trap_SendServerCommand( -1, va( "cp \"%s\" 2", token ) );
-	G_matchPrintInfo(va("%s!", token));
+	trap_SendServerCommand( -1, va( "cp \"%s\" 2", token ) );
 
 	return qtrue;
 }

@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -486,9 +486,7 @@ void CG_PyroSmokeTrail( centity_t *ent, const weaponInfo_t *wi ) {
 		if ( !ent->currentState.otherEntityNum2 ) { // axis team, generate red smoke
 			le = CG_SmokePuff( origin, dir,
 							   25 + rnd * 110, // width
-							   // L0 - Light up colors..
-							   //rnd * 0.5 + 0.5, rnd * 0.5 + 0.5, 1, 0.5,
-							   rnd * 0.5 + 0.2, rnd * 0.5 + 0.2, 1, 0.5,
+							   rnd * 0.5 + 0.5, rnd * 0.5 + 0.5, 1, 0.5,
 							   4800 + ( rand() % 2800 ), // duration was 2800+
 							   t,
 							   0,
@@ -497,9 +495,7 @@ void CG_PyroSmokeTrail( centity_t *ent, const weaponInfo_t *wi ) {
 		} else {
 			le = CG_SmokePuff( origin, dir,
 							   25 + rnd * 110, // width
-							   // L0 - Light up colors..
-							   //1.0, rnd * 0.5 + 0.5, rnd * 0.5 + 0.5, 0.5,
-							   1.0, rnd * 0.5 + 0.2, rnd * 0.5 + 0.2, 0.5,
+							   1.0, rnd * 0.5 + 0.5, rnd * 0.5 + 0.5, 0.5,
 							   4800 + ( rand() % 2800 ), // duration was 2800+
 							   t,
 							   0,
@@ -2681,11 +2677,12 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
 		flash.hModel = 0;
 	}
 
-	// OSPx - Disable muzzleFlash if they have it off..	
+	// OSPx - Disable muzzleFlash if they have it off..
 	// NOTE: Patched for zoomed FOV
 	if (!cg_muzzleFlash.integer || cg.zoomedFOV) {
 		flash.hModel = 0;
 	}
+
 	// weaps with barrel smoke
 	if ( ps || cg.renderingThirdPerson || !isPlayer ) {
 		if ( weaponNum == WP_STEN || weaponNum == WP_VENOM ) {
@@ -3857,16 +3854,15 @@ CG_LastWeaponUsed_f
 */
 void CG_LastWeaponUsed_f( void ) {
 	int lastweap;
-
-	// OSPx - Pause
-	if (cg.snap->ps.pm_type == PM_FREEZE) {
+	// L0 - Pause
+	if ( cg.snap->ps.pm_type == PM_FREEZE ) {
 		return;
-	}
+	} // End
 
 	if ( cg.time - cg.weaponSelectTime < cg_weaponCycleDelay.integer ) {
 		return; // force pause so holding it down won't go too fast
-	}
 
+	}
 	cg.weaponSelectTime = cg.time;  // flash the current weapon icon
 
 	// don't switchback if reloading (it nullifies the reload)
@@ -3894,16 +3890,15 @@ CG_NextWeaponInBank_f
 ==============
 */
 void CG_NextWeaponInBank_f( void ) {
-
-	// OSPx - Pause
-	if (cg.snap->ps.pm_type == PM_FREEZE) {
+	// L0 - Pause
+	if ( cg.snap->ps.pm_type == PM_FREEZE ) {
 		return;
-	}
+	} // End
 
 	if ( cg.time - cg.weaponSelectTime < cg_weaponCycleDelay.integer ) {
 		return; // force pause so holding it down won't go too fast
-	}
 
+	}
 	// this cvar is an option that lets the player use his weapon switching keys (probably the mousewheel)
 	// for zooming (binocs/snooper/sniper/etc.)
 	if ( cg.zoomval ) {
@@ -3927,16 +3922,15 @@ CG_PrevWeaponInBank_f
 ==============
 */
 void CG_PrevWeaponInBank_f( void ) {
-
-	// OSPx - Pause
-	if (cg.snap->ps.pm_type == PM_FREEZE) {
+	// L0 - Pause
+	if ( cg.snap->ps.pm_type == PM_FREEZE ) {
 		return;
-	}
+	} // End
 
 	if ( cg.time - cg.weaponSelectTime < cg_weaponCycleDelay.integer ) {
 		return; // force pause so holding it down won't go too fast
-	}
 
+	}
 	// this cvar is an option that lets the player use his weapon switching keys (probably the mousewheel)
 	// for zooming (binocs/snooper/sniper/etc.)
 	if ( cg.zoomval ) {
@@ -3965,10 +3959,11 @@ void CG_NextWeapon_f( void ) {
 	if ( !cg.snap ) {
 		return;
 	}
-	// OSPx - Pause
-	if (cg.snap->ps.pm_type == PM_FREEZE) {
+
+	// L0 - Pause
+	if ( cg.snap->ps.pm_type == PM_FREEZE ) {
 		return;
-	}
+	} // End
 	if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) {
 		return;
 	}
@@ -4016,10 +4011,10 @@ void CG_PrevWeapon_f( void ) {
 	if ( !cg.snap ) {
 		return;
 	}
-	// OSPx - Pause
-	if (cg.snap->ps.pm_type == PM_FREEZE) {
+		// L0 - Pause
+	if ( cg.snap->ps.pm_type == PM_FREEZE ) {
 		return;
-	}
+	} // End
 	if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) {
 		return;
 	}
@@ -4065,12 +4060,10 @@ void CG_WeaponBank_f( void ) {
 	if ( !cg.snap ) {
 		return;
 	}
-
-	// OSPx - Pause
-	if (cg.snap->ps.pm_type == PM_FREEZE) {
+	// L0 - Pause
+	if ( cg.snap->ps.pm_type == PM_FREEZE ) {
 		return;
-	}
-
+	} // End
 	if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) {
 		return;
 	}
@@ -4144,11 +4137,10 @@ void CG_Weapon_f( void ) {
 		return;
 	}
 
-	// OSPx - Pause
-	if (cg.snap->ps.pm_type == PM_FREEZE) {
+	// L0 - Pause
+	if ( cg.snap->ps.pm_type == PM_FREEZE ) {
 		return;
-	}
-
+	} // End
 	if ( cg.snap->ps.pm_flags & PMF_FOLLOW ) {
 		return;
 	}
@@ -4241,48 +4233,52 @@ void CG_OutOfAmmoChange( qboolean allowforceswitch ) {
 	}
 // jpw
 
-// JPW NERVE -- early out if we just fired Panzerfaust, go to pistola, then grenades
-	if ( cg.weaponSelect == WP_PANZERFAUST ) {
-		for ( i = 0; i < MAX_WEAPS_IN_BANK_MP; i++ )
-			if ( CG_WeaponSelectable( weapBanksMultiPlayer[2][i] ) ) { // find a pistol
+	// OSPx - wrapped for noAmmoAutoSwitch
+//	if (allowforceswitch)   // nihi commented out
+//	{
+		// JPW NERVE -- early out if we just fired Panzerfaust, go to pistola, then grenades
+		if (cg.weaponSelect == WP_PANZERFAUST) {
+			for (i = 0; i < MAX_WEAPS_IN_BANK_MP; i++)
+			if (CG_WeaponSelectable(weapBanksMultiPlayer[2][i])) { // find a pistol
 				cg.weaponSelect = weapBanksMultiPlayer[2][i];
-				CG_FinishWeaponChange( cg.predictedPlayerState.weapon, cg.weaponSelect );
+				CG_FinishWeaponChange(cg.predictedPlayerState.weapon, cg.weaponSelect);
 				return;
 			}
-		for ( i = 0; i < MAX_WEAPS_IN_BANK_MP; i++ )
-			if ( CG_WeaponSelectable( weapBanksMultiPlayer[4][i] ) ) { // find a grenade
+			for (i = 0; i < MAX_WEAPS_IN_BANK_MP; i++)
+			if (CG_WeaponSelectable(weapBanksMultiPlayer[4][i])) { // find a grenade
 				cg.weaponSelect = weapBanksMultiPlayer[4][i];
-				CG_FinishWeaponChange( cg.predictedPlayerState.weapon, cg.weaponSelect );
+				CG_FinishWeaponChange(cg.predictedPlayerState.weapon, cg.weaponSelect);
 				return;
 			}
-	}
-// jpw
+		}
+		// jpw
 
-	// never switch weapon if auto-reload is disabled
-	if (!cg.pmext.bAutoReload && IS_AUTORELOAD_WEAPON(cg.weaponSelect)
-		&& !cg_noAmmoAutoSwitch.integer) { // OSPx - Account for cg_noAmmoAutoSwitch variable..
-		return;
-	}
-
-	// if you're using an alt mode weapon, try switching back to the parent
-	// otherwise, switch to the equivalent if you've got it
-	if ( cg.weaponSelect >= WP_BEGINSECONDARY && cg.weaponSelect <= WP_LASTSECONDARY ) {
-		cg.weaponSelect = equiv = getAltWeapon( cg.weaponSelect );    // base any further changes on the parent
-		if ( CG_WeaponSelectable( equiv ) ) {    // the parent was selectable, drop back to that
-			CG_FinishWeaponChange( cg.predictedPlayerState.weapon, cg.weaponSelect ); //----(SA)
+		// never switch weapon if auto-reload is disabled
+		if (!cg.pmext.bAutoReload && IS_AUTORELOAD_WEAPON(cg.weaponSelect)
+			&& !cg_noAmmoAutoSwitch.integer) {   // OSPx - Account for cg_noAmmoAutoSwitch variable.. //nihi added
 			return;
 		}
-	}
+
+		// if you're using an alt mode weapon, try switching back to the parent
+		// otherwise, switch to the equivalent if you've got it
+		if (cg.weaponSelect >= WP_BEGINSECONDARY && cg.weaponSelect <= WP_LASTSECONDARY) {
+			cg.weaponSelect = equiv = getAltWeapon(cg.weaponSelect);    // base any further changes on the parent
+			if (CG_WeaponSelectable(equiv)) {    // the parent was selectable, drop back to that
+				CG_FinishWeaponChange(cg.predictedPlayerState.weapon, cg.weaponSelect); //----(SA)
+				return;
+			}
+		}
 
 
-	// now try the opposite team's equivalent weap
-	equiv = getEquivWeapon( cg.weaponSelect );
+		// now try the opposite team's equivalent weap
+		equiv = getEquivWeapon(cg.weaponSelect);
 
-	if ( equiv != cg.weaponSelect && CG_WeaponSelectable( equiv ) ) {
-		cg.weaponSelect = equiv;
-		CG_FinishWeaponChange( cg.predictedPlayerState.weapon, cg.weaponSelect ); //----(SA)
-		return;
-	}
+		if (equiv != cg.weaponSelect && CG_WeaponSelectable(equiv)) {
+			cg.weaponSelect = equiv;
+			CG_FinishWeaponChange(cg.predictedPlayerState.weapon, cg.weaponSelect); //----(SA)
+			return;
+		}
+//	} // -OSPx - Wrapper ends here..
 
 	//
 	// more complicated selection
@@ -4563,7 +4559,7 @@ void CG_FireWeapon( centity_t *cent ) {
 
 		if (cg_muzzleFlash.integer)
 		{
-		cent->muzzleFlashTime = cg.time;
+			cent->muzzleFlashTime = cg.time;
 		}
 		else
 		{
@@ -4588,7 +4584,7 @@ void CG_FireWeapon( centity_t *cent ) {
 	// append the flash to the weapon model
 	if (cg_muzzleFlash.integer)
 	{
-	cent->muzzleFlashTime = cg.time;
+		cent->muzzleFlashTime = cg.time;
 	}
 	else
 	{

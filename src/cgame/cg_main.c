@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -86,7 +86,7 @@ int vmMain( int command, int arg0, int arg1, int arg2, int arg3, int arg4, int a
 		CG_MouseEvent( arg0, arg1 );
 		return 0;
 	case CG_EVENT_HANDLING:
-		CG_EventHandling(arg0, qtrue);
+		CG_EventHandling( arg0 );
 		return 0;
 	case CG_GET_TAG:
 		return CG_GetTag( arg0, (char *)arg1, (orientation_t *)arg2 );
@@ -104,6 +104,7 @@ cgs_t cgs;
 centity_t cg_entities[MAX_GENTITIES];
 weaponInfo_t cg_weapons[MAX_WEAPONS];
 itemInfo_t cg_items[MAX_ITEMS];
+
 
 vmCvar_t cg_railTrailTime;
 vmCvar_t cg_centertime;
@@ -288,57 +289,33 @@ vmCvar_t cg_antilag;
 
 // OSPx
 vmCvar_t cg_crosshairPulse;
+vmCvar_t cg_showFlags;			//mcwf GeoIP
 vmCvar_t cg_bloodDamageBlend;
 vmCvar_t cg_bloodFlash;
 vmCvar_t cg_crosshairAlpha;
 vmCvar_t cg_crosshairAlphaAlt;
 vmCvar_t cg_crosshairColor;
 vmCvar_t cg_crosshairColorAlt;
-vmCvar_t cg_coloredCrosshairNames;
+vmCvar_t cg_hitsounds;
 vmCvar_t cg_drawWeaponIconFlash;
 vmCvar_t cg_printObjectiveInfo;
 vmCvar_t cg_muzzleFlash;
 vmCvar_t cg_complaintPopUp;
 vmCvar_t cg_drawReinforcementTime;
-vmCvar_t cg_reinforcementTimeColor;
 vmCvar_t cg_noChat;
 vmCvar_t cg_noVoice;
-vmCvar_t cg_noAmmoAutoSwitch;
-vmCvar_t cg_wideScreen;
 vmCvar_t cg_zoomedFOV;
 vmCvar_t cg_statsList;			// 0 = player only, 1 = team stats, 2 = stats of all players
 vmCvar_t cg_zoomedSens;
-vmCvar_t vp_drawnames;
-vmCvar_t cg_drawNames;
-vmCvar_t cg_showFlags;
 vmCvar_t cg_announcer;
-vmCvar_t cg_drawPickupItems;
 vmCvar_t cg_autoAction;
-vmCvar_t cg_useScreenshotJPEG;
-vmCvar_t cg_chatAlpha;
-vmCvar_t cg_chatBackgroundColor;
-vmCvar_t cg_instantTapout;
-vmCvar_t cg_forceTapout;
-vmCvar_t cg_hitsounds;
-vmCvar_t cg_uinfo;
-
-// Stats - Font scale
-vmCvar_t cf_wstats; 
-vmCvar_t cf_wtopshots;
-
-// OSP
-vmCvar_t authLevel;
-
-
-//vmCvar_t	cg_announcer;
+vmCvar_t cf_wstats;             // OSP's Font scale for +wstats window
+vmCvar_t cf_wtopshots;          // OSP's Font scale for +wtopshots window
 vmCvar_t cg_noAmmoAutoSwitch;
-vmCvar_t cg_printObjectiveInfo;
-vmCvar_t cg_specHelp;
 vmCvar_t cg_uinfo;
 vmCvar_t cg_useScreenshotJPEG;
 
-vmCvar_t ch_font;
-
+// -OSPx
 vmCvar_t demo_avifpsF1;
 vmCvar_t demo_avifpsF2;
 vmCvar_t demo_avifpsF3;
@@ -346,22 +323,9 @@ vmCvar_t demo_avifpsF4;
 vmCvar_t demo_avifpsF5;
 vmCvar_t demo_drawTimeScale;
 vmCvar_t demo_infoWindow;
-
-vmCvar_t mv_sensitivity;
-
-vmCvar_t demo_controlsWindow;
-vmCvar_t demo_popupWindow;
-vmCvar_t demo_showTimein;
-vmCvar_t demo_noAdvertisement;
-
 vmCvar_t int_cl_maxpackets;
 vmCvar_t int_cl_timenudge;
-vmCvar_t int_m_pitch;
-vmCvar_t int_sensitivity;
-vmCvar_t int_timescale;
 vmCvar_t int_ui_blackout;
-vmCvar_t gender;
-// -OSP
 
 typedef struct {
 	vmCvar_t    *vmCvar;
@@ -398,7 +362,7 @@ cvarTable_t cvarTable[] = {
 	{ &cg_drawFrags, "cg_drawFrags", "1", CVAR_ARCHIVE },
 	{ &cg_drawStatus, "cg_drawStatus", "1", CVAR_ARCHIVE  },
 	{ &cg_drawTimer, "cg_drawTimer", "0", CVAR_ARCHIVE  },
-	{ &cg_drawFPS, "cg_drawFPS", "1", CVAR_ARCHIVE  },
+	{ &cg_drawFPS, "cg_drawFPS", "0", CVAR_ARCHIVE  },
 	{ &cg_drawSnapshot, "cg_drawSnapshot", "0", CVAR_ARCHIVE  },
 	{ &cg_draw3dIcons, "cg_draw3dIcons", "1", CVAR_ARCHIVE  },
 	{ &cg_drawIcons, "cg_drawIcons", "1", CVAR_ARCHIVE  },
@@ -423,7 +387,7 @@ cvarTable_t cvarTable[] = {
 	{ &cg_reticleType, "cg_reticleType", "1", CVAR_ARCHIVE },
 	{ &cg_reticleBrightness, "cg_reticleBrightness", "0.7", CVAR_ARCHIVE },
 	{ &cg_markTime, "cg_marktime", "10000", CVAR_ARCHIVE },
-	{ &cg_lagometer, "cg_lagometer", "1", CVAR_ARCHIVE },
+	{ &cg_lagometer, "cg_lagometer", "0", CVAR_ARCHIVE },
 	{ &cg_railTrailTime, "cg_railTrailTime", "400", CVAR_ARCHIVE  },
 	{ &cg_gun_x, "cg_gunX", "0", CVAR_CHEAT },
 	{ &cg_gun_y, "cg_gunY", "0", CVAR_CHEAT },
@@ -457,7 +421,8 @@ cvarTable_t cvarTable[] = {
 	{ &cg_noPlayerAnims, "cg_noplayeranims", "0", CVAR_CHEAT },
 	{ &cg_showmiss, "cg_showmiss", "0", 0 },
 	{ &cg_footsteps, "cg_footsteps", "1", CVAR_CHEAT },
-	{ &cg_tracerChance, "cg_tracerchance", "0.4", CVAR_CHEAT },
+	//{ &cg_tracerChance, "cg_tracerchance", "0.4", CVAR_CHEAT },   // nihi cmmmented to allow cg_tracerchance
+    { &cg_tracerChance, "cg_tracerchance", "0.4", CVAR_ARCHIVE },
 	{ &cg_tracerWidth, "cg_tracerwidth", "0.8", CVAR_CHEAT },
 	{ &cg_tracerSpeed, "cg_tracerSpeed", "4500", CVAR_CHEAT },
 	{ &cg_tracerLength, "cg_tracerlength", "160", CVAR_CHEAT },
@@ -564,7 +529,9 @@ cvarTable_t cvarTable[] = {
 	{ &cg_autoReload, "cg_autoReload", "1", CVAR_ARCHIVE },
 
 	{ &cg_antilag, "g_antilag", "0", 0 },
+
 	// OSPx
+	{ &cg_showFlags, "cg_showFlags", "1", CVAR_ARCHIVE }, //mcwf GeoIP
 	{ &cg_crosshairPulse, "cg_crosshairPulse", "1", CVAR_ARCHIVE },
 	{ &cg_bloodDamageBlend, "cg_bloodDamageBlend", "1.0", CVAR_ARCHIVE },
 	{ &cg_bloodFlash, "cg_bloodFlash", "1.0", CVAR_ARCHIVE },
@@ -572,45 +539,30 @@ cvarTable_t cvarTable[] = {
 	{ &cg_crosshairAlphaAlt, "cg_crosshairAlphaAlt", "1.0", CVAR_ARCHIVE },
 	{ &cg_crosshairColor, "cg_crosshairColor", "White", CVAR_ARCHIVE },
 	{ &cg_crosshairColorAlt, "cg_crosshairColorAlt", "White", CVAR_ARCHIVE },
-	{ &cg_coloredCrosshairNames, "cg_coloredCrosshairNames", "0", CVAR_ARCHIVE },
 	{ &cg_drawWeaponIconFlash, "cg_drawWeaponIconFlash", "0", CVAR_ARCHIVE },
+	{ &cg_hitsounds, "cg_hitsounds", "0", CVAR_ARCHIVE},
+//	{ &cg_hitsounds, "cg_hitsounds", "0", CVAR_ARCHIVE},
 	{ &cg_printObjectiveInfo, "cg_printObjectiveInfo", "1", CVAR_ARCHIVE },
 	{ &cg_muzzleFlash, "cg_muzzleFlash", "1", CVAR_ARCHIVE },
 	{ &cg_complaintPopUp, "cg_complaintPopUp", "1", CVAR_ARCHIVE },
 	{ &cg_drawReinforcementTime, "cg_drawReinforcementTime", "1", CVAR_ARCHIVE },
-	{ &cg_reinforcementTimeColor, "cg_reinforcementTimeColor", "red", CVAR_ARCHIVE },
 	{ &cg_noChat, "cg_noChat", "0", CVAR_ARCHIVE },
 	{ &cg_noVoice, "cg_noVoice", "0", CVAR_ARCHIVE },
-	{ &cg_noAmmoAutoSwitch, "cg_noAmmoAutoSwitch", "1", CVAR_ARCHIVE },
-	{ &cg_wideScreen, "cg_wideScreen", "0", CVAR_ARCHIVE | CVAR_LATCH },
 	{ &cg_zoomedFOV, "cg_zoomedFOV", "90", CVAR_ARCHIVE },
 	{ &cg_statsList, "cg_statsList", "0", CVAR_ARCHIVE },
 	{ &cg_zoomedSens, "cg_zoomedSens", ".3", CVAR_ARCHIVE },
-	{ &vp_drawnames, "vp_drawnames", "0", CVAR_ARCHIVE | CVAR_CHEAT },
-	{ &cg_drawNames, "cg_drawNames", "1", CVAR_ROM },
-	{ &cg_showFlags, "cg_showFlags", "1", CVAR_ARCHIVE },
 	{ &cg_announcer, "cg_announcer", "1", CVAR_ARCHIVE },
 	{ &cg_autoAction, "cg_autoAction", "0", CVAR_ARCHIVE },
 	{ &cg_useScreenshotJPEG, "cg_useScreenshotJPEG", "1", CVAR_ARCHIVE },
-	{ &cg_instantTapout, "cg_instantTapout", "0", CVAR_ARCHIVE },
-	{ &cg_forceTapout, "cg_forceTapout", "0", CVAR_ARCHIVE },
-	{ &cg_hitsounds, "cg_hitsounds", "0", CVAR_ARCHIVE },
 	{ &cg_uinfo, "cg_uinfo", "0", CVAR_ROM | CVAR_USERINFO },
 	{ &cf_wstats, "cf_wstats", "1.2", CVAR_ARCHIVE },
 	{ &cf_wtopshots, "cf_wtopshots", "1.0", CVAR_ARCHIVE },
-
 	{ &int_cl_maxpackets, "cl_maxpackets", "30", CVAR_ARCHIVE },
+	{ &cg_noAmmoAutoSwitch, "cg_noAmmoAutoSwitch", "1", CVAR_ARCHIVE },
 	{ &int_cl_timenudge, "cl_timenudge", "0", CVAR_ARCHIVE|CVAR_LATCH },
-	{ &int_ui_blackout, "ui_blackout", "0", CVAR_ROM },
-
-	{ &demo_infoWindow, "demo_infoWindow", "1", CVAR_ARCHIVE },
-	{ &demo_controlsWindow, "demo_controlsWindow", "1", CVAR_ARCHIVE},
-	{ &demo_popupWindow, "demo_popupWindow", "1", CVAR_ARCHIVE },
-	{ &demo_showTimein, "demo_showTimein", "1", CVAR_ARCHIVE },
-	{ &demo_noAdvertisement, "demo_noAdvertisement", "0", CVAR_ARCHIVE },
-	
-	{ &gender, "gender", "male", CVAR_ARCHIVE }
 	// -OSPx
+	{ &int_ui_blackout, "ui_blackout", "0", CVAR_ROM },
+	{ &cg_antilag, "g_antilag", "0", 0 }
 };
 int cvarTableSize = sizeof( cvarTable ) / sizeof( cvarTable[0] );
 // OSPx - Client Flags
@@ -643,15 +595,12 @@ void CG_RegisterCvars( void ) {
 	trap_Cvar_Register( NULL, "head", DEFAULT_HEAD, CVAR_USERINFO | CVAR_ARCHIVE );
 
 // OSPx
-	// Client Flags
+	// Auto actions
 	CG_setClientFlags();
 
 	// Crosshairs
 	BG_setCrosshair(cg_crosshairColor.string, cg.xhairColor, cg_crosshairAlpha.value, "cg_crosshairColor");
 	BG_setCrosshair(cg_crosshairColorAlt.string, cg.xhairColorAlt, cg_crosshairAlphaAlt.value, "cg_crosshairColorAlt");
-
-	// Reinforcements color
-	BG_setCrosshair(cg_reinforcementTimeColor.string, cg.reinforcementColor, 1.0, "cg_reinforcementTimeColor");
 // -OSPx
 }
 
@@ -686,8 +635,7 @@ void CG_UpdateCvars( void ) {
 
 	for ( i = 0, cv = cvarTable ; i < cvarTableSize ; i++, cv++ ) {
 		trap_Cvar_Update( cv->vmCvar );
-// OSPx
-		// Check if we need to update any client flags to be sent to the server
+
 		if (cv->vmCvar == &cg_autoAction || cv->vmCvar == &cg_autoReload ||
 			cv->vmCvar == &int_cl_timenudge || cv->vmCvar == &int_cl_maxpackets ||
 			cv->vmCvar == &cg_autoactivate || cv->vmCvar == &cg_predictItems) {
@@ -698,12 +646,7 @@ void CG_UpdateCvars( void ) {
 		}
 		else if (cv->vmCvar == &cg_crosshairColorAlt || cv->vmCvar == &cg_crosshairAlphaAlt)     {
 			BG_setCrosshair(cg_crosshairColorAlt.string, cg.xhairColorAlt, cg_crosshairAlphaAlt.value, "cg_crosshairColorAlt");
-		}
-		// Reinforcements
-		else if (cv->vmCvar == &cg_reinforcementTimeColor) {
-			BG_setCrosshair(cg_reinforcementTimeColor.string, cg.reinforcementColor, 1.0, "cg_reinforcementTimeColor");
-		}
-// -OSPx
+		} // -OSPx
 	}
 
 	// if force model changed
@@ -719,11 +662,6 @@ void CG_UpdateCvars( void ) {
 			cg.pmext.bAutoReload = qfalse;
 		}
 		autoReloadModificationCount = cg_autoReload.modificationCount;
-	}
-
-	// OSPx - Client Flags
-	if (fSetFlags) {
-		CG_setClientFlags();
 	}
 }
 
@@ -753,6 +691,8 @@ void CG_setClientFlags(void) {
 		int_cl_timenudge.integer,
 		// MaxPackets
 		int_cl_maxpackets.integer
+		// Gender
+	//	setGender()
 		));
 }
 
@@ -845,32 +785,29 @@ const char *CG_Argv( int arg ) {
 
 	return buffer;
 }
-
 /*
 ================
-OSPx - Name generation for SS's and Demo's
+L0
+
+OSP's name generation for SS's and Demo's
 ================
 */
 // Standard naming for screenshots/demos
-char *CG_generateFilename(void) {
+char *CG_generateFilename( void ) {
 	qtime_t ct;
-	const char *pszServerInfo = CG_ConfigString(CS_SERVERINFO);
+	const char *pszServerInfo = CG_ConfigString( CS_SERVERINFO );
 
-	trap_RealTime(&ct);
+	trap_RealTime( &ct );
 	return( va( "%s.%02d.%d/%02d-%02d.%02d-%s",
-		aMonths[ct.tm_mon], ct.tm_mday, 1900 + ct.tm_year,
-		ct.tm_hour, ct.tm_min, ct.tm_sec,
-		Info_ValueForKey(pszServerInfo, "mapname")));
+				aMonths[ct.tm_mon],ct.tm_mday, 1900 + ct.tm_year,
+				ct.tm_hour, ct.tm_min, ct.tm_sec,
+				Info_ValueForKey( pszServerInfo, "mapname" ) ));
 }
-
-/*
-================
-OSPx - Console prints for stats
-================
-*/
-void CG_printConsoleString(char *str) {
-	CG_Printf("[skipnotify]%s", str);
+// Console prints for stats
+void CG_printConsoleString( char *str ) {
+	CG_Printf( "[skipnotify]%s", str );
 }
+// End
 
 //========================================================================
 void CG_SetupDlightstyles( void ) {
@@ -1245,11 +1182,13 @@ static void CG_RegisterSounds( void ) {
 	trap_S_RegisterSound( "sound/Loogie/spit.wav" );
 	trap_S_RegisterSound( "sound/Loogie/sizzle.wav" );
 */
-// OSPxf
+	// L0 - sounds
+	cgs.media.countFightSound = trap_S_RegisterSound( "sound/scenaric/fight.wav" );
 	// Hitsounds
-	cgs.media.headShot = trap_S_RegisterSound("sound/game/hitsounds/hitH.wav");
-	cgs.media.bodyShot = trap_S_RegisterSound("sound/game/hitsounds/hit.wav");
-	cgs.media.teamShot = trap_S_RegisterSound("sound/game/hitsounds/hitteam.wav");
+	cgs.media.headShot = trap_S_RegisterSound( "EliteMod/sound/game/hitH.wav" );
+	cgs.media.bodyShot = trap_S_RegisterSound( "EliteMod/sound/game/hit.wav" );
+	cgs.media.teamShot = trap_S_RegisterSound( "EliteMod/sound/game/hitTeam.wav" );
+	// End
 }
 
 
@@ -1454,8 +1393,6 @@ static void CG_RegisterGraphics( void ) {
 
 	cgs.media.backTileShader = trap_R_RegisterShader( "gfx/2d/backtile" );
 	cgs.media.noammoShader = trap_R_RegisterShader( "icons/noammo" );
-	// OSPx - Country Flags (by mcwf)
-	cgs.media.countryFlags = trap_R_RegisterShaderNoMip("gfx/flags/world_flags");
 
 	// powerup shaders
 //	cgs.media.quadShader = trap_R_RegisterShader("powerups/quad" );
@@ -2514,6 +2451,7 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 	cgs.serverCommandSequence = serverCommandSequence;
 
 	// load a few needed things before we do any screen updates
+	// nihi changed hudchars to hudchars_OSP1
 	cgs.media.charsetShader     = trap_R_RegisterShader( "gfx/2d/hudchars_OSP1" ); //trap_R_RegisterShader( "gfx/2d/bigchars" );
 	// JOSEPH 4-17-00
 	cgs.media.menucharsetShader = trap_R_RegisterShader( "gfx/2d/hudchars_OSP1" );
@@ -2548,23 +2486,19 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 
 	s = CG_ConfigString( CS_LEVEL_START_TIME );
 	cgs.levelStartTime = atoi( s );
-
-// OSPx
-	// Reinforcements offset
-	CG_ParseReinforcementTimes(CG_ConfigString(CS_REINFSEEDS));
+	// L0 - Reinforcements offset
+	CG_ParseReinforcementTimes( CG_ConfigString( CS_REINFSEEDS ) );
+	// L0 - Pause
 	// So if client disconnects during pause..
 	if (!cgs.pauseState)
 		cgs.fadeAlpha = 0;
-// -OSPx
+
 // JPW NERVE -- pick a direction for smoke drift on the client -- cheap trick because it can be different on different clients, but who cares?
 	cgs.smokeWindDir = crandom();
 // jpw
 
 	CG_ParseServerinfo();
 	CG_ParseWolfinfo();     // NERVE - SMF
-
-	// OSP
-	//CG_ParseServerVersionInfo(CG_ConfigString(CS_VERSIONINFO));
 
 	// load the new map
 	CG_LoadingString( "collision map" );
@@ -2619,24 +2553,12 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 	// NERVE - SMF
 // JPW NERVE -- commented out 'cause this moved
 
-	// OSPx - Account for WideScreen
-	if (cg_wideScreen.integer) {
-		trap_Cvar_Set("cg_gunX", "2");
-		trap_Cvar_Set("cg_gunY", "-1");
-		trap_Cvar_Set("cg_gunZ", "1");
-	}
-	else {
-		trap_Cvar_Set("cg_gunX", "0");
-		trap_Cvar_Set("cg_gunY", "0");
-		trap_Cvar_Set("cg_gunZ", "0");
-	}
 	if ( cgs.gametype >= GT_WOLF ) {
 		trap_Cvar_Set( "cg_drawTimer", "0" ); // jpw
 	}
 	// jpw
 	// -NERVE - SMF
-
-	// OSP
+	// L0 - OSP stats
 	cgs.dumpStatsFile = 0;
 	cgs.dumpStatsTime = 0;
 }
@@ -2653,6 +2575,3 @@ void CG_Shutdown( void ) {
 	// like closing files or archiving session data
 }
 
-//void CG_printConsoleString(char *str) { // OSP
-//	CG_Printf("[skipnotify]%s", str);
-//}

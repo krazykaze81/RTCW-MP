@@ -137,8 +137,10 @@ extern vmCvar_t ui_crosshairColorAlt;
 extern vmCvar_t ui_crosshairAlpha;
 extern vmCvar_t ui_crosshairAlphaAlt;
 extern vmCvar_t ui_crosshairSize;
+// Speclock
 extern vmCvar_t ui_blackout;
 // -OSPx
+
 //
 // ui_qmenu.c
 //
@@ -893,6 +895,7 @@ typedef struct {
 	vec4_t xhairColor;
 	vec4_t xhairColorAlt;
 	// -OSPx
+
 	int startPostGameTime;
 	sfxHandle_t newHighScoreSound;
 

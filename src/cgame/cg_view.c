@@ -897,21 +897,31 @@ static int CG_CalcZoomedFov(void) {
 			fov_x = 90;
 		}
 		else {
-			fov_x = cg_fov.value;			
-			if (fov_x < 90) {
-				fov_x = 90;	
+			fov_x = cg_fov.value;
+			if (cgs.gametype == GT_SINGLE_PLAYER) {
+				if (fov_x < 1) {
+					fov_x = 1;	// OSPx - Limited from 120 to 90
+				}
+				else if (fov_x > 120) {
+					fov_x = 120;
+				}
 			}
-			else if (fov_x > 120) {
-				fov_x = 120;
+			else {
+				if (fov_x < 90) {
+					fov_x = 90;	 // OSPx - Limited from 120 to 90
+				}
+				else if (fov_x > 120) {
+					fov_x = 120;
+				}
 			}
 		}
 
 		// account for zooms
 		if (cg.zoomedVal) {
-			zoomFov = cg.zoomedVal;
+			zoomFov = cg.zoomedVal;   // (SA) use user scrolled amount
 
-			if (zoomFov < 90) {
-				zoomFov = 90;
+			if (zoomFov < 1) {
+				zoomFov = 1;	// OSPx - Limited from 120 to 90
 			}
 			else if (zoomFov > 120) {
 				zoomFov = 120;
@@ -947,7 +957,6 @@ static int CG_CalcZoomedFov(void) {
 	x = cg.refdef.width / tan(fov_x / 360 * M_PI);
 	fov_y = atan2(cg.refdef.height, x);
 	fov_y = fov_y * 360 / M_PI;
-
 	// set it
 	cg.refdef.fov_x = fov_x;
 	cg.refdef.fov_y = fov_y;
@@ -959,6 +968,7 @@ static int CG_CalcZoomedFov(void) {
 	else
 		value = cg_zoomedSens.value;
 
+	
 	if (cg.snap->ps.pm_type == PM_FREEZE || (cg.snap->ps.pm_type == PM_DEAD && (cg.snap->ps.pm_flags & PMF_LIMBO)) || cg.snap->ps.pm_flags & PMF_TIME_LOCKPLAYER) {
 		// No movement for pauses
 		cg.zoomSensitivity = 0;
@@ -972,6 +982,7 @@ static int CG_CalcZoomedFov(void) {
 
 	return qfalse;
 }
+
 
 /*
 ====================
@@ -1000,11 +1011,6 @@ static int CG_CalcFov( void ) {
 		cg.zoomedBinoc = qfalse;
 		cg.zoomTime = 0;
 		cg.zoomval = 0;
-	}
-	else {
-		cg.zoomedVal = cg_fov.value;
-		cg.zoomedTime = cg.time;
-		cg.zoomedFOV = qfalse;
 	}
 
 	if ( cg.predictedPlayerState.pm_type == PM_INTERMISSION ) {
@@ -1101,16 +1107,27 @@ static int CG_CalcFov( void ) {
 	} else {
 		cg.refdef.rdflags &= ~RDF_UNDERWATER;
 	}
+/* nihi commented out due to no poison
+	// L0 - Poison										// Pause handling
+	if (  cg.predictedPlayerState.eFlags & EF_POISONED && !cg.snap->ps.pm_type == PM_FREEZE )
+	{
+		phase = cg.time / 1000.0 * 0.3 * M_PI * 2;	//phase = cg.time / 1000.0 * 0.6 * M_PI * 2;
+		v = 12 * sin( phase );	//v = 2 * sin( phase );
+		fov_x += v;
+		fov_y -= v;
+		cg.refdef.rdflags |= RDF_UNDERWATER;
 
+		inwater = qtrue;
+	} // End
+*/
 	// set it
 	cg.refdef.fov_x = fov_x;
 	cg.refdef.fov_y = fov_y;
 
-	// OSPx - Freezed 
-	if (cg.snap->ps.pm_type == PM_FREEZE || (cg.snap->ps.pm_type == PM_DEAD && (cg.snap->ps.pm_flags & PMF_LIMBO)) || cg.snap->ps.pm_flags & PMF_TIME_LOCKPLAYER) {
+	// L0 - Freezed 
+	if ( cg.snap->ps.pm_type == PM_FREEZE || ( cg.snap->ps.pm_type == PM_DEAD && ( cg.snap->ps.pm_flags & PMF_LIMBO ) ) || cg.snap->ps.pm_flags & PMF_TIME_LOCKPLAYER ) {
 		// No movement for pauses
 		cg.zoomSensitivity = 0;
-	// -OSPx
 	} else if ( !cg.zoomedBinoc ) {
 		// NERVE - SMF - fix for zoomed in/out movement bug
 		if ( cg.zoomval ) {
@@ -1438,7 +1455,7 @@ static int CG_CalcViewValues( void ) {
 	}
 
 	// field of view
-	// OSPx - Patched for zoomed FOV
+	// OSPx - Patched for zoomed POV
 	if (cg.zoomedFOV)
 		return CG_CalcZoomedFov();
 	else
@@ -1622,17 +1639,6 @@ void CG_DrawSkyBoxPortal( void ) {
 			} else if ( zoomFov > 160 ) {
 				zoomFov = 160;
 			}
-// OSPx - zoomed FOV
-		} else if (cg.zoomedVal) {
-			zoomFov = cg.zoomedVal;   // (SA) use user scrolled amount
-
-			if (zoomFov < 1) {
-				zoomFov = 1;
-			}
-			else if (zoomFov > 140) {
-				zoomFov = 140;
-			}
-// ~OSPx
 		} else {
 			zoomFov = lastfov;
 		}
@@ -1647,7 +1653,8 @@ void CG_DrawSkyBoxPortal( void ) {
 			}
 			lastfov = fov_x;
 // OSPx - zommed FOV
-		} else if (cg.zoomedFOV) {
+		}
+		else if (cg.zoomedFOV) {
 			f = (cg.time - cg.zoomedTime) / (float)ZOOM_TIME;
 			if (f > 1.0) {
 				fov_x = cg.zoomedVal;

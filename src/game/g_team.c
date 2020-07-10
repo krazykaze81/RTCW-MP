@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -187,7 +187,7 @@ void Team_FragBonuses( gentity_t *targ, gentity_t *inflictor, gentity_t *attacke
 	if ( targ->client->ps.powerups[enemy_flag_pw] ) {
 		attacker->client->pers.teamState.lastfraggedcarrier = level.time;
 		if ( g_gametype.integer >= GT_WOLF ) {
-			AddScoreObjective( attacker, WOLF_FRAG_CARRIER_BONUS, WOLF_FRAG_CARRIER_BONUS_STAT);
+			AddScore( attacker, WOLF_FRAG_CARRIER_BONUS );
 		} else {
 			AddScore( attacker, CTF_FRAG_CARRIER_BONUS );
 			PrintMsg( NULL, "%s" S_COLOR_WHITE " fragged %s's flag carrier!\n",
@@ -268,7 +268,7 @@ void Team_FragBonuses( gentity_t *targ, gentity_t *inflictor, gentity_t *attacke
 			 attacker->client->sess.sessionTeam != targ->client->sess.sessionTeam ) {
 			// we defended the base flag
 			if ( g_gametype.integer >= GT_WOLF ) { // JPW NERVE FIXME -- don't report flag defense messages, change to gooder message
-				AddScoreObjective( attacker, WOLF_FLAG_DEFENSE_BONUS, WOLF_FLAG_DEFENSE_BONUS_STAT );
+				AddScore( attacker, WOLF_FLAG_DEFENSE_BONUS );
 			} else {
 				AddScore( attacker, CTF_FLAG_DEFENSE_BONUS );
 				if ( !flag->r.contents ) {
@@ -312,7 +312,7 @@ void Team_FragBonuses( gentity_t *targ, gentity_t *inflictor, gentity_t *attacke
 		if ( ( flag->s.frame != WCP_ANIM_NOFLAG ) && ( flag->count == attacker->client->sess.sessionTeam ) ) {
 			if ( VectorLength( v1 ) < WOLF_CP_PROTECT_RADIUS ) {
 				if ( flag->spawnflags & 1 ) {                     // protected spawnpoint
-					AddScoreObjective( attacker, WOLF_SP_PROTECT_BONUS, WOLF_SP_PROTECT_BONUS_STAT);
+					AddScore( attacker, WOLF_SP_PROTECT_BONUS );
 				} else {
 					AddScore( attacker, WOLF_CP_PROTECT_BONUS );  // protected checkpoint
 				}
@@ -402,7 +402,7 @@ void Team_ReturnFlagSound( gentity_t *ent, int team ) {
 
 void Team_ReturnFlag( int team ) {
 	Team_ReturnFlagSound( Team_ResetFlag( team ), team );
-	G_matchPrintInfo(va("The %s flag has returned!\n", (team == TEAM_RED ? "Axis" : "Allied")));
+	PrintMsg( NULL, "The %s flag has returned!\n", TeamName( team ) );
 }
 
 void Team_FreeEntity( gentity_t *ent ) {
@@ -433,13 +433,13 @@ void Team_DroppedFlagThink( gentity_t *ent ) {
 	if ( ent->item->giTag == PW_REDFLAG ) {
 		Team_ReturnFlagSound( Team_ResetFlag( TEAM_RED ), TEAM_RED );
 		if ( gm ) {
-			G_matchPrintInfo( "Axis have returned the objective!");
+			trap_SendServerCommand( -1, "cp \"Axis have returned the objective!\" 2" );
 			G_Script_ScriptEvent( gm, "trigger", "axis_object_returned" );
 		}
 	} else if ( ent->item->giTag == PW_BLUEFLAG )     {
 		Team_ReturnFlagSound( Team_ResetFlag( TEAM_BLUE ), TEAM_BLUE );
-		if ( gm ) {			
-			G_matchPrintInfo("Allies have returned the objective!");
+		if ( gm ) {
+			trap_SendServerCommand( -1, "cp \"Allies have returned the objective!\" 2" );
 			G_Script_ScriptEvent( gm, "trigger", "allied_object_returned" );
 		}
 	}
@@ -465,7 +465,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 		// hey, its not home.  return it by teleporting it back
 // JPW NERVE
 		if ( g_gametype.integer >= GT_WOLF ) {
-			AddScoreObjective( other, WOLF_SECURE_OBJ_BONUS, WOLF_SECURE_OBJ_BONUS_STAT );
+			AddScore( other, WOLF_SECURE_OBJ_BONUS );
 			te = G_TempEntity( other->s.pos.trBase, EV_GLOBAL_SOUND );
 			te->r.svFlags |= SVF_BROADCAST;
 			te->s.teamNum = cl->sess.sessionTeam;
@@ -474,14 +474,14 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 			gm = G_Find( NULL, FOFS( scriptName ), "game_manager" );
 
 			if ( cl->sess.sessionTeam == TEAM_RED ) {
-				te->s.eventParm = G_SoundIndex( "sound/multiplayer/axis/g-objective_secure.wav" );				
-				G_matchPrintInfo(va("Axis have returned %s!", ent->message));
+				te->s.eventParm = G_SoundIndex( "sound/multiplayer/axis/g-objective_secure.wav" );
+				trap_SendServerCommand( -1, va( "cp \"Axis have returned %s!\n\" 2", ent->message ) );
 				if ( gm ) {
 					G_Script_ScriptEvent( gm, "trigger", "axis_object_returned" );
 				}
 			} else {
 				te->s.eventParm = G_SoundIndex( "sound/multiplayer/allies/a-objective_secure.wav" );
-				G_matchPrintInfo(va("Allies have returned %s!", ent->message));
+				trap_SendServerCommand( -1, va( "cp \"Allies have returned %s!\n\" 2", ent->message ) );
 				if ( gm ) {
 					G_Script_ScriptEvent( gm, "trigger", "allied_object_returned" );
 				}
@@ -527,7 +527,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 
 	// other gets another 10 frag bonus
 	if ( g_gametype.integer >= GT_WOLF ) {
-		AddScoreObjective( other, WOLF_CAPTURE_BONUS, WOLF_CAPTURE_BONUS_STAT );
+		AddScore( other, WOLF_CAPTURE_BONUS );
 		PrintMsg( NULL,"%s" S_COLOR_WHITE " captured enemy objective!\n",cl->pers.netname );
 	} else {
 		AddScore( other, CTF_CAPTURE_BONUS );
@@ -555,7 +555,7 @@ int Team_TouchOurFlag( gentity_t *ent, gentity_t *other, int team ) {
 			if ( player != other ) {
 // JPW NERVE
 				if ( g_gametype.integer >= GT_WOLF ) {
-					AddScoreObjective( player, WOLF_CAPTURE_BONUS, WOLF_CAPTURE_BONUS_STAT );
+					AddScore( player, WOLF_CAPTURE_BONUS );
 				} else {
 // jpw
 					AddScore( player, CTF_CAPTURE_BONUS );
@@ -598,7 +598,7 @@ int Team_TouchEnemyFlag( gentity_t *ent, gentity_t *other, int team ) {
 	// hey, its not our flag, pick it up
 	if ( g_gametype.integer >= GT_WOLF ) {
 // JPW NERVE
-		AddScoreObjective( other, WOLF_STEAL_OBJ_BONUS, WOLF_STEAL_OBJ_BONUS_STAT );
+		AddScore( other, WOLF_STEAL_OBJ_BONUS );
 		te = G_TempEntity( other->s.pos.trBase, EV_GLOBAL_SOUND );
 		te->r.svFlags |= SVF_BROADCAST;
 		te->s.teamNum = cl->sess.sessionTeam;
@@ -607,14 +607,14 @@ int Team_TouchEnemyFlag( gentity_t *ent, gentity_t *other, int team ) {
 		gm = G_Find( NULL, FOFS( scriptName ), "game_manager" );
 
 		if ( cl->sess.sessionTeam == TEAM_RED ) {
-			te->s.eventParm = G_SoundIndex( "sound/multiplayer/axis/g-objective_taken.wav" );			
-			G_matchPrintInfo(va("Axis have stolen %s!", ent->message));
+			te->s.eventParm = G_SoundIndex( "sound/multiplayer/axis/g-objective_taken.wav" );
+			trap_SendServerCommand( -1, va( "cp \"Axis have stolen %s!\n\" 2", ent->message ) );
 			if ( gm ) {
 				G_Script_ScriptEvent( gm, "trigger", "allied_object_stolen" );
 			}
 		} else {
-			te->s.eventParm = G_SoundIndex( "sound/multiplayer/allies/a-objective_taken.wav" );			
-			G_matchPrintInfo(va("Allies have stolen %s!", ent->message));
+			te->s.eventParm = G_SoundIndex( "sound/multiplayer/allies/a-objective_taken.wav" );
+			trap_SendServerCommand( -1, va( "cp \"Allies have stolen %s!\n\" 2", ent->message ) );
 			if ( gm ) {
 				G_Script_ScriptEvent( gm, "trigger", "axis_object_stolen" );
 			}
@@ -709,7 +709,7 @@ Team_GetLocation
 Report a location for the player. Uses placed nearby target_location entities
 ============
 */
-qboolean Team_GetLocationMsg(gentity_t *ent, char *loc, int loclen, qboolean sanitized) {
+qboolean Team_GetLocationMsg( gentity_t *ent, char *loc, int loclen ) {
 	gentity_t *best;
 
 	best = Team_GetLocation( ent );
@@ -725,17 +725,9 @@ qboolean Team_GetLocationMsg(gentity_t *ent, char *loc, int loclen, qboolean san
 		if ( best->count > 7 ) {
 			best->count = 7;
 		}
-		// OSPx - Do nicer prints when asked..
-		if (sanitized)
-			Com_sprintf(loc, loclen, "%c%c%s" S_COLOR_WHITE, Q_COLOR_ESCAPE, best->count + '0', best->message);
-		else
-			Com_sprintf(loc, loclen, "%c%c[lon]%s[lof]" S_COLOR_WHITE, Q_COLOR_ESCAPE, best->count + '0', best->message);
+		Com_sprintf( loc, loclen, "%c%c[lon]%s[lof]" S_COLOR_WHITE, Q_COLOR_ESCAPE, best->count + '0', best->message );
 	} else {
-		// OSPx - Do nicer prints when asked..
-		if (sanitized)
-			Com_sprintf(loc, loclen, "%s", best->message);
-		else
-			Com_sprintf(loc, loclen, "[lon]%s[lof]", best->message);
+		Com_sprintf( loc, loclen, "[lon]%s[lof]", best->message );
 	}
 
 	return qtrue;
@@ -1366,9 +1358,9 @@ void checkpoint_touch( gentity_t *self, gentity_t *other, trace_t *trace ) {
 
 // JPW NERVE
 	if ( self->s.frame == WCP_ANIM_NOFLAG ) {
-		AddScoreObjective( other, WOLF_CP_CAPTURE, WOLF_CP_CAPTURE_STAT );
+		AddScore( other, WOLF_CP_CAPTURE );
 	} else {
-		AddScore( other, WOLF_CP_RECOVER );		
+		AddScore( other, WOLF_CP_RECOVER );
 	}
 // jpw
 
@@ -1425,11 +1417,9 @@ void checkpoint_spawntouch( gentity_t *self, gentity_t *other, trace_t *trace ) 
 
 // JPW NERVE
 	if ( self->s.frame == WCP_ANIM_NOFLAG ) {
-		AddScoreObjective( other, WOLF_SP_CAPTURE, WOLF_SP_CAPTURE_STAT );
-		G_matchPrintInfo(va("%s captured the flag!\n", ((other->client->sess.sessionTeam == TEAM_RED) ? "Axis" : "Allies")));		
+		AddScore( other, WOLF_SP_CAPTURE );
 	} else {
-		AddScoreObjective( other, WOLF_SP_RECOVER, WOLF_SP_RECOVER_STAT );
-		G_matchPrintInfo(va("%s reclaimed the flag!\n", ((other->client->sess.sessionTeam == TEAM_RED) ? "Axis" : "Allies")));
+		AddScore( other, WOLF_SP_RECOVER );
 	}
 // jpw
 
@@ -1598,9 +1588,7 @@ void SP_team_WOLF_checkpoint( gentity_t *ent ) {
 	trap_LinkEntity( ent );
 }
 
-// OSPx
-char *aTeams[TEAM_NUM_TEAMS] = { "FFA", "^1Axis^7", "^4Allies^7", "^3Spectators^7" };
-team_info teamInfo[TEAM_NUM_TEAMS];
+// L0 - OSP dump
 
 /*
 ===========
@@ -1610,39 +1598,13 @@ Resets a team's settings
 ===========
 */
 void G_teamReset(int team_num, qboolean fClearSpecLock) {
-	teamInfo[team_num].team_lock = (match_latejoin.integer == 0 && g_gamestate.integer == GS_PLAYING);
-	teamInfo[team_num].team_name[0] = 0;
-	teamInfo[team_num].timeouts = match_timeoutcount.integer;
+//	teamInfo[team_num].team_lock = (match_latejoin.integer == 0 && g_gamestate.integer == GS_PLAYING);
+//	teamInfo[team_num].team_name[0] = 0;
+//	teamInfo[team_num].timeouts = match_timeoutcount.integer;
 
-	if (fClearSpecLock) {
-		teamInfo[team_num].spec_lock = qfalse;
-	}
-}
-
-// Swaps active players on teams
-void G_swapTeams( void ) {
-	int i;
-	gclient_t *cl;
-
-	for ( i = TEAM_RED; i <= TEAM_BLUE; i++ ) {
-		G_teamReset( i, qtrue );
-	}
-
-	for ( i = 0; i < level.numConnectedClients; i++ ) {
-		cl = level.clients + level.sortedClients[i];
-
-		if ( cl->sess.sessionTeam == TEAM_RED ) {
-			cl->sess.sessionTeam = TEAM_BLUE;
-		} else if ( cl->sess.sessionTeam == TEAM_BLUE ) {
-			cl->sess.sessionTeam = TEAM_RED;
-		} else { continue;}
-
-		//G_UpdateCharacter( cl );
-		ClientUserinfoChanged( level.sortedClients[i] );
-		ClientBegin( level.sortedClients[i] );
-	}
-
-	AP( "cp \"^1Teams have been swapped!\n\"" );
+//	if (fClearSpecLock) {
+//		teamInfo[team_num].spec_lock = qfalse;
+//	}
 }
 // Shuffle active players onto teams
 void G_shuffleTeams( void ) {
@@ -1695,180 +1657,110 @@ void G_shuffleTeams( void ) {
 
 	AP( "cp \"^1Teams have been shuffled!\n\"" );
 }
-/*
-===========
-OSPx - G_teamJoinCheck (et port)
 
-Checks to see if a specified team is allowing players to join.
-===========
-*/
-qboolean G_teamJoinCheck(int team_num, gentity_t *ent) {
-	int cnt = TeamCount(-1, team_num);
-
-	// Sanity check
-	if (cnt == 0) {
-		G_teamReset(team_num, qtrue);
-		teamInfo[team_num].team_lock = qfalse;
-	}
-
-	// Check for locked teams
-	if ((team_num == TEAM_RED || team_num == TEAM_BLUE)) {
-		if (ent->client->sess.sessionTeam == team_num) {
-			return(qtrue);
-		}
-		
-		// Check for full teams
-		if (team_maxplayers.integer > 0 && team_maxplayers.integer <= cnt) {			
-			CP(va("cp \"The %s team is full!\n\"2", aTeams[team_num]));
-			return(qfalse);
-		} // Check for locked teams
-		else if (teamInfo[team_num].team_lock /*&& (!(ent->client->pers.invite & team_num))*/) {			
-			CP(va("cp \"The %s team is LOCKED!\n\"2", aTeams[team_num]));
-			return(qfalse);
-		}		
-	}
-	return(qtrue);
-}
-
-/*
-=============
-Ready/Not Ready
-=============
-*/
-qboolean G_playersReady(void) { // ET equivalient of G_checkReady
-	int i, ready = 0, notReady = match_minplayers.integer;
+// Swaps active players on teams
+void G_swapTeams( void ) {
+	int i;
 	gclient_t *cl;
 
-	if (0 == g_doWarmup.integer) {
-		return(qtrue);
+	for ( i = TEAM_RED; i <= TEAM_BLUE; i++ ) {
+		G_teamReset( i, qtrue );
 	}
 
-	// Ensure we have enough real players
-	if (level.numPlayingClients > 0 && level.numPlayingClients >= match_minplayers.integer) {
-		// Step through all active clients
-		notReady = 0;
-		for (i = 0; i < level.numConnectedClients; i++) {
-			cl = level.clients + level.sortedClients[i];
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
+		cl = level.clients + level.sortedClients[i];
 
-			if (cl->pers.connected != CON_CONNECTED || cl->sess.sessionTeam == TEAM_SPECTATOR) {
-				continue;
-			}
-			else if (cl->pers.ready || (g_entities[level.sortedClients[i]].r.svFlags & SVF_BOT)) {
-				ready++;
-			}
-			else { notReady++; }
-		}
+		if ( cl->sess.sessionTeam == TEAM_RED ) {
+			cl->sess.sessionTeam = TEAM_BLUE;
+		} else if ( cl->sess.sessionTeam == TEAM_BLUE ) {
+			cl->sess.sessionTeam = TEAM_RED;
+		} else { continue;}
+
+		//G_UpdateCharacter( cl );
+		ClientUserinfoChanged( level.sortedClients[i] );
+		ClientBegin( level.sortedClients[i] );
 	}
 
-	notReady = (notReady > 0 || ready > 0) ? notReady : match_minplayers.integer;
-	if (g_minGameClients.integer != notReady) {
-		trap_Cvar_Set("g_minGameClients", va("%d", notReady));
-	}
-
-	return ( level.readyAll || ((ready + notReady > 0) && 100 * ready / (ready + notReady) >= match_readypercent.integer) );
-}
-
-void G_readyReset(qboolean aForced) {
-	if (g_gamestate.integer == GS_WARMUP_COUNTDOWN && !aForced) {
-		AP("print \"*** INFO: ^3Countdown aborted! Going back to warmup..\n\"2");
-	}
-	level.lastRestartTime = level.time;
-	trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WARMUP));
-}
-
-void G_readyStart(void) {
-	level.readyAll = qtrue;
-	level.cnNum = 0; // Resets countdown
-	trap_SetConfigstring(CS_READY, va("%i", READY_NONE));
-}
-
-/*
-=============
-Track locked stuff (team/specs)
-=============
-*/
-void G_swapTeamLocks(void) {
-	qboolean fLock = teamInfo[TEAM_RED].spec_lock;
-	teamInfo[TEAM_RED].spec_lock = teamInfo[TEAM_BLUE].spec_lock;
-	teamInfo[TEAM_BLUE].spec_lock = fLock;
-}
-
-/*
-=============
-Speclock
-=============
-*/
+	AP( "cp \"^1Teams have been swapped!\n\"" );
+}    
 // Return blockout status for a player
-int G_blockoutTeam(gentity_t *ent, int nTeam) {
-	return(!G_allowFollow(ent, nTeam));
+int G_blockoutTeam( gentity_t *ent, int nTeam ) {
+	return( !G_allowFollow( ent, nTeam ) );
 }
-
 // Figure out if we are allowed/want to follow a given player
-qboolean G_allowFollow(gentity_t *ent, int nTeam) {
+qboolean G_allowFollow( gentity_t *ent, int nTeam ) {	
 
-	if (level.time - level.startTime > 2500) {
-		if (TeamCount(-1, TEAM_RED) == 0) {
+	if ( level.time - level.startTime > 2500 ) {
+		if ( TeamCount( -1, TEAM_RED ) == 0 ) {
 			teamInfo[TEAM_RED].spec_lock = qfalse;
 		}
-		if (TeamCount(-1, TEAM_BLUE) == 0) {
+		if ( TeamCount( -1, TEAM_BLUE ) == 0 ) {
 			teamInfo[TEAM_BLUE].spec_lock = qfalse;
 		}
 	}
 
-	return((!teamInfo[nTeam].spec_lock || ent->client->sess.sessionTeam != TEAM_SPECTATOR || (ent->client->sess.specInvited & nTeam) == nTeam));
+	return( ( !teamInfo[nTeam].spec_lock || ent->client->sess.sessionTeam != TEAM_SPECTATOR || ( ent->client->sess.specInvited & nTeam ) == nTeam ) );
 }
 
 // Figure out if we are allowed/want to follow a given player
-qboolean G_desiredFollow(gentity_t *ent, int nTeam) {
-	if (G_allowFollow(ent, nTeam) &&
-		(ent->client->sess.specLocked == 0 || ent->client->sess.specLocked == nTeam)) {
-		return(qtrue);
+qboolean G_desiredFollow( gentity_t *ent, int nTeam ) {
+	if ( G_allowFollow( ent, nTeam ) &&
+		 ( ent->client->sess.specLocked == 0 || ent->client->sess.specLocked == nTeam ) ) {
+		return( qtrue );
 	}
-	return(qfalse);
-}
 
+	return( qfalse );
+}
+// Swap team speclocks
+void G_swapTeamLocks( void ) {	
+	qboolean fLock = teamInfo[TEAM_RED].spec_lock;
+	teamInfo[TEAM_RED].spec_lock = teamInfo[TEAM_BLUE].spec_lock;
+	teamInfo[TEAM_BLUE].spec_lock = fLock;
+}
 // Update specs for blackout, as needed
-void G_updateSpecLock(int nTeam, qboolean fLock) {
+void G_updateSpecLock( int nTeam, qboolean fLock ) {
+
 	int i;
 	gentity_t *ent;
 
 	teamInfo[nTeam].spec_lock = fLock;
-	for (i = 0; i < level.numConnectedClients; i++) {
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
 		ent = g_entities + level.sortedClients[i];
 
-		if (ent->client->sess.admin) {
+		if ( ent->client->sess.admin ) {
 			continue;
 		}
 
 		ent->client->sess.specInvited &= ~nTeam;
 
-		if (ent->client->sess.sessionTeam != TEAM_SPECTATOR) {
+		if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR ) {
 			continue;
 		}
 
-		if (!fLock) {
+		if ( !fLock ) {
 			continue;
 		}
 
-		if (ent->client->sess.spectatorState == SPECTATOR_FOLLOW) {
-			StopFollowing(ent);
+		if ( ent->client->sess.spectatorState == SPECTATOR_FOLLOW ) {
+			StopFollowing( ent );
 			ent->client->sess.specLocked &= ~nTeam;
 		}
 
-		// ClientBegin sets blackout		
-		SetTeam(ent, "s", qtrue);
+		// ClientBegin sets blackout
+		SetTeam( ent, "s", qtrue);
 	}
+
 }
 
 // Removes everyone's specinvite for a particular team.
-void G_removeSpecInvite(int team) {
+void G_removeSpecInvite( int team ) {
 	int i;
 	gentity_t *cl;
-	qboolean update = qfalse;
+	qboolean update=qfalse;
 
-	for (i = 0; i < level.numConnectedClients; i++) {
+	for ( i = 0; i < level.numConnectedClients; i++ ) {
 		cl = g_entities + level.sortedClients[i];
-		if (!cl->inuse || cl->client->sess.admin) {
+		if ( !cl->inuse || cl->client->sess.admin ) {
 			continue;
 		}
 
@@ -1877,29 +1769,66 @@ void G_removeSpecInvite(int team) {
 			update = qtrue;
 		}
 	}
+
 	if (update)
-		G_updateSpecLock(team, qtrue);
+		G_updateSpecLock( team, qtrue );
+		
 }
+/*
+=============
+Tardo -- Ready/Not Ready
 
-// Set player's spec status after logout/voted out..
-void G_setClientSpeclock(gentity_t *ent) {
-	if (ent->client->sess.sessionTeam == TEAM_SPECTATOR &&
-		!ent->client->sess.specInvited &&
-		(teamInfo[TEAM_RED].spec_lock || teamInfo[TEAM_BLUE].spec_lock))
-	{
-		SetTeam(ent, "s", qtrue);
-	}		
-	// This needs to get tested under various conditions
-	else if (teamInfo[TEAM_RED].spec_lock || teamInfo[TEAM_BLUE].spec_lock)
-	{
-		G_updateSpecLock(ent->client->sess.specInvited, qtrue);
+L0 - Rewrote and simplifed this
+=============
+*/
+// count players
+int G_playersReady( void ) {
+	gclient_t *cl;
+	int ready = 0,		\
+		i,				\
+		state = 0,		\
+		count = 0;
+
+	for ( i = 0;  i < level.numPlayingClients; i++ ) {
+		cl = level.clients + level.sortedClients[i];
+
+		if (cl->pers.ready)
+			ready++;
 	}
+
+	count = (!level.numPlayingClients) ? -1 : level.numPlayingClients - ready;
+	state = ( (ready == level.numPlayingClients) && level.numPlayingClients ) ? -2 : count;
+
+	if (g_noTeamSwitching.integer) {
+		state = ((ready >= g_minGameClients.integer) ? -2 : g_minGameClients.integer - ready);
+	}
+
+return state;
 }
 
-// Returns player's "real" team.
-int G_teamID(gentity_t *ent) {
-	//if (ent->client->sess.coach_team) {
-	//	return(ent->client->sess.coach_team);
-	//}
-	return(ent->client->sess.sessionTeam);
+void G_readyReset( qboolean aForced ) {
+	if ( g_gamestate.integer == GS_WARMUP_COUNTDOWN && !aForced ) {
+		AP( "print \"*** ^zINFO: ^nCountdown aborted! Going back to warmup..\n\"2" );
+	}
+	level.readyAll = qfalse;
+	level.lastRestartTime = level.time;
+	level.readyPrint = qfalse;
+	trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
+	trap_SetConfigstring( CS_READY, va( "%i", (g_noTeamSwitching.integer ? READY_PENDING : READY_AWAITING) ));
 }
+
+void G_readyStart( void ) {
+	level.readyAll = qtrue;
+	level.CNstart = 0; // Resets countdown
+	trap_SetConfigstring( CS_READY, va( "%i", READY_NONE ));
+
+	// Prevents joining once countdown starts..
+	if (g_tournament.integer == 2)
+		G_readyTeamLock();
+}
+
+void G_readyTeamLock( void ) {
+	teamInfo[TEAM_RED].team_lock = qtrue;
+	teamInfo[TEAM_BLUE].team_lock = qtrue;
+}
+

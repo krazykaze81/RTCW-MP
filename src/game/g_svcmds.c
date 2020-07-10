@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -271,11 +271,6 @@ static void AddIP( char *str ) {
 
 	UpdateIPBans();
 }
-
-void AddIPBan(const char *str) {
-	AddIP(&ipFilters, str);
-}
-
 /*
 =================
 AddMaxLivesGUID
@@ -526,7 +521,7 @@ void    Svcmd_ForceTeam_f( void ) {
 
 	// set the team
 	trap_Argv( 2, str, sizeof( str ) );
-	SetTeam( &g_entities[cl - level.clients], str, qtrue );
+	SetTeam( &g_entities[cl - level.clients], str ,qfalse);
 }
 
 /*
@@ -559,56 +554,6 @@ void Svcmd_StartMatch_f() {
 
 /*
 ============
-Svcmd_SwapTeams_f
-
-NERVE - SMF - swaps all clients to opposite team
-============
-*/
-void Svcmd_SwapTeams_f() {
-//  if ( g_gamestate.integer != GS_PLAYING ) {
-	if ( ( g_gamestate.integer == GS_INITIALIZE ) || // JPW NERVE -- so teams can swap between checkpoint rounds
-		 ( g_gamestate.integer == GS_WAITING_FOR_PLAYERS ) ||
-		 ( g_gamestate.integer == GS_RESET ) ) {
-		trap_SendServerCommand( -1, va( "print \"Match must be in progress to swap teams.\n\"" ) );
-		return;
-	}
-
-	if ( g_gametype.integer == GT_WOLF_STOPWATCH ) {
-		trap_Cvar_Set( "g_currentRound", "0" );
-		trap_Cvar_Set( "g_nextTimeLimit", "0" );
-	}
-
-	trap_Cvar_Set( "g_swapteams", "1" );
-	trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
-}
-
-
-/*
-==================
-Svcmd_ResetMatch_f
-
-OSP - multiuse now for both map restarts and total match resets
-==================
-*/
-void Svcmd_ResetMatch_f(qboolean fDoReset, qboolean fDoRestart) {
-	int i;
-
-	for (i = 0; i < level.numConnectedClients; i++) {
-		g_entities[level.sortedClients[i]].client->pers.ready = 0;
-	}
-
-	if (fDoReset) {
-		G_resetRoundState();
-		G_resetModeState();
-	}
-
-	if (fDoRestart) {
-		trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", ((g_gamestate.integer != GS_PLAYING) ? GS_RESET : GS_WARMUP)));
-	}
-}
-
-/*
-============
 Svcmd_ResetMatch_f
 
 NERVE - SMF - this has three behaviors
@@ -616,7 +561,7 @@ NERVE - SMF - this has three behaviors
 - if in tournament mode, go back to waitingForPlayers mode
 - if in stopwatch mode, reset back to first round
 ============
-
+*/
 void Svcmd_ResetMatch_f() {
 	if ( g_gametype.integer == GT_WOLF_STOPWATCH ) {
 		trap_Cvar_Set( "g_currentRound", "0" );
@@ -626,43 +571,152 @@ void Svcmd_ResetMatch_f() {
 	if ( !g_noTeamSwitching.integer || ( g_minGameClients.integer > 1 && level.numPlayingClients >= g_minGameClients.integer ) ) {
 		trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
 		return;
-	} else {
-		// OSPx - Ready
+	} else { // L0 - Tournament..
+	//	if (g_tournament.integer) {
 		if (g_doWarmup.integer) {
-			trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WARMUP));
-			trap_SetConfigstring(CS_READY, va("%i", READY_PENDING));
-		}
-		else {
-			trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WAITING_FOR_PLAYERS));
+			trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
+			trap_SetConfigstring( CS_READY, va( "%i", READY_PENDING ) );
+		} else {
+			trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WAITING_FOR_PLAYERS ) );
 		}
 		return;
 	}
 }
-*/
 
 /*
-====================
-Svcmd_ShuffleTeams_f
+============
+Svcmd_SwapTeams_f
 
-OSP - randomly places players on teams
-====================
+NERVE - SMF - swaps all clients to opposite team
+============
 */
-void Svcmd_ShuffleTeams_f(void) {
-	G_resetRoundState();
-	G_shuffleTeams();
-
-	if ((g_gamestate.integer == GS_INITIALIZE) ||
-		(g_gamestate.integer == GS_WARMUP) ||
-		(g_gamestate.integer == GS_RESET)) {
+void Svcmd_SwapTeams_f() {
+//  if ( g_gamestate.integer != GS_PLAYING ) {
+/*	if ( ( g_gamestate.integer == GS_INITIALIZE ) || // JPW NERVE -- so teams can swap between checkpoint rounds
+		 ( g_gamestate.integer == GS_WAITING_FOR_PLAYERS ) ||
+		 ( g_gamestate.integer == GS_RESET ) ) {
+		trap_SendServerCommand( -1, va( "print \"Match must be in progress to swap teams.\n\"" ) );
 		return;
 	}
-
-	G_resetModeState();
-	Svcmd_ResetMatch_f(qfalse, qtrue);
+*/
+	if ((g_gamestate.integer == GS_INITIALIZE) ||
+	    (g_gamestate.integer == GS_WARMUP) ||
+	    ( g_gamestate.integer == GS_WAITING_FOR_PLAYERS ) ||
+	    (g_gamestate.integer == GS_RESET))
+	{
+		G_swapTeams();
+		return;
+	}
+	if ( g_gametype.integer == GT_WOLF_STOPWATCH ) {
+		trap_Cvar_Set( "g_currentRound", "0" );
+		trap_Cvar_Set( "g_nextTimeLimit", "0" );
+	}
+/*
+	// L0 - locked team switch fix on swap
+	if (g_gamelocked.integer == 2)
+		trap_Cvar_Set( "g_gamelocked", "1" );
+	else if (g_gamelocked.integer == 1)
+		trap_Cvar_Set( "g_gamelocked", "2" );
+	// L0 - end
+	*/
+	trap_Cvar_Set( "g_swapteams", "1" );
+	trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
 }
+
 
 
 char    *ConcatArgs( int start );
+/*
+===========
+L0 - Shuffle
+===========
+*/
+void Svcmd_Shuffle_f( void )
+{
+	int count=0, tmpCount, i;
+	int players[MAX_CLIENTS];
+
+	memset(players, -1, sizeof(players));
+
+	if (g_gamestate.integer == GS_RESET)
+	return;
+
+	for (i = 0; i < MAX_CLIENTS; i++)
+	{
+		//skip client numbers that aren't used
+		if ((!g_entities[i].inuse) || (level.clients[i].pers.connected != CON_CONNECTED))
+			continue;
+
+		//ignore spectators
+		if ((level.clients[i].sess.sessionTeam != TEAM_RED) && (level.clients[i].sess.sessionTeam != TEAM_BLUE))
+			continue;
+
+		players[count] = i;
+		count++;
+	}
+
+	tmpCount = count;	//copy the number of active clients
+
+	//loop through all the active players
+	for (i = 0; i < count; i++)
+	{
+		int j;
+
+		do {
+			j = (rand() % count);
+		} while (players[j] == -1);
+
+		//put every other random choice on allies
+		if (i & 1)
+			level.clients[players[j]].sess.sessionTeam = TEAM_BLUE;
+		else
+			level.clients[players[j]].sess.sessionTeam = TEAM_RED;
+
+		ClientUserinfoChanged(players[j]);
+		ClientBegin(players[j]);
+
+
+		players[j] = players[tmpCount-1];
+		players[tmpCount-1] = -1;
+		tmpCount--;
+	}
+
+	// Reset match if there's a shuffle!
+	Svcmd_ResetMatch_f();
+
+	AP("chat \"^zconsole:^7 Teams were shuffled^1!\n\"");
+}
+/*
+=================
+L0 - Antilag
+=================
+*/
+void Svcmd_Antilag_f( void ) {
+
+	if ( g_antilag.integer != 0 ) {
+		trap_SendConsoleCommand( EXEC_APPEND, "g_antilag 0\n" );
+		AP("chat \"^zconsole:^7 Antilag has been disbled^1!\n\"");
+	} else {
+		trap_SendConsoleCommand( EXEC_APPEND, "g_antilag 1\n" );
+		AP("chat \"^zconsole:^7 Antilag has been enabled^2!\n\"");
+	}
+}
+/*
+=================
+L0 - Pause/Unpause
+=================
+*/
+void Svcmd_Pause_f(qboolean pause) {
+	if (pause) {
+		level.paused = !PAUSE_NONE;
+		trap_SetConfigstring( CS_PAUSED,  va( "%i", level.paused ));
+		AP(va("cp \"Match has been ^3Paused^7!\n\"2"));
+	} else {
+		level.CNstart = 0; // Resets countdown if it was aborted before
+		level.paused = PAUSE_UNPAUSING;
+		AP(va("cp \"Resuming match..\n\"2"));
+	}
+}
 
 /*
 =================
@@ -723,7 +777,7 @@ qboolean    ConsoleCommand( void ) {
 	}
 
 	if ( Q_stricmp( cmd, "reset_match" ) == 0 ) {
-		Svcmd_ResetMatch_f(qtrue, qtrue);
+		Svcmd_ResetMatch_f();
 		return qtrue;
 	}
 
@@ -733,21 +787,27 @@ qboolean    ConsoleCommand( void ) {
 	}
 	// -NERVE - SMF
 
-	if (Q_stricmp(cmd, "shuffle_teams") == 0) {
-		Svcmd_ShuffleTeams_f();
+	// L0 - Callvotes and server side (console) handling
+	// Shuffle
+	if ( Q_stricmp( cmd, "shuffle" ) == 0 ) {
+		Svcmd_Shuffle_f();
+	return qtrue;
+	}
+	// Antilag
+	if ( Q_stricmp( cmd, "antilag" ) == 0 ) {
+		Svcmd_Antilag_f();
 		return qtrue;
 	}
-
-	if (Q_stricmp(cmd, "makeReferee") == 0) {
-		G_MakeReferee();
+	// Pause
+	if ( Q_stricmp( cmd, "pause" ) == 0 ) {
+		Svcmd_Pause_f(qtrue);
 		return qtrue;
 	}
-
-	if (Q_stricmp(cmd, "removeReferee") == 0) {
-		G_RemoveReferee();
+	// UnPause
+	if ( Q_stricmp( cmd, "unpause" ) == 0 ) {
+		Svcmd_Pause_f(qfalse);
 		return qtrue;
 	}
-
 	if ( g_dedicated.integer ) {
 		if ( Q_stricmp( cmd, "say" ) == 0 ) {
 			trap_SendServerCommand( -1, va( "print \"server:[lof] %s\"", ConcatArgs( 1 ) ) );

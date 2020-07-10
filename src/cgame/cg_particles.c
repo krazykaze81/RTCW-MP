@@ -762,9 +762,6 @@ void CG_AddParticleToScene( cparticle_t *p, vec3_t org, float alpha ) {
 		if ( ratio >= 1.0 ) {
 			ratio = 0.9999;
 		}
-		else if (ratio < 0.0) {
-			ratio = 0.0001;
-		} // End
 
 		width = p->width + ( ratio * ( p->endwidth - p->width ) );
 		height = p->height + ( ratio * ( p->endheight - p->height ) );

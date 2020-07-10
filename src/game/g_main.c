@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -37,7 +37,6 @@ typedef struct {
 	int cvarFlags;
 	int modificationCount;          // for tracking changes
 	qboolean trackChange;           // track this variable, and announce if changed
-	qboolean fConfigReset;          // OSP: set this var to the default on a config reset
 	qboolean teamShader;      // track and if changed, update shader state
 } cvarTable_t;
 
@@ -120,9 +119,6 @@ vmCvar_t g_teamForceBalance;
 vmCvar_t g_listEntity;
 vmCvar_t g_banIPs;
 vmCvar_t g_filterBan;
-vmCvar_t bannedMSG;				// Message that will be printed to banned users.
-vmCvar_t IP_handling;			// If enabled it checks for IP bans and tempbans..
-
 vmCvar_t g_rankings;
 vmCvar_t g_enableBreath;
 vmCvar_t g_smoothClients;
@@ -160,142 +156,93 @@ vmCvar_t sv_screenshake;
 
 // Gordon
 vmCvar_t g_antilag;
-vmCvar_t	g_antiWarp;				// Enable Anti warp..
 
 vmCvar_t mod_url;
 vmCvar_t url;
 
 vmCvar_t g_dbgRevive;
 
-// OSPx
-// - Admins
-vmCvar_t a1_pass;
-vmCvar_t a2_pass;
-vmCvar_t a3_pass;
-vmCvar_t a4_pass;
-vmCvar_t a5_pass;
-vmCvar_t a1_tag;
-vmCvar_t a2_tag;
-vmCvar_t a3_tag;
-vmCvar_t a4_tag;
-vmCvar_t a5_tag;
-vmCvar_t a1_cmds;
-vmCvar_t a2_cmds;
-vmCvar_t a3_cmds;
-vmCvar_t a4_cmds;
-vmCvar_t a5_cmds;
-vmCvar_t a5_allowAll;
-vmCvar_t	adm_help;		// If enabled users can use !list_cmds to get list of commands for their level..
-
+// L0 - New cvars
+// Admins
+vmCvar_t a1_pass;		// Level 1 admin
+vmCvar_t a2_pass;		// Level 2 admin
+vmCvar_t a3_pass;		// Level 3 admin
+vmCvar_t a4_pass;		// Level 4 admin
+vmCvar_t a5_pass;		// Level 4 admin
+vmCvar_t a1_tag;		// Level 1 admin tag
+vmCvar_t a2_tag;		// Level 2 admin tag
+vmCvar_t a3_tag;		// Level 3 admin tag
+vmCvar_t a4_tag;		// Level 3 admin tag
+vmCvar_t a5_tag;		// Level 5 admin tag
+vmCvar_t a1_cmds;		// Level 1 admin commands
+vmCvar_t a2_cmds;		// Level 2 admin commands
+vmCvar_t a3_cmds;		// Level 3 admin commands
+vmCvar_t a4_cmds;		// Level 4 admin commands
+vmCvar_t a5_cmds;		// Level 5 admin commands
+vmCvar_t a5_allowAll;	// Allows level 5 to execute all admin commands + any other that's set in a5_cmds ->
+						// In this case, use a5_cmds for server specific cvars like g_allowVote that would otherwise require rcon etc..
+vmCvar_t adm_help;		// If enabled users can use !list_cmds to get list of commands for their level..
 vmCvar_t g_gamelocked;	// Controls if Admin locked the game so players can't join
-vmCvar_t g_extendedLog;
-
-// Match
-vmCvar_t team_maxplayers;
-vmCvar_t team_nocontrols;
-
-vmCvar_t match_warmupDamage;
-vmCvar_t match_mutespecs;
-vmCvar_t match_latejoin;
-vmCvar_t match_minplayers;
-vmCvar_t match_readypercent;
-vmCvar_t match_timeoutlength;
-vmCvar_t match_timeoutcount;
-
-vmCvar_t vote_allow_comp;
-vmCvar_t vote_allow_gametype;
-vmCvar_t vote_allow_kick;
-vmCvar_t vote_allow_map;
-vmCvar_t vote_allow_matchreset;
-vmCvar_t vote_allow_mutespecs;
-vmCvar_t vote_allow_nextmap;
-vmCvar_t vote_allow_pub;
-vmCvar_t vote_allow_referee;
-vmCvar_t vote_allow_shuffleteamsxp;
-vmCvar_t vote_allow_swapteams;
-vmCvar_t vote_allow_friendlyfire;
-vmCvar_t vote_allow_timelimit;
-vmCvar_t vote_allow_warmupdamage;
-vmCvar_t vote_allow_antilag;
-vmCvar_t vote_allow_balancedteams;
-vmCvar_t vote_allow_muting;
-vmCvar_t vote_limit;
-vmCvar_t vote_percent;
-vmCvar_t refereePassword;
-
-vmCvar_t g_spectatorInactivity;
-vmCvar_t g_showFlags;
-vmCvar_t g_allowSoftKill;
-vmCvar_t server_autoconfig;
-
-// classes
-vmCvar_t	g_ltNades;				// Number of nades a lt starts with 
-vmCvar_t	g_medicNades;			// Number of nades a med starts with 
-vmCvar_t	g_soldNades;			// Number of nades sold starts with
-vmCvar_t	g_engNades;				// Number of nades eng starts with
-vmCvar_t	g_medicClips;			// Number of clips in weapon med starts with 
-vmCvar_t	g_engineerClips;		// Number of clips in weapon eng starts with
-vmCvar_t	g_soldierClips;			// Number of clips in weapon sold starts with
-vmCvar_t	g_leutClips;			// Number of clips in weapon leut starts with
-vmCvar_t	g_pistolClips;			// How many clips pistol gets
-vmCvar_t	g_maxTeamPF;			// Max Pf's per team
-vmCvar_t	g_maxTeamSniper;		// Max snipers per team
-vmCvar_t	g_maxTeamVenom;			// Max venoms per team
-vmCvar_t	g_maxTeamFlamer;		// Max flamers per team
-
-
-vmCvar_t g_fixedphysics;
+vmCvar_t sv_hostname;	// So it's more accesible
+vmCvar_t svx_serverStreaming; // So it's more accessible
+vmCvar_t g_extendedLog;	// Logs various admin actions in a seperate logs
+vmCvar_t g_bannedMSG;	// Message that's printed to banned users
+vmCvar_t	g_hitsounds;			// Hitsounds - Requires soundpack
+vmCvar_t g_privateServer; // If disabled it doesn't check for password but instead re-uses it for ban bypass based on NO-SQL solution.
+vmCvar_t TXThandle;		// Optional so text (file) based checks (ip/guid tempban-ban) can be disabled..
+// MOTD's
+vmCvar_t g_serverMessage;	// Shows a center print each time when player switches teams.
+vmCvar_t g_showMOTD;		// Enable MOTD's (message of the day)
+vmCvar_t motdNum;			// To track motds..
+vmCvar_t g_motd1;			// MESSAGE 1
+vmCvar_t g_motd2;			// MESSAGE 2
+vmCvar_t g_motd3;			// MESSAGE 3
+vmCvar_t g_motd4;			// MESSAGE 4
+vmCvar_t g_motd5;			// MESSAGE 5
+vmCvar_t g_motd6;			// MESSAGE 6
+vmCvar_t g_motd7;			// MESSAGE 7
+vmCvar_t g_motd8;			// MESSAGE 8
+vmCvar_t g_motd9;			// MESSAGE 9
+vmCvar_t g_motd10;			// MESSAGE 10
+vmCvar_t g_motd11;			// MESSAGE 11
+vmCvar_t g_motd12;			// MESSAGE 12
+vmCvar_t g_motdTime;		// Time between each message
+// Server Admin Bot
+vmCvar_t sab_system;		// Controls all sab_ settings (NOTE: To disable any sab_ setting set -1 ->
+							// with exception for low score kick..0 = off rest will be transformed in negative value..)
+vmCvar_t sab_maxTeamKills;	// Max team kills before client gets kicked
+vmCvar_t sab_maxTeamBleed;	// Max bleed points before client gets kicked (NOTE: one hit = 1 point)
+vmCvar_t sab_minLowScore;	// Min low score before client gets kicked
+vmCvar_t sab_MaxPingFlux;	// Max ping limit client can hit
+vmCvar_t sab_maxPingHits;	// How many times can hit it before client gets kicked ->
+							// (1hit = each time it's hitted otherwise counts as 1 per second if constantly above)
+vmCvar_t sab_censorPenalty;	// 1 = Auto ignore client after 3 strikes, 2 = kick client after 3 strikes.
+vmCvar_t sab_autoIgnore;	// If enabled it will auto ignore player (for a round) after 3 spam warnings.
+// General
+vmCvar_t g_maxVotes;	// Max votes per user
+vmCvar_t g_showFlags;	// mcwf GeoIP
+vmCvar_t g_inactivityToSpecs;	// Puts inactive players in spectators instead of dropping them.
+vmCvar_t g_ignoreSpecs;	// Ignores spectators - Admins can still bypass the ignore..
+vmCvar_t g_allowVote;	// Replaced voteFlags as i hate it and see it to complicated for new users..
+vmCvar_t g_disallowedVotes; // Disalloved votes separeted by space..
+vmCvar_t g_headshotsOnly;	// Enables headshots only mode
+vmCvar_t g_fixedphysics;	// So it's fair for all..
 vmCvar_t g_drawHitboxes;	// So I can adjust them a little..
 vmCvar_t g_allowPMs;		// Allow private messages
-vmCvar_t g_hitsounds;
+vmCvar_t g_hitsounds;		// Hitsounds - client can disable them localy if they're on.
 vmCvar_t g_mapConfigs;		// Essentials for custom map configs...
-vmCvar_t g_staminaBoost;			// If enabled it recharges stamina faster when player is crouching..
-
-vmCvar_t vote_limit;
-vmCvar_t vote_percent;
-
-vmCvar_t	g_dragBodies;			// If enabled player can drag bodies using salute or activate command
-vmCvar_t	g_dropObj;				// Drop Objective
-vmCvar_t	g_unlockWeapons;		// Gives ability to drop weapon to all classes..
-vmCvar_t	g_disableSMGPickup;		// If enabled, client can't pickup SMG if they already have one.
-vmCvar_t	g_flagRetake;			// How many times flag can be retaken
-vmCvar_t	g_inactivityToSpecs;	// Puts inactive players in spectators instead of dropping them.
-vmCvar_t	g_spectatorInactivity;	// Drop spectators after some time..
-vmCvar_t	g_spectatorAllowDemo;	// Basically ignores any client that's following other players when g_spectatorInactivity is set.
-
-
-
-// - System
-vmCvar_t z_serverflags;
-// MOTD's
-vmCvar_t	g_serverMessage;	// Shows a center print each time when player switches teams.
-vmCvar_t	g_showMOTD;			// Enable MOTD's (message of the day)
-vmCvar_t	g_motd1;			// MESSAGE 1
-vmCvar_t	g_motd2;			// MESSAGE 2
-vmCvar_t	g_motd3;			// MESSAGE 3
-vmCvar_t	g_motd4;			// MESSAGE 4
-vmCvar_t	g_motd5;			// MESSAGE 5
-vmCvar_t	g_motd6;			// MESSAGE 6
-vmCvar_t	g_motd7;			// MESSAGE 7
-vmCvar_t	g_motd8;			// MESSAGE 8
-vmCvar_t	g_motd9;			// MESSAGE 9
-vmCvar_t	g_motd10;			// MESSAGE 10
-vmCvar_t	g_motd11;			// MESSAGE 11
-vmCvar_t	g_motd12;			// MESSAGE 12
-vmCvar_t	g_motdTime;			// Time between each message
-vmCvar_t sv_hostname;
-vmCvar_t	motdNum;			// To track motds..
-/*vmCvar_t	g_swapCounter;		// Count times so it auto swaps once it reaches it..
-vmCvar_t	g_needBalance;		// Flag for auto balance check
-vmCvar_t	shuffleTracking;	// Tracks rounds for (auto) shuffle
-vmCvar_t	int_match_started;	// Tracks if Tournament has started*/
-// -OSPx
-// Stats
-vmCvar_t g_showLifeStats;		// If enabled it prints some life info when to player (when (s)he dies)
-vmCvar_t g_roundStats;			// Prints high achievers each round
-vmCvar_t g_excludedRoundStats;	// List of excluded stats (not tracked and not printed)
-// Forced cvars (due OSPx Client mod)
-vmCvar_t	cl_allowdownload;		// Map downloading 
+vmCvar_t g_lifeStats;		// If enabled it prints killer health
+vmCvar_t g_warmupDamage;	// Allows damage in warmup
+vmCvar_t g_pauseLimit;	// How many pauses per team
+vmCvar_t g_duelAutoPause; // If enabled, it auto pauses when in duel mode with uneven teams.
+vmCvar_t team_nocontrols;
+// Match specific
+vmCvar_t team_commands; // Team commands (captain..)
+vmCvar_t g_tournament;	// Ready-unready system
+vmCvar_t g_maxTeamPF;		// Max Pf's per team
+vmCvar_t g_maxTeamSniper;	// Max snipers per team
+vmCvar_t g_maxTeamVenom;	// Max venoms per team
+vmCvar_t g_maxTeamFlamer;	// Max flamers per team
 cvarTable_t gameCvarTable[] = {
 	// don't override the cheat state set by the system
 	{ &g_cheats, "sv_cheats", "", 0, qfalse },
@@ -341,7 +288,7 @@ cvarTable_t gameCvarTable[] = {
 	{ &g_teamForceBalance, "g_teamForceBalance", "0", CVAR_ARCHIVE  },                            // NERVE - SMF - merge from team arena
 
 	{ &g_warmup, "g_warmup", "20", CVAR_ARCHIVE, 0, qtrue  },
-	{ &g_doWarmup, "g_doWarmup", "0", 0, 0, qtrue  },
+	{ &g_doWarmup, "g_doWarmup", "0", 0, CVAR_ARCHIVE, qtrue  },
 
 	// NERVE - SMF
 	{ &g_warmupLatch, "g_warmupLatch", "1", 0, 0, qfalse },
@@ -366,8 +313,10 @@ cvarTable_t gameCvarTable[] = {
 	{ &g_logSync, "g_logSync", "0", CVAR_ARCHIVE, 0, qfalse  },
 
 	{ &g_password, "g_password", "", CVAR_USERINFO, 0, qfalse  },
+	{ &g_banIPs, "g_banIPs", "", CVAR_ARCHIVE, 0, qfalse  },
+	// show_bug.cgi?id=500
+	{ &g_filterBan, "g_filterBan", "1", CVAR_ARCHIVE, 0, qfalse  },
 
-	
 	{ &g_dedicated, "dedicated", "0", 0, 0, qfalse  },
 
 	{ &g_speed, "g_speed", "320", 0, 0, qtrue  },
@@ -426,17 +375,15 @@ cvarTable_t gameCvarTable[] = {
 
 	{&g_antilag, "g_antilag", "0", CVAR_SERVERINFO | CVAR_ARCHIVE, 0, qfalse},
 
-	
-
-// OSPx
-	{ &refereePassword, "refereePassword", "none", CVAR_ARCHIVE, 0, qfalse },
+	// L0 - New cvars
+// Admins
 	{ &a1_pass, "a1_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a2_pass, "a2_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a3_pass, "a3_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a4_pass, "a4_pass", "none", CVAR_ARCHIVE, 0, qfalse },
 	{ &a5_pass, "a5_pass", "none", CVAR_ARCHIVE, 0, qfalse },
-	{ &a1_tag, "a1_tag", "^1Admin", CVAR_ARCHIVE, 0, qfalse },
-	{ &a2_tag, "a2_tag", "^jAdmin", CVAR_ARCHIVE, 0, qfalse },
+	{ &a1_tag, "a1_tag", "^1Referee", CVAR_ARCHIVE, 0, qfalse },
+	{ &a2_tag, "a2_tag", "^jMember", CVAR_ARCHIVE, 0, qfalse },
 	{ &a3_tag, "a3_tag", "^2Adm!n", CVAR_ARCHIVE, 0, qfalse },
 	{ &a4_tag, "a4_tag", "^3Adm!n", CVAR_ARCHIVE, 0, qfalse },
 	{ &a5_tag, "a5_tag", "^dAdm!n", CVAR_ARCHIVE, 0, qfalse },
@@ -447,118 +394,57 @@ cvarTable_t gameCvarTable[] = {
 	{ &a5_cmds, "a5_cmds", "", CVAR_ARCHIVE, 0, qfalse },
 	{ &a5_allowAll, "a5_allowAll", "0", CVAR_ARCHIVE, 0, qfalse },
 	{ &adm_help, "adm_help", "1", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_extendedLog, "g_extendedLog", "1", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_maxVotes, "g_maxVotes", "2", CVAR_ARCHIVE | CVAR_LATCH, 0, qfalse },
+	{ &g_showFlags, "g_showFlags", "1", 0 },
+	{ &g_gamelocked, "g_gamelocked", "0", CVAR_ROM, 0, qfalse },
+	{ &g_hitsounds, "g_hitsounds", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &sv_hostname, "sv_hostname", "", CVAR_SERVERINFO, 0, qfalse },
+	{ &svx_serverStreaming, "svx_serverStreaming", "", CVAR_SERVERINFO, 0, qfalse },
+	{ &g_extendedLog, "g_extendedLog", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_bannedMSG, "g_bannedMSG", "You are ^3Banned ^7from this server!", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_privateServer, "g_privateServer", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &TXThandle, "TXThandle", "1", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_serverMessage, "g_serverMessage", "", CVAR_ARCHIVE, 0, qfalse },
 
-	// system
-	{ &g_banIPs, "g_banIPs", "", CVAR_ARCHIVE, 0, qfalse  },
-	{ &g_filterBan, "g_filterBan", "1", CVAR_ARCHIVE, 0, qfalse  },
-	{ &IP_handling, "IP_handling", "0", CVAR_ARCHIVE, 0, qfalse },
-	{ &bannedMSG, "bannedMSG", "^7You are ^1Banned ^7from this server^1!", CVAR_ARCHIVE, 0, qfalse },
+// MOTDs
+	{ &g_showMOTD, "g_showMOTD", "0", 0, 0, qfalse },
+	{ &g_motd1, "g_motd1", "", 0, 0, qfalse},
+	{ &g_motd2, "g_motd2", "", 0, 0, qfalse},
+	{ &g_motd3, "g_motd3", "", 0, 0, qfalse},
+	{ &g_motd4, "g_motd4", "", 0, 0, qfalse},
+	{ &g_motd5, "g_motd5", "", 0, 0, qfalse},
+	{ &g_motd6, "g_motd6", "", 0, 0, qfalse},
+	{ &g_motd7, "g_motd7", "", 0, 0, qfalse},
+	{ &g_motd8, "g_motd8", "", 0, 0, qfalse},
+	{ &g_motd9, "g_motd9", "", 0, 0, qfalse},
+	{ &g_motd10, "g_motd10", "", 0, 0, qfalse},
+	{ &g_motd11, "g_motd11", "", 0, 0, qfalse},
+	{ &g_motd12, "g_motd12", "", 0, 0, qfalse},
+	{ &g_motdTime, "g_motdTime", "80", 0, 0, qtrue},
+	{ &motdNum, "motdNum", "1", 0, 0, qfalse},
 
-
-	{ &g_fixedphysics, "g_fixedphysics", "1", CVAR_ARCHIVE | CVAR_SERVERINFO, qfalse, qfalse },
-	{ &g_mapConfigs, "g_mapConfigs", "0", CVAR_LATCH, 0, qfalse },
-	{ &g_antiWarp, "g_antiWarp", "1", CVAR_ARCHIVE, 0, qfalse },
-	// match
-	{ &team_maxplayers, "team_maxplayers", "0", 0, 0, qfalse, qfalse },
-	{ &team_nocontrols, "team_nocontrols", "1", CVAR_ARCHIVE, 0, qfalse },
-	{ &match_warmupDamage, "match_warmupDamage", "1", 0, 0, qfalse },
-	{ &match_mutespecs, "match_mutespecs", "0", 0, 0, qfalse, qtrue },
-	{ &match_latejoin, "match_latejoin", "1", 0, 0, qfalse, qfalse },
-	{ &match_minplayers, "match_minplayers", "2", 0, 0, qfalse, qfalse },
-	{ &match_readypercent, "match_readypercent", "100", 0, 0, qfalse, qtrue },
-	{ &match_timeoutlength, "match_timeoutlength", "180", 0, 0, qfalse, qtrue },
-	{ &match_timeoutcount, "match_timeoutcount", "3", 0, 0, qfalse, qtrue },
-	
-	// game
-	{ &g_spectatorInactivity, "g_spectatorInactivity", "0", 0, 0, qfalse, qfalse },
-	{ &g_spectatorAllowDemo, "g_spectatorAllowDemo", "0", CVAR_ARCHIVE, 0, qtrue },
-	{ &g_showFlags, "g_showFlags", "1", 0, qfalse, qfalse },
-	{ &g_allowSoftKill, "g_allowSoftKill", "0", CVAR_ARCHIVE, 0, qfalse, qfalse },
-	{ &server_autoconfig, "server_autoconfig", "1", 0, 0, qfalse, qfalse }, // set to 1 for comp settings
-	{ &g_noTeamSwitching, "g_noTeamSwitching", "0", 0, 0, qfalse, qfalse }, // set to 0 for comp settings
-	{ &g_minGameClients, "g_minGameClients", "2", 0, 0, qfalse, qfalse }, // comp settings
-	{ &g_hitsounds, "g_hitsounds", "0", 0 },
-	{ &g_staminaBoost, "g_staminaBoost", "1", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_drawHitboxes, "g_drawHitboxes", "1", CVAR_ARCHIVE },
-	//{ &g_drawHitboxes, "g_drawHitboxes", "0", CVAR_CHEAT },
-
-
-
-	{ &g_unlockWeapons, "g_unlockWeapons", "0", CVAR_ARCHIVE | CVAR_LATCH, 0, qfalse },
-	{ &g_disableSMGPickup, "g_disableSMGPickup", "0", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_flagRetake, "g_flagRetake", "-1", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_ltNades, "g_ltNades", "1", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
-	{ &g_medicNades, "g_medicNades", "1", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
-	{ &g_engNades, "g_engNades", "8", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
-	{ &g_soldNades, "g_soldNades", "4", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
-	{ &g_medicClips, "g_medicClips", "0", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
-	{ &g_engineerClips, "g_engineerClips", "1", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
-	{ &g_soldierClips, "g_soldierClips", "2", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
-	{ &g_leutClips, "g_leutClips", "1", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
-	{ &g_pistolClips, "g_pistolClips", "8", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
-	{ &g_maxTeamPF, "g_maxTeamPF", "1", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
+// SAB (Server Admin Bot)
+	{ &sab_system, "sab_system", "0", CVAR_ARCHIVE|CVAR_LATCH, 0, qfalse },
+	{ &sab_maxTeamKills, "sab_maxTeamKills", "-1", CVAR_ARCHIVE|CVAR_LATCH, 0, qfalse },
+	{ &sab_maxTeamBleed, "sab_maxTeamBleed", "-1", CVAR_ARCHIVE|CVAR_LATCH, 0, qfalse },
+	{ &sab_minLowScore, "sab_minLowScore", "-1", CVAR_ARCHIVE|CVAR_LATCH, 0, qfalse },
+	{ &sab_MaxPingFlux, "sab_MaxPingFlux", "-1", CVAR_ARCHIVE|CVAR_LATCH, 0, qfalse },
+	{ &sab_maxPingHits, "sab_maxPingHits", "-1", CVAR_ARCHIVE|CVAR_LATCH, 0, qfalse },
+	{ &sab_censorPenalty, "sab_censorPenalty", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &sab_autoIgnore, "sab_autoIgnore", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_allowPMs, "g_allowPMs", "1", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_warmupDamage, "g_warmupDamage", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_mapConfigs, "g_mapConfigs", "0", CVAR_LATCH, 0, qfalse},
+	{ &g_lifeStats, "g_lifeStats", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_maxTeamPF, "g_maxTeamPF", "-1", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
 	{ &g_maxTeamSniper, "g_maxTeamSniper", "-1", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
 	{ &g_maxTeamVenom, "g_maxTeamVenom", "-1", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
 	{ &g_maxTeamFlamer, "g_maxTeamFlamer", "-1", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
-	{ &g_dragBodies, "g_dragBodies", "0", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_dropObj, "g_dropObj", "0", CVAR_ARCHIVE, 0, qfalse },
-
-	{ &z_serverflags, "z_serverflags", "0", 0, 0, qfalse, qfalse },
-
-	// MOTDs
-	{ &g_serverMessage, "g_serverMessage", "", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_showMOTD, "g_showMOTD", "0", 0, 0, qfalse },
-	{ &g_motd1, "g_motd1", "", 0, 0, qfalse },
-	{ &g_motd2, "g_motd2", "", 0, 0, qfalse },
-	{ &g_motd3, "g_motd3", "", 0, 0, qfalse },
-	{ &g_motd4, "g_motd4", "", 0, 0, qfalse },
-	{ &g_motd5, "g_motd5", "", 0, 0, qfalse },
-	{ &g_motd6, "g_motd6", "", 0, 0, qfalse },
-	{ &g_motd7, "g_motd7", "", 0, 0, qfalse },
-	{ &g_motd8, "g_motd8", "", 0, 0, qfalse },
-	{ &g_motd9, "g_motd9", "", 0, 0, qfalse },
-	{ &g_motd10, "g_motd10", "", 0, 0, qfalse },
-	{ &g_motd11, "g_motd11", "", 0, 0, qfalse },
-	{ &g_motd12, "g_motd12", "", 0, 0, qfalse },
-	{ &g_motdTime, "g_motdTime", "80", 0, 0, qtrue },
-	{ &sv_hostname, "sv_hostname", "", CVAR_SERVERINFO, 0, qfalse },
-	{ &motdNum, "motdNum", "1", 0, 0, qfalse },
-
-	
-	// Stats
-	{ &g_showLifeStats, "g_showLifeStats", "0", CVAR_ARCHIVE, 0, qfalse },
-	{ &g_roundStats, "g_roundStats", "0", CVAR_ARCHIVE | CVAR_LATCH, 0, qfalse },
-	{ &g_excludedRoundStats, "g_excludedRoundStats", "", CVAR_ARCHIVE | CVAR_LATCH, 0, qfalse },
-	
-	// Forced stuff
-	{ 0, "cl_allowdownload", "1", CVAR_SYSTEMINFO, qfalse },
-	// End
-
-	{&g_dbgRevive, "g_dbgRevive", "0", 0, 0, qfalse},
-	
-	// voting
-	{ &vote_limit, "vote_limit", "3", CVAR_ARCHIVE, qfalse, qfalse },
-	{ &vote_percent, "vote_percent", "50", CVAR_ARCHIVE, qfalse, qfalse },
-	{ &vote_allow_comp, "vote_allow_comp", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_gametype,     "vote_allow_gametype", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_kick,         "vote_allow_kick", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_map,          "vote_allow_map", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_matchreset,   "vote_allow_matchreset", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_mutespecs,    "vote_allow_mutespecs", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_nextmap,      "vote_allow_nextmap", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_pub,          "vote_allow_pub", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_referee,      "vote_allow_referee", "0", 0, 0, qfalse, qfalse },
-	{ &vote_allow_shuffleteamsxp,   "vote_allow_shuffleteamsxp", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_swapteams,    "vote_allow_swapteams", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_friendlyfire, "vote_allow_friendlyfire", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_timelimit,    "vote_allow_timelimit", "0", 0, 0, qfalse, qfalse },
-	{ &vote_allow_warmupdamage, "vote_allow_warmupdamage", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_antilag,      "vote_allow_antilag", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_balancedteams,"vote_allow_balancedteams", "1", 0, 0, qfalse, qfalse },
-	{ &vote_allow_muting,       "vote_allow_muting", "1", 0, 0, qfalse, qfalse },
-	{ &vote_limit,      "vote_limit", "5", 0, 0, qfalse, qfalse },
-	{ &vote_percent,    "vote_percent", "51", 0, 0, qfalse, qfalse }, // set to 51 percent
+	{ &g_duelAutoPause, "g_duelAutoPause", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &team_commands, "team_commands", "0", CVAR_ARCHIVE, 0, qfalse },
+	{ &team_nocontrols, "team_nocontrols", "1", CVAR_ARCHIVE, 0, qfalse },
+	{ &g_tournament, "g_tournament", "0", CVAR_ARCHIVE | CVAR_LATCH, 0, qtrue },
+	{&g_dbgRevive, "g_dbgRevive", "0", 0, 0, qfalse}
 };
 
 // bk001129 - made static to avoid aliasing
@@ -1289,26 +1175,6 @@ void G_RegisterCvars( void ) {
 	// done
 
 	level.warmupModificationCount = g_warmup.modificationCount;
-// OSPx
-	// Ready percents
-	if (match_readypercent.integer < 1) {
-		trap_Cvar_Set("match_readypercent", "1");
-	}
-	else if (match_readypercent.integer > 100) {
-		trap_Cvar_Set("match_readypercent", "1");
-	}
-
-	// Sanity check (clamps)
-	if (pmove_msec.integer < 8) {
-		trap_Cvar_Set("pmove_msec", "8");
-	}
-	else if (pmove_msec.integer > 33) {
-		trap_Cvar_Set("pmove_msec", "33");
-	}
-	if (match_timeoutcount.integer > 999) {
-		trap_Cvar_Set("match_timeoutcount", "999");
-	}
-// -OSPx
 }
 
 /*
@@ -1336,22 +1202,6 @@ void G_UpdateCvars( void ) {
 				if ( cv->teamShader ) {
 					remapped = qtrue;
 				}
-				// OSPx
-				if (cv->vmCvar == &match_readypercent) {
-					if (match_readypercent.integer < 1) {
-						trap_Cvar_Set(cv->cvarName, "1");
-					}
-					else if (match_readypercent.integer > 100) {
-						trap_Cvar_Set(cv->cvarName, "100");
-					}				
-				} else if (cv->vmCvar == &pmove_msec) {
-					if (pmove_msec.integer < 8) {
-						trap_Cvar_Set(cv->cvarName, "8");
-					}
-					else if (pmove_msec.integer > 33) {
-						trap_Cvar_Set(cv->cvarName, "33");
-					}
-				} // -OSPx
 			}
 		}
 	}
@@ -1361,26 +1211,7 @@ void G_UpdateCvars( void ) {
 	}
 }
 
-/*
-=================
-OSPx - G_wipeCvars
 
-Reset particular server variables back to defaults if a config is voted in.
-=================
-*/
-void G_wipeCvars(void) {
-	int i;
-	cvarTable_t *pCvars;
-
-	for (i = 0, pCvars = gameCvarTable; i < gameCvarTableSize; i++, pCvars++) {
-		if (pCvars->vmCvar && pCvars->fConfigReset) {
-			G_Printf("set %s %s\n", pCvars->cvarName, pCvars->defaultString);
-			trap_Cvar_Set(pCvars->cvarName, pCvars->defaultString);
-		}
-	}
-
-	G_UpdateCvars();
-}
 
 /*
 ==============
@@ -1440,6 +1271,9 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	we need to clear the list even if enforce maxlives is not active
 	in cas ethe g_maxlives was changed, and a map_restart happened
 	*/
+	// nihi commented below
+/*
+
 	ClearMaxLivesGUID();
 
 	// just for verbosity
@@ -1447,19 +1281,18 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 		G_Printf( "EnforceMaxLives-Cleared GUID List\n" );
 	}
 
-	G_ProcessIPBans();
-
+//	G_ProcessIPBans();
+*/
 	G_InitMemory();
 
 	// NERVE - SMF - intialize gamestate
 	if ( g_gamestate.integer == GS_INITIALIZE ) {
 		if ( g_noTeamSwitching.integer ) {
-			// OSPx - Ready
-			if (g_doWarmup.integer) {
-				trap_Cvar_Set("gamestate", va("%i", GS_WARMUP));
-				trap_SetConfigstring(CS_READY, va("%i", READY_PENDING));
+			if (g_tournament.integer) {// L0 - Ready
+				trap_Cvar_Set( "gamestate", va( "%i", GS_WARMUP ) );
+				trap_SetConfigstring( CS_READY, va( "%i", READY_PENDING ) );
 			} else {
-				trap_Cvar_Set("gamestate", va("%i", GS_WAITING_FOR_PLAYERS));
+				trap_Cvar_Set( "gamestate", va( "%i", GS_WAITING_FOR_PLAYERS ) );
 			}
 		} else {
 			trap_Cvar_Set( "gamestate", va( "%i", GS_WARMUP ) );
@@ -1562,20 +1395,17 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 	SaveRegisteredItems();
 
-	// L0 - auto cfg for each map
-	if (g_mapConfigs.integer){	
-		char mapName[64];	
-
-		trap_Cvar_VariableStringBuffer( "mapname", mapName, sizeof(mapName) );
-		trap_SendConsoleCommand(EXEC_APPEND, va("exec mapConfigs/%s.cfg \n", mapName));
-	} // L0 - end
-
 	if ( trap_Cvar_VariableIntegerValue( "g_gametype" ) != GT_SINGLE_PLAYER ) {
 		G_Printf( "-----------------------------------\n" );
 	}
 
-	// OSPx - Country Flags
-	GeoIP_open();
+	// L0 - auto cfg for each map
+	if (g_mapConfigs.integer){
+		char mapName[64];
+
+		trap_Cvar_VariableStringBuffer( "mapname", mapName, sizeof(mapName) );
+		trap_SendConsoleCommand(EXEC_APPEND, va("exec mapConfigs/%s.cfg \n", mapName));
+	} // L0 - end
 	if ( trap_Cvar_VariableIntegerValue( "bot_enable" ) ) {
 		BotAISetup( restart );
 		BotAILoadMap( restart );
@@ -1583,17 +1413,11 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	}
 
 	G_RemapTeamShaders();
-	// OSPx - Reinforcements offset
-	G_loadMatchGame();
-
-	// OSPx - Make sure pause is 0..
-	trap_SetConfigstring(CS_PAUSED, "0");
-
-	// This sometimes goes off so make sure..
-	teamInfo[TEAM_RED].timeouts = match_timeoutcount.integer;
-	teamInfo[TEAM_BLUE].timeouts = match_timeoutcount.integer;
+	// L0 - Pause
+	// Start with off! As if map_restart occur while paused screen fade is stuck..
+	// Disconnect while paused is handled in client side.
+	trap_SetConfigstring( CS_PAUSED,  va( "%i", PAUSE_NONE ));
 }
-
 
 
 
@@ -1626,8 +1450,6 @@ void G_ShutdownGame( int restart ) {
 		// done.
 	}
 	// done.
-	// OSPx - Country Flags
-	GeoIP_close();
 
 	// write all the client session data so we can get it back
 	G_WriteSessionData();
@@ -1727,7 +1549,7 @@ void AddTournamentPlayer( void ) {
 	level.warmupTime = -1;
 
 	// set them to free-for-all team
-	SetTeam( &g_entities[ nextInLine - level.clients ], "f", qfalse );
+	SetTeam( &g_entities[ nextInLine - level.clients ], "f" ,qfalse);
 }
 
 /*
@@ -1751,7 +1573,7 @@ void RemoveTournamentLoser( void ) {
 	}
 
 	// make them a spectator
-	SetTeam( &g_entities[ clientNum ], "s", qfalse );
+	SetTeam( &g_entities[ clientNum ], "s",qfalse );
 }
 
 
@@ -1862,7 +1684,7 @@ void CalculateRanks( void ) {
 	level.numFinalDead[0] = 0;      // NERVE - SMF
 	level.numFinalDead[1] = 0;      // NERVE - SMF
 
-	for ( i = 0; i < ARRAY_LEN(level.numteamVotingClients); i++ ) {
+	for ( i = 0; i < TEAM_NUM_TEAMS; i++ ) {
 		level.numteamVotingClients[i] = 0;
 	}
 	for ( i = 0 ; i < level.maxclients ; i++ ) {
@@ -2309,7 +2131,7 @@ void LogExit( const char *string ) {
 				trap_Cvar_Set( "g_nextTimeLimit", va( "%f", g_timelimit.value ) );
 			} else {
 				// use remaining time as next timer
-				trap_Cvar_Set( "g_nextTimeLimit", va( "%f", (level.timeCurrent - level.startTime) / 60000.f ) );
+				trap_Cvar_Set( "g_nextTimeLimit", va( "%f", ( level.time - level.startTime ) / 60000.f ) );
 			}
 		} else {
 			// reset timer
@@ -2333,7 +2155,7 @@ wait 10 seconds before going on.
 =================
 */
 void CheckIntermissionExit( void ) {
-	static int fActions = 0;
+	//static int fActions = 0;	// L0 - OSP port
 	int ready, notReady, playerCount;
 	int i;
 	gclient_t   *cl;
@@ -2342,16 +2164,6 @@ void CheckIntermissionExit( void ) {
 	if ( g_gametype.integer == GT_SINGLE_PLAYER ) {
 		return;
 	}
-
-	// OSPx - end-of-level auto-actions
-	if (!(fActions & EOM_WEAPONSTATS) && (level.time - level.intermissiontime) > 300) {
-		G_matchInfoDump(EOM_WEAPONSTATS);
-		fActions |= EOM_WEAPONSTATS;
-	}
-	/*if (!(fActions & EOM_MATCHINFO) && (level.time - level.intermissiontime) > 2000) {
-		G_matchInfoDump(EOM_MATCHINFO);
-		fActions |= EOM_MATCHINFO;
-	}*/
 
 	// DHM - Nerve :: Flat 10 second timer until exit
 	if ( g_gametype.integer >= GT_WOLF ) {
@@ -2490,6 +2302,7 @@ void CheckExitRules( void ) {
 	// if at the intermission, wait for all non-bots to
 	// signal ready, then go to next level
 	if ( level.intermissiontime ) {
+      //  if (g_altStopwatchMode.integer == 1 ) { G_swapTeams(); }
 		CheckIntermissionExit();
 		return;
 	}
@@ -2503,7 +2316,7 @@ void CheckExitRules( void ) {
 	}
 
 	if ( g_timelimit.value && !level.warmupTime ) {
-		if ( level.timeCurrent - level.startTime >= g_timelimit.value*60000 ) {
+		if ( level.time - level.startTime >= g_timelimit.value * 60000 ) {
 
 			// check for sudden death
 			if ( g_gametype.integer != GT_CTF && ScoreIsTied() ) {
@@ -2610,6 +2423,7 @@ void CheckExitRules( void ) {
 			return;
 		}
 	}
+
 }
 
 
@@ -2684,6 +2498,7 @@ void CheckTournement( void ) {
 		level.warmupTime += 10000;
 		trap_Cvar_Set( "g_restarted", "1" );
 		trap_SendConsoleCommand( EXEC_APPEND, "map_restart 0\n" );
+
 		level.restarted = qtrue;
 		return;
 	}
@@ -2696,7 +2511,7 @@ CheckWolfMP
 NERVE - SMF
 =============
 */
-void CheckGameState() {
+void CheckGameState( void ) {
 	gamestate_t current_gs;
 
 	current_gs = trap_Cvar_VariableIntegerValue( "gamestate" );
@@ -2709,18 +2524,19 @@ void CheckGameState() {
 	if ( g_noTeamSwitching.integer && !trap_Cvar_VariableIntegerValue( "sv_serverRestarting" ) ) {
 		if ( current_gs != GS_WAITING_FOR_PLAYERS && level.numPlayingClients <= 1 && level.lastRestartTime + 1000 < level.time ) {
 			level.lastRestartTime = level.time;
-			// OSPx - Ready
-			if (g_doWarmup.integer) {
-				trap_SetConfigstring(CS_READY, va("%i", READY_PENDING));
-				trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WARMUP));
+
+			if (g_tournament.integer) {
+				trap_SetConfigstring( CS_READY, va( "%i", READY_PENDING ) );
+				trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
 			} else {
-				trap_SendConsoleCommand(EXEC_APPEND, va("map_restart 0 %i\n", GS_WAITING_FOR_PLAYERS));
+				trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WAITING_FOR_PLAYERS ) );
 			}
 		}
 	}
 
 	if ( current_gs == GS_WAITING_FOR_PLAYERS && g_minGameClients.integer > 1 &&
-		 level.numPlayingClients >= g_minGameClients.integer && level.lastRestartTime + 1000 < level.time ) {
+		 level.numPlayingClients >= g_minGameClients.integer && level.lastRestartTime + 1000 < level.time
+		 && !g_tournament.integer ) {
 
 		level.lastRestartTime = level.time;
 		trap_SendConsoleCommand( EXEC_APPEND, va( "map_restart 0 %i\n", GS_WARMUP ) );
@@ -2733,49 +2549,52 @@ void CheckGameState() {
 	}
 
 	// check warmup latch
-	if (current_gs == GS_WARMUP) {
-// OSPx - Ready
-		if (g_doWarmup.integer) {
+	if ( current_gs == GS_WARMUP ) {
 
-			if (G_playersReady()) {
-				level.warmupTime = level.time + 7000;
-				trap_SetConfigstring(CS_READY, va("%i", READY_NONE));
-				trap_SetConfigstring(CS_WARMUP, va("%i", level.warmupTime));
-				trap_Cvar_Set("gamestate", va("%i", GS_WARMUP_COUNTDOWN));
-			
+		// L0 - Tourny..
+		if (g_tournament.integer) {
+
+			if ( (G_playersReady() == -2) || level.readyAll) {
+				level.warmupTime = level.time + 11000;
+				trap_SetConfigstring( CS_READY, va( "%i", READY_NONE ));
+				trap_SetConfigstring( CS_WARMUP, va( "%i", level.warmupTime ) );
+				trap_Cvar_Set( "gamestate", va( "%i", GS_WARMUP_COUNTDOWN ) );
+				// Prevents joining once countdown starts..
+				if (g_tournament.integer == 2)
+					G_readyTeamLock();
+
 				if (!level.readyPrint) {
-					AP(va("cp \"%s\n\"2", (g_noTeamSwitching.integer ? "Ready threshold reached!" : "All players are now ^nready^7!")));
+					AP(va("cp \"%s\n\"2", (g_noTeamSwitching.integer ? "Ready threshold reached!" : "All players are now ^nready^7!") ));
 					level.readyPrint = qtrue;
 				}
+			} else {
+				trap_SetConfigstring( CS_READY, va( "%i", (g_noTeamSwitching.integer ? READY_PENDING : READY_AWAITING) ));
 			}
-			else {
-				trap_SetConfigstring(CS_READY, va("%i", (g_noTeamSwitching.integer ? READY_PENDING : READY_AWAITING)));
-			}
-		}
-		else { // Tourny is off..act casual
+
+		} else { // Tourny is off..act casual
 			int delay = g_warmup.integer + 1;
-			trap_SetConfigstring(CS_READY, va("%i", READY_NONE));
+			trap_SetConfigstring( CS_READY, va( "%i", READY_NONE ));
 
-			if (delay < 6) {
-				trap_Cvar_Set("g_warmup", "5");
-				delay = 7;
+			if ( delay < 6 ) {
+				trap_Cvar_Set( "g_warmup", "5" );
+				delay = 11;
 			}
 
-			level.warmupTime = level.time + (delay * 1000);
-			trap_SetConfigstring(CS_WARMUP, va("%i", level.warmupTime));
-			trap_Cvar_Set("gamestate", va("%i", GS_WARMUP_COUNTDOWN));
+			level.warmupTime = level.time + ( delay * 1000 );
+			trap_SetConfigstring( CS_WARMUP, va( "%i", level.warmupTime ) );
+			trap_Cvar_Set( "gamestate", va( "%i", GS_WARMUP_COUNTDOWN ) );
 		}
-// -OSPx
 	}
 
-	// OSPx - Reset countdown if ready goes off (eg. player enters, leaves..)
-	if (current_gs == GS_WARMUP_COUNTDOWN) {
-		if (g_doWarmup.integer) {
-			if (!G_playersReady())
+	// L0 - Reset countdown if ready goes off (eg. player enters, leaves..)
+	if ( current_gs == GS_WARMUP_COUNTDOWN ) {
+		if (g_tournament.integer) {
+			if ( (G_playersReady() != -2) && !level.readyAll )
 				G_readyReset(qfalse);
 		}
 	}
 }
+
 
 /*
 =============
@@ -2801,10 +2620,12 @@ void CheckWolfMP() {
 		return;
 	}
 
-	// OSPx - Countdown
-	if (level.time > level.warmupTime - 7100 && !level.cnStarted) {
-		level.cnStarted = qtrue;
-		CountDown( qtrue );
+	// if the warmup time has counted down, restart
+	if ( level.time > level.warmupTime ) {
+		level.warmupTime += 10000;
+		trap_Cvar_Set( "g_restarted", "1" );
+		trap_SendConsoleCommand( EXEC_APPEND, "map_restart 0\n" );
+		level.restarted = qtrue;
 		return;
 	}
 }
@@ -2818,32 +2639,19 @@ CheckVote
 void CheckVote( void ) {
 	if ( level.voteExecuteTime && level.voteExecuteTime < level.time ) {
 		level.voteExecuteTime = 0;
-		trap_SendConsoleCommand( EXEC_APPEND, va( "%s\n", level.voteInfo.voteString ) );
+		trap_SendConsoleCommand( EXEC_APPEND, va( "%s\n", level.voteString ) );
 	}
-	if ( !level.voteInfo.voteTime ) {
+	if ( !level.voteTime ) {
 		return;
 	}
-	if ( level.time - level.voteInfo.voteTime >= VOTE_TIME ) {
+	if ( level.time - level.voteTime >= VOTE_TIME ) {
 		trap_SendServerCommand( -1, "print \"Vote failed.\n\"" );
-		G_LogPrintf( "Vote Failed: %s\n", level.voteInfo.voteString );
 	} else {
-// OSPx - Vote percent..
-		int vCnt = (!Q_stricmp(level.voteInfo.voteString, "start_match") ? 75 : vote_percent.integer);
-		int total = level.numVotingClients;
-
-		if (vCnt > 99)
-			vCnt = 99;
-		else if (vCnt < 1)
-			vCnt = 1;
-				
-		// Vote will always pass with single client..rest is perc depended..
-		if ( (total == 1) || ( 100 * level.voteInfo.voteYes / total >= vCnt) ) {
-// -OSPx
+		if ( level.voteYes > level.numVotingClients / 2 ) {
 			// execute the command, then remove the vote
 			trap_SendServerCommand( -1, "print \"Vote passed.\n\"" );
 			level.voteExecuteTime = level.time + 3000;
 			level.prevVoteExecuteTime = level.time + 4000;
-			G_LogPrintf("Vote Passed: %s\n", level.voteInfo.voteString);
 
 // JPW NERVE
 #ifndef PRE_RELEASE_DEMO
@@ -2875,7 +2683,7 @@ void CheckVote( void ) {
 #endif
 // jpw
 
-		} else if ( level.voteInfo.voteNo >= level.numVotingClients / 2 ) {
+		} else if ( level.voteNo >= level.numVotingClients / 2 ) {
 			// same behavior as a timeout
 			trap_SendServerCommand( -1, "print \"Vote failed.\n\"" );
 		} else {
@@ -2883,7 +2691,7 @@ void CheckVote( void ) {
 			return;
 		}
 	}
-	level.voteInfo.voteTime = 0;
+	level.voteTime = 0;
 	trap_SetConfigstring( CS_VOTE_TIME, "" );
 
 }
@@ -2917,89 +2725,6 @@ void CheckReloadStatus( void ) {
 
 /*
 ==================
-L0 - MOTD's
-==================
-*/
-void MOTD( void ) {
-
-	if (!g_showMOTD.integer)
-		return;
-
-	// Works only first time around (when map is loaded for the 1st time..) but at least smth...
-	if (level.startTime < 2000)
-		return;
-		
-	// Start with base, see if there's anything to print otherwise bail out.
-	//
-	// It will render first message blank on server spawn but it's not a problem for map changes
-	// as then it falls in the loop along the process.. :)
-	if (motdNum.integer == 0) {
-		level.motdTime = level.time;	
-			(strlen(g_motd1.string) > 2) ? trap_Cvar_Set( "motdNum", "1" ) : trap_Cvar_Set( "motdNum", "0" );
-	}		
-	if (motdNum.integer == 1){
-		AP(va("chat \"console: ^7%s\n\"", g_motd1.string));		
-			level.motdTime = level.time;	
-				(strlen(g_motd2.string) > 2) ? trap_Cvar_Set( "motdNum", "2" ) : trap_Cvar_Set( "motdNum", "1" );
-	}	
-	if (motdNum.integer == 2){		
-		AP(va("chat \"console: ^7%s\n\"", g_motd2.string));
-			level.motdTime = level.time;
-				(strlen(g_motd3.string) > 2) ? trap_Cvar_Set( "motdNum", "3" ) : trap_Cvar_Set( "motdNum", "1" );
-	}		
-	if (motdNum.integer == 3){
-		AP(va("chat \"console: ^7%s\n\"", g_motd3.string));
-			level.motdTime = level.time;
-				(strlen(g_motd4.string) > 2) ? trap_Cvar_Set( "motdNum", "4" ) : trap_Cvar_Set( "motdNum", "1" );
-	}
-	if (motdNum.integer == 4){
-		AP(va("chat \"console: ^7%s\n\"", g_motd4.string));
-			level.motdTime = level.time;
-				(strlen(g_motd5.string) > 2) ? trap_Cvar_Set( "motdNum", "5" ) : trap_Cvar_Set( "motdNum", "1" );
-	} 
-	if (motdNum.integer == 5){		
-		AP(va("chat \"console: ^7%s\n\"", g_motd5.string));
-			level.motdTime = level.time;
-				(strlen(g_motd6.string) > 2) ? trap_Cvar_Set( "motdNum", "6" ) : trap_Cvar_Set( "motdNum", "1" );
-	} 
-	if (motdNum.integer == 6){		
-		AP(va("chat \"console: ^7%s\n\"", g_motd6.string));
-			level.motdTime = level.time;
-				(strlen(g_motd7.string) > 2) ? trap_Cvar_Set( "motdNum", "7" ) : trap_Cvar_Set( "motdNum", "1" );
-	} 
-	if (motdNum.integer == 7){		
-		AP(va("chat \"console: ^7%s\n\"", g_motd7.string));
-			level.motdTime = level.time;
-				(strlen(g_motd8.string) > 2) ? trap_Cvar_Set( "motdNum", "8" ) : trap_Cvar_Set( "motdNum", "1" );
-	} 
-	if (motdNum.integer == 8){		
-		AP(va("chat \"console: ^7%s\n\"", g_motd8.string));
-			level.motdTime = level.time;
-				(strlen(g_motd9.string) > 2) ? trap_Cvar_Set( "motdNum", "9" ) : trap_Cvar_Set( "motdNum", "1" );
-	} 
-	if (motdNum.integer == 9){		
-		AP(va("chat \"console: ^7%s\n\"", g_motd9.string));
-			level.motdTime = level.time;
-				(strlen(g_motd10.string) > 2) ? trap_Cvar_Set( "motdNum", "10" ) : trap_Cvar_Set( "motdNum", "1" );
-	} 
-	if (motdNum.integer == 10){		
-		AP(va("chat \"console: ^7%s\n\"", g_motd10.string));
-			level.motdTime = level.time;
-				(strlen(g_motd11.string) > 2) ? trap_Cvar_Set( "motdNum", "11" ) : trap_Cvar_Set( "motdNum", "1" );
-	} 
-	if (motdNum.integer == 11){		
-		AP(va("chat \"console: ^7%s\n\"", g_motd11.string));
-			level.motdTime = level.time;
-				(strlen(g_motd12.string) > 2) ? trap_Cvar_Set( "motdNum", "12" ) : trap_Cvar_Set( "motdNum", "1" );
-	} 
-	if (motdNum.integer == 12){
-		AP(va("chat \"console: ^7%s\n\"", g_motd6.string));
-			level.motdTime = level.time;	
-				trap_Cvar_Set( "motdNum", "1" );
-	}
-} // L0 - end
-
-/*
 CheckCvars
 ==================
 */
@@ -3025,12 +2750,12 @@ Runs thinking code for this frame if necessary
 */
 void G_RunThink( gentity_t *ent ) {
 	float thinktime;
-
-	// OSPx - Pause
-	if (level.match_pause != PAUSE_NONE && (ent - g_entities) >= g_maxclients.integer &&
-		ent->nextthink > level.time && strstr(ent->classname, "DPRINTF_") == NULL) {
+	// L0 - Pause dump
+	if ( level.paused != PAUSE_NONE && ( ent - g_entities ) >= g_maxclients.integer &&
+		 ent->nextthink > level.time && strstr( ent->classname, "DPRINTF_" ) == NULL ) {
 		ent->nextthink += level.time - level.previousTime;
 	}
+
 	// RF, run scripting
 	if ( ent->s.number >= MAX_CLIENTS ) {
 //----(SA)	this causes trouble in various maps
@@ -3058,12 +2783,11 @@ void G_RunThink( gentity_t *ent ) {
 	}
 	ent->think( ent );
 }
-
 /*
 ================
-OSPx - sortedActivePlayers
+L0 - sortedActivePlayers
 
-Sort players per teams so we can re-use this call where need it..
+Sort players per teams so I can re-use this call where need it..
 ================
 */
 void sortedActivePlayers(void) {
@@ -3071,7 +2795,7 @@ void sortedActivePlayers(void) {
 	level.axisPlayers = 0;
 	level.alliedPlayers = 0;
 
-	for (i = 0; i < level.maxclients; i++){
+	for(i = 0; i < level.maxclients; i++){
 		if (level.clients[i].pers.connected != CON_CONNECTED)
 			continue;
 		if (level.clients[i].sess.sessionTeam == TEAM_RED)
@@ -3088,18 +2812,18 @@ OSPx - check for team stuff..
 */
 void handleEmptyTeams(void) {
 	if (g_gamestate.integer == GS_PLAYING) {
-		if (!level.axisPlayers) {			
-			G_teamReset(TEAM_RED, qtrue);
+		if (!level.axisPlayers) {
+		//	G_teamReset(TEAM_RED, qtrue);
 
 			// Reset match if paused with an empty team
-			if (level.match_pause > PAUSE_UNPAUSING)
+			if (level.paused != PAUSE_NONE )
 				trap_SendConsoleCommand(EXEC_APPEND, va("reset_match"));
 		}
-		else if (!level.alliedPlayers) {			
-			G_teamReset(TEAM_BLUE, qtrue);
+		else if (!level.alliedPlayers) {
+		//	G_teamReset(TEAM_BLUE, qtrue);
 
 			// Reset match if paused with an empty team
-			if (level.match_pause > PAUSE_UNPAUSING)
+			if (level.paused != PAUSE_NONE )
 				trap_SendConsoleCommand(EXEC_APPEND, va("reset_match"));
 		}
 	}
@@ -3139,12 +2863,11 @@ L0 - pauseCheck
 
 Some jokers may set a pause and leave..
 ================
-
+*/
 void pauseCheck(void) {
 	if (level.numPlayingClients == 0 && level.paused != PAUSE_NONE)
 		resetPause();
 }
-*/
 /*
 G_RunFrame
 
@@ -3162,21 +2885,21 @@ void G_RunFrame( int levelTime ) {
 		return;
 	}
 
-	// OSPx - Handling of pause offsets
-	if (level.match_pause == PAUSE_NONE) {
+	// L0 - Pause
+	// OSP Handling of pause offsets
+	if ( level.paused == PAUSE_NONE ) {
 		level.timeCurrent = levelTime - level.timeDelta;
 	} else {
 		level.timeDelta = levelTime - level.timeCurrent;
-		if ((level.time % 500) == 0) {
+		if ( ( level.time % 500 ) == 0 ) {
 			// Respawn and time issuses
-			trap_SetConfigstring(CS_LEVEL_START_TIME, va("%i", level.startTime + level.timeDelta));
+			trap_SetConfigstring( CS_LEVEL_START_TIME, va( "%i", level.startTime + level.timeDelta ) );
 			// Print stuff.. FIXME one day...
 			trap_SetConfigstring( CS_PAUSED, va( "%i", level.startTime + level.timeDelta ) );
 		}
-	}
-
-	// Antilag
-	level.frameStartTime = trap_Milliseconds();
+	} // End
+//	level.frameTime = trap_Milliseconds();   // nihi removed
+	level.frameStartTime = trap_Milliseconds(); // nihi added
 
 	level.framenum++;
 	level.previousTime = level.time;
@@ -3194,7 +2917,7 @@ void G_RunFrame( int levelTime ) {
 		if ( !( worldspawnflags & NO_GT_WOLF ) ) {
 			gt = 5;
 		} else {
-			gt = 6; // stopwatch
+			gt = 10; // L0 - 10 not 7..!   //nihi changed from 7
 		}
 
 		trap_SendServerCommand( -1, "print \"Invalid gametype was specified, Restarting\n\"" );
@@ -3281,21 +3004,22 @@ void G_RunFrame( int levelTime ) {
 			 || ent->s.eType == ET_FIRE_COLUMN_SMOKE
 			 || ent->s.eType == ET_EXPLO_PART
 			 || ent->s.eType == ET_RAMJET ) {
-			// OSPx - pausing
-			if (level.match_pause == PAUSE_NONE) {
-				G_RunMissile(ent);
-				//continue;
+// nihi
+			// L0 - Pause dump
+			if ( level.paused == PAUSE_NONE ) {
+				G_RunMissile( ent );
+				continue;
 			} else {
 				// During a pause, gotta keep track of stuff in the air
 				ent->s.pos.trTime += level.time - level.previousTime;
 				// Keep pulsing right for dynmamite
-				if (ent->methodOfDeath == MOD_DYNAMITE) {
+				if ( ent->methodOfDeath == MOD_DYNAMITE ) {
 					ent->s.effect1Time += level.time - level.previousTime;
 				}
-				G_RunThink(ent);
+				G_RunThink( ent );
 			}
-			// -OSPx
-			continue; // return
+		return;
+		// End
 		}
 
 		// DHM - Nerve :: Server-side collision for flamethrower
@@ -3359,45 +3083,35 @@ void G_RunFrame( int levelTime ) {
 	// cancel vote if timed out
 	CheckVote();
 
+
 	// L0 - MOTDs
-	if (g_showMOTD.integer > 0 && level.startTime > 2000){
-		if (level.time >= (level.motdTime + g_motdTime.integer*1000))
-			MOTD();
-	} // end
-	
+//	if (g_showMOTD.integer > 0 && level.startTime > 2000){
+//		if (level.time >= (level.motdTime + g_motdTime.integer*1000))
+//			MOTD();
+//	} // end
+
+	// L0 sync team
+//	if (g_needBalance.integer){
+//		if (level.time >= level.balanceTimer)
+//			balanceTeams();
+//	}
+	// end
 	// check team votes
 //	CheckTeamVote( TEAM_RED );
 //	CheckTeamVote( TEAM_BLUE );
 
 	// for tracking changes
 	CheckCvars();
-
-	// OSPx - Countdown for warmup/pause
-	if ((level.time > level.cnPush) && (g_gamestate.integer == GS_WARMUP_COUNTDOWN)) {
-		CountDown( qtrue );
-	}
-	
-	// L0 - Round Stats
-	/*if ((level.time > level.statsPrint) &&
-		(g_gamestate.integer != GS_PLAYING && g_gamestate.integer != GS_INTERMISSION) &&
-		g_roundStats.integer && !level.cnStarted)
-	{
-		stats_RoundStats();
-	} // new stats */
-
-	// L0 - Map Stats
-	/*if (g_mapStats.integer &&
-		(g_gamestate.integer == GS_WARMUP) &&
-		!level.mapStatsPrinted)
-	{
-		stats_MapStats();
-	}*/
+	// L0 - countdown
+	if ((level.time > level.CNpush) && (g_gamestate.integer == GS_WARMUP_COUNTDOWN)) {
+		CountDown(qtrue);
+	} // end
 
 	// L0 - Pause countdown
-	//if ((level.time > level.cnPush) && level.match_pause) {
-	//	level.cnStarted = qtrue;
-	//	PauseHandle();
-	//} // end
+	if ((level.time > level.CNpush) && level.paused) {
+		level.CNyes = qtrue;
+		PauseHandle();
+	} // end
 
 	if ( g_listEntity.integer ) {
 		for ( i = 0; i < MAX_GENTITIES; i++ ) {
@@ -3413,13 +3127,11 @@ void G_RunFrame( int levelTime ) {
 
 	// Ridah, check if we are reloading, and times have expired
 	CheckReloadStatus();
-// OSPx
-	// Track active players (per team)
+	// L0 - Count active players..
 	sortedActivePlayers();
-
 	// L0 - Check Team Lock status..
 	TeamLockStatus();
 	// L0 - Pause
-	//pauseCheck();
+	pauseCheck();
 	handleEmptyTeams();
 }

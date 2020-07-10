@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -368,9 +368,11 @@ void AssetCache() {
 	uiInfo.uiDC.Assets.sliderThumb = trap_R_RegisterShaderNoMip( ASSET_SLIDER_THUMB );
 
 	for ( n = 0; n < NUM_CROSSHAIRS; n++ ) {
-		uiInfo.uiDC.Assets.crosshairShader[n] = trap_R_RegisterShaderNoMip( va( "gfx/2d/crosshair%c_OSPx", 'a' + n ) );
+		uiInfo.uiDC.Assets.crosshairShader[n] = trap_R_RegisterShaderNoMip( va( "gfx/2d/crosshair%c_OSPx", 'a' + n ) );  //nihi commented
+	//	uiInfo.uiDC.Assets.crosshairShader[n] = trap_R_RegisterShaderNoMip( va( "gfx/2d/crosshair%c", 'a' + n ) );  //nihi addded
 		// OSPx - Crosshairs
-		uiInfo.uiDC.Assets.crosshairAltShader[n] = trap_R_RegisterShaderNoMip(va("gfx/2d/crosshair%c_alt_OSPx", 'a' + n));
+        uiInfo.uiDC.Assets.crosshairAltShader[n] = trap_R_RegisterShaderNoMip(va("gfx/2d/crosshair%c_alt_OSPx", 'a' + n)); //nihi commented
+//		uiInfo.uiDC.Assets.crosshairAltShader[n] = trap_R_RegisterShaderNoMip(va("gfx/2d/crosshair%c_alt", 'a' + n)); //nihi added
 	}
 
 	//uiInfo.newHighScoreSound = trap_S_RegisterSound("sound/feedback/voc_newhighscore.wav");
@@ -1064,9 +1066,9 @@ void _UI_Refresh( int realtime ) {
 
 
 	UI_UpdateCvars();
-	// OSPx - Speclock
-	if (ui_blackout.integer > 0) {
-		UI_FillRect(-10, -10, 650, 490, colorBlack);
+	// L0 / OSP - blackout if speclocked
+	if ( ui_blackout.integer > 0 ) {
+		UI_FillRect( -10, -10, 650, 490, colorBlack );
 	}
 
 	if ( Menu_Count() > 0 ) {
@@ -2337,12 +2339,14 @@ static void UI_DrawCrosshair( rectDef_t *rect, float scale, vec4_t color ) {
 	if ( uiInfo.currentCrosshair < 0 || uiInfo.currentCrosshair >= NUM_CROSSHAIRS ) {
 		uiInfo.currentCrosshair = 0;
 	}
+
 	// OSPx - Crosshairs
 	trap_R_SetColor( uiInfo.xhairColor );
 	UI_DrawHandlePic( rect->x, rect->y - rect->h, rect->w, rect->h, uiInfo.uiDC.Assets.crosshairShader[uiInfo.currentCrosshair] );
 	trap_R_SetColor( uiInfo.xhairColorAlt );
 	UI_DrawHandlePic( rect->x, rect->y - rect->h, rect->w, rect->h, uiInfo.uiDC.Assets.crosshairAltShader[uiInfo.currentCrosshair] );
 	// -OSPx
+
 	trap_R_SetColor( NULL );
 }
 
@@ -7172,7 +7176,7 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 	int xferRate;
 	const char *s;
 
-	vec4_t bg_color = { 0.1f, 0.1f, 0.1f, 0.6f };
+	vec4_t bg_color = { 0.3f, 0.3f, 0.3f, 0.8f };
 
 	downloadSize = trap_Cvar_VariableValue( "cl_downloadSize" );
 	downloadCount = trap_Cvar_VariableValue( "cl_downloadCount" );
@@ -7181,10 +7185,10 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 	// Background
 	UI_FillRect( 0, yStart + 185, 640, 83, bg_color );
 
-	UI_SetColor(colorRed);
-	Text_Paint(92, yStart + 210, scale, colorRed, dlText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE);
-	Text_Paint(35, yStart + 235, scale, colorRed, etaText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE);
-	Text_Paint(86, yStart + 260, scale, colorRed, xferText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE);
+	UI_SetColor( colorYellow );
+	Text_Paint( 92, yStart + 210, scale, colorYellow, dlText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE );
+	Text_Paint( 35, yStart + 235, scale, colorYellow, etaText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE );
+	Text_Paint( 86, yStart + 260, scale, colorYellow, xferText, 0, 64, ITEM_TEXTSTYLE_SHADOWEDMORE );
 
 	if ( downloadSize > 0 ) {
 		s = va( "%s (%d%%)", downloadName, downloadCount * 100 / downloadSize );
@@ -7192,15 +7196,14 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 		s = downloadName;
 	}
 
-	s = ( (strlen(s) > 40) ? va("Downloading .. (%d%%)", (downloadCount * 100 / downloadSize)) : s );
-	Text_Paint( 260, yStart + 210, scale, colorWhite, s, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE );
+	Text_Paint( 260, yStart + 210, scale, colorYellow, s, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE );
 
 	UI_ReadableSize( dlSizeBuf,     sizeof dlSizeBuf,       downloadCount );
 	UI_ReadableSize( totalSizeBuf,  sizeof totalSizeBuf,    downloadSize );
 
 	if ( downloadCount < 4096 || !downloadTime ) {
-		Text_PaintCenter( centerPoint, yStart + 235, scale, colorWhite, "estimating", 0 );
-		Text_PaintCenter( centerPoint, yStart + 340, scale, colorWhite, va( "(%s of %s copied)", dlSizeBuf, totalSizeBuf ), 0 );
+		Text_PaintCenter( centerPoint, yStart + 235, scale, colorYellow, "estimating", 0 );
+		Text_PaintCenter( centerPoint, yStart + 340, scale, colorYellow, va( "(%s of %s copied)", dlSizeBuf, totalSizeBuf ), 0 );
 	} else {
 		if ( ( uiInfo.uiDC.realTime - downloadTime ) / 1000 ) {
 			xferRate = downloadCount / ( ( uiInfo.uiDC.realTime - downloadTime ) / 1000 );
@@ -7228,21 +7231,19 @@ static void UI_DisplayDownloadInfo( const char *downloadName, float centerPoint,
 
 			UI_PrintTime( dlTimeBuf, sizeof dlTimeBuf, timeleft );
 
-			Text_Paint(260, yStart + 235, scale, colorWhite, dlTimeBuf, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE);
-			Text_PaintCenter(centerPoint, yStart + 340, scale, colorWhite, va("(%s of %s copied)", dlSizeBuf, totalSizeBuf), 0);
-		}
-		else {
-			Text_PaintCenter(centerPoint, yStart + 235, scale, colorWhite, "estimating", 0);
+			Text_Paint( 260, yStart + 235, scale, colorYellow, dlTimeBuf, 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE );
+			Text_PaintCenter( centerPoint, yStart + 340, scale, colorYellow, va( "(%s of %s copied)", dlSizeBuf, totalSizeBuf ), 0 );
+		} else {
+			Text_PaintCenter( centerPoint, yStart + 235, scale, colorYellow, "estimating", 0 );
 			if ( downloadSize ) {
-				Text_PaintCenter(centerPoint, yStart + 340, scale, colorWhite, va("(%s of %s copied)", dlSizeBuf, totalSizeBuf), 0);
-			}
-			else {
-				Text_PaintCenter(centerPoint, yStart + 340, scale, colorWhite, va("(%s copied)", dlSizeBuf), 0);
+				Text_PaintCenter( centerPoint, yStart + 340, scale, colorYellow, va( "(%s of %s copied)", dlSizeBuf, totalSizeBuf ), 0 );
+			} else {
+				Text_PaintCenter( centerPoint, yStart + 340, scale, colorYellow, va( "(%s copied)", dlSizeBuf ), 0 );
 			}
 		}
 
 		if ( xferRate ) {
-			Text_Paint(260, yStart + 260, scale, colorWhite, va("%s/Sec", xferRateBuf), 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE);
+			Text_Paint( 260, yStart + 260, scale, colorYellow, va( "%s/Sec", xferRateBuf ), 0, 0, ITEM_TEXTSTYLE_SHADOWEDMORE );
 		}
 	}
 }
@@ -7263,6 +7264,7 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 	char info[MAX_INFO_VALUE];
 	char text[256];
 	float centerPoint, yStart, scale;
+	vec4_t color = { 0.3f, 0.3f, 0.3f, 0.8f };
 
 	char downloadName[MAX_INFO_VALUE];
 
@@ -7326,11 +7328,10 @@ void UI_DrawConnectScreen( qboolean overlay ) {
 
 			// if out of temp buffer room OR end of string OR it is time to linebreak & we've found a space
 			if ( ( index >= 58 ) || ( i == ( len - 1 ) ) || ( neednewline && s[i] == ' ' ) ) {
-				vec4_t bg_color = { 0.1f, 0.1f, 0.1f, 0.6f }; // L0 - More transparent bg & changed text to red..
 				ps[index + 1] = '\0';
 
-				DC->fillRect( 0, yPrint - 17, 640, 22, bg_color );				
-				Text_PaintCenter( centerPoint, yPrint, scale, colorRed, ps, 0 );
+				DC->fillRect( 0, yPrint - 17, 640, 22, color );
+				Text_PaintCenter( centerPoint, yPrint, scale, colorYellow, ps, 0 );
 
 				neednewline = qfalse;
 				yPrint += 22;       // next line
@@ -7524,8 +7525,8 @@ vmCvar_t ui_crosshairSize;
 
 // Speclock
 vmCvar_t ui_blackout;
-
 // -OSPx
+
 cvarTable_t cvarTable[] = {
 
 	{ &ui_glCustom, "ui_glCustom", "4", CVAR_ARCHIVE }, // JPW NERVE missing from q3ta
@@ -7652,16 +7653,17 @@ cvarTable_t cvarTable[] = {
 	{ &ui_isSpectator, "ui_isSpectator", "1", 0 },
 	// -NERVE - SMF
 
-// OSPx	
-	// cgame mappings	
+// OSPx
+	// cgame mappings
 	{ &ui_crosshairColor, "cg_crosshairColor", "White", CVAR_ARCHIVE },
 	{ &ui_crosshairColorAlt, "cg_crosshairColorAlt", "White", CVAR_ARCHIVE },
 	{ &ui_crosshairSize, "cg_crosshairSize", "48", CVAR_ARCHIVE },
 	{ &ui_crosshairAlphaAlt, "cg_crosshairAlphaAlt", "1.0", CVAR_ARCHIVE },
 	{ &ui_crosshairAlpha, "cg_crosshairAlpha", "1.0", CVAR_ARCHIVE },
-
+	// Speclock
 	{ &ui_blackout, "ui_blackout", "0", CVAR_ROM },
 // -OSPx
+
 	{ &ui_hudAlpha, "cg_hudAlpha", "1.0", CVAR_ARCHIVE }
 };
 
@@ -7680,15 +7682,11 @@ void UI_RegisterCvars( void ) {
 	for ( i = 0, cv = cvarTable ; i < cvarTableSize ; i++, cv++ ) {
 		trap_Cvar_Register( cv->vmCvar, cv->cvarName, cv->defaultString, cv->cvarFlags );
 	}
-// OSPx 
-	// Speclock	
-	trap_Cvar_Set("ui_blackout", "0");
 
-	// Crosshairs
+	// OSPx - Crosshairs
 	BG_setCrosshair(ui_crosshairColor.string, uiInfo.xhairColor, ui_crosshairAlpha.value, "cg_crosshairColor");
 	BG_setCrosshair(ui_crosshairColorAlt.string, uiInfo.xhairColorAlt, ui_crosshairAlphaAlt.value, "cg_crosshairColorAlt");
 	uiInfo.currentCrosshair = ui_drawCrosshair.integer;
-// -OSPx
 }
 
 /*
@@ -7702,6 +7700,7 @@ void UI_UpdateCvars( void ) {
 
 	for ( i = 0, cv = cvarTable ; i < cvarTableSize ; i++, cv++ ) {
 		trap_Cvar_Update( cv->vmCvar );
+
 // OSPx
 		if (cv->vmCvar == &ui_crosshairColor || cv->vmCvar == &ui_crosshairAlpha) {
 			BG_setCrosshair(ui_crosshairColor.string, uiInfo.xhairColor, ui_crosshairAlpha.value, "cg_crosshairColor");
@@ -7711,7 +7710,7 @@ void UI_UpdateCvars( void ) {
 		}
 		if (cv->vmCvar == &ui_drawCrosshair) {
 			uiInfo.currentCrosshair = ui_drawCrosshair.integer;
-		} 
+		}
 // -OSPx
 	}
 }
@@ -7790,6 +7789,7 @@ UI_StartServerRefresh
 =================
 */
 static void UI_StartServerRefresh( qboolean full ) {
+	int i;
 	char    *ptr;
 
 	qtime_t q;
@@ -7818,14 +7818,18 @@ static void UI_StartServerRefresh( qboolean full ) {
 	}
 
 	uiInfo.serverStatus.refreshtime = uiInfo.uiDC.realTime + 5000;
+	if ( ui_netSource.integer == AS_GLOBAL || ui_netSource.integer == AS_MPLAYER ) {
 		if ( ui_netSource.integer == AS_GLOBAL ) {
+			i = 0;
+		} else {
+			i = 1;
+		}
 
 		ptr = UI_Cvar_VariableString( "debug_protocol" );
 		if ( strlen( ptr ) ) {
-			trap_Cmd_ExecuteText(EXEC_NOW, va("globalservers 0 %s full empty\n", ptr));
-		}
-		else {
-			trap_Cmd_ExecuteText(EXEC_NOW, va("globalservers 0 %d full empty\n", (int)trap_Cvar_VariableValue("protocol")));
+			trap_Cmd_ExecuteText( EXEC_NOW, va( "globalservers %d %s full empty\n", i, ptr ) );
+		} else {
+			trap_Cmd_ExecuteText( EXEC_NOW, va( "globalservers %d %d full empty\n", i, (int)trap_Cvar_VariableValue( "protocol" ) ) );
 		}
 	}
 }

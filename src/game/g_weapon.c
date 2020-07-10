@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -41,7 +41,7 @@ static vec3_t forward, right, up;
 static vec3_t muzzleEffect;
 static vec3_t muzzleTrace;
 
-
+//extern extWeaponStats_t BG_WeapStatForWeapon(weapon_t iWeaponID);
 // forward dec
 void Bullet_Fire( gentity_t *ent, float spread, int damage );
 void Bullet_Fire_Extended( gentity_t *source, gentity_t *attacker, vec3_t start, vec3_t end, float spread, int damage );
@@ -326,10 +326,11 @@ void Weapon_Syringe( gentity_t *ent ) {
 				memcpy( weapons,traceEnt->client->ps.weapons,sizeof( int ) * ( MAX_WEAPONS / ( sizeof( int ) * 8 ) ) );
 
 				ClientSpawn( traceEnt, qtrue );
-
-				// OSPx - Antilag
+				// nihi added below
+				// L0 - Antilag
 				G_ResetTrail(traceEnt);
 				traceEnt->client->saved.leveltime = 0;
+				// end
 				memcpy( traceEnt->client->ps.ammo,ammo,sizeof( int ) * MAX_WEAPONS );
 				memcpy( traceEnt->client->ps.ammoclip,ammoclip,sizeof( int ) * MAX_WEAPONS );
 				memcpy( traceEnt->client->ps.weapons,weapons,sizeof( int ) * ( MAX_WEAPONS / ( sizeof( int ) * 8 ) ) );
@@ -362,11 +363,11 @@ void Weapon_Syringe( gentity_t *ent ) {
 
 				// DHM - Nerve :: Mark that the medicine was indeed dispensed
 				usedSyringe = qtrue;
-				// OSPx - Stats
-				if (g_gamestate.integer == GS_PLAYING) {
+				// L0 - OSP Stats
+				if ( g_gamestate.integer == GS_PLAYING ) {
 					ent->client->sess.aWeaponStats[WS_SYRINGE].hits++;
 					ent->client->sess.revives++;
-				}
+				} // End
 
 				// sound
 				te = G_TempEntity( traceEnt->r.currentOrigin, EV_GENERAL_SOUND );
@@ -466,7 +467,7 @@ void Weapon_Engineer( gentity_t *ent ) {
 				traceEnt->health = MG42_MULTIPLAYER_HEALTH;
 			}
 
-			AddScoreObjective( ent, WOLF_REPAIR_BONUS, WOLF_REPAIR_BONUS_STAT ); // JPW NERVE props to the E for the fixin'
+			AddScore( ent, WOLF_REPAIR_BONUS ); // JPW NERVE props to the E for the fixin'
 
 			traceEnt->takedamage = qtrue;
 			traceEnt->s.eFlags &= ~EF_SMOKING;
@@ -502,7 +503,7 @@ void Weapon_Engineer( gentity_t *ent ) {
 					return;
 				}
 
-				trap_SendServerCommand( ent - g_entities, "cp \"^nArming dynamite...\" 1" );
+				trap_SendServerCommand( ent - g_entities, "cp \"Arming dynamite...\" 1" );
 
 				// Give health until it is full, don't continue
 				traceEnt->health += 7;
@@ -522,7 +523,7 @@ void Weapon_Engineer( gentity_t *ent ) {
 				traceEnt->s.effect1Time = level.time;
 
 				// ARM IT!
-				trap_SendServerCommand( ent - g_entities, "cp \"Dynamite is now armed with a ^n30 ^7second timer!\" 1" );
+				trap_SendServerCommand( ent - g_entities, "cp \"Dynamite is now armed with a 30 second timer!\" 1" );
 				traceEnt->nextthink = level.time + 30000;
 				traceEnt->think = G_ExplodeMissile;
 
@@ -575,16 +576,16 @@ void Weapon_Engineer( gentity_t *ent ) {
 						if ( ( ( hit->spawnflags & AXIS_OBJECTIVE ) && ( ent->client->sess.sessionTeam == TEAM_BLUE ) ) ||
 							 ( ( hit->spawnflags & ALLIED_OBJECTIVE ) && ( ent->client->sess.sessionTeam == TEAM_RED ) ) ) {
 							if ( hit->track ) {
-								G_matchPrintInfo(va("Dynamite planted near %s!", hit->track));
+								trap_SendServerCommand( -1, va( "cp \"%s\" 1", va( "Dynamite planted near %s!", hit->track ) ) );
 							} else {
-								G_matchPrintInfo(va("Dynamite planted near objective #%d!", hit->count));
+								trap_SendServerCommand( -1, va( "cp \"%s\" 1", va( "Dynamite planted near objective #%d!", hit->count ) ) );
 							}
 						}
 						i = num;
 
 						if ( ( !( hit->spawnflags & OBJECTIVE_DESTROYED ) ) &&
 							 te->s.teamNum && ( te->s.teamNum != ent->client->sess.sessionTeam ) ) {
-							AddScoreObjective( traceEnt->parent, WOLF_DYNAMITE_PLANT, WOLF_DYNAMITE_PLANT_STAT ); // give drop score to guy who dropped it
+							AddScore( traceEnt->parent, WOLF_DYNAMITE_PLANT ); // give drop score to guy who dropped it
 							traceEnt->parent = ent; // give explode score to guy who armed it
 //	jpw pulled					hit->spawnflags |= OBJECTIVE_DESTROYED; // this is pretty kludgy but we can't test it in explode fn
 						}
@@ -640,20 +641,20 @@ void Weapon_Engineer( gentity_t *ent ) {
 							traceEnt->r.svFlags |= SVF_BROADCAST;
 							if ( ent->client->sess.sessionTeam == TEAM_RED ) {
 								if ( ( hit->spawnflags & AXIS_OBJECTIVE ) && ( !scored ) ) {
-									AddScoreObjective( ent, WOLF_DYNAMITE_DIFFUSE, WOLF_DYNAMITE_DIFFUSE_STAT ); // FIXME add team info to *dynamite* so we don't get points for diffusing own team dynamite
+									AddScore( ent,WOLF_DYNAMITE_DIFFUSE ); // FIXME add team info to *dynamite* so we don't get points for diffusing own team dynamite
 									scored++;
 									hit->spawnflags &= ~OBJECTIVE_DESTROYED; // "re-activate" objective since it wasn't destroyed.  kludgy, I know; see G_ExplodeMissile for the other half
 								}
-								G_matchPrintInfo(va("Axis defused dynamite near %s!", hit->track));
+								trap_SendServerCommand( -1, "cp \"Axis engineer disarmed the Dynamite!\n\"" );
 								traceEnt->s.eventParm = G_SoundIndex( "sound/multiplayer/axis/g-dynamite_defused.wav" );
 								traceEnt->s.teamNum = TEAM_RED;
 							} else { // TEAM_BLUE
 								if ( ( hit->spawnflags & ALLIED_OBJECTIVE ) && ( !scored ) ) {
-									AddScoreObjective( ent, WOLF_DYNAMITE_DIFFUSE, WOLF_DYNAMITE_DIFFUSE_STAT );
+									AddScore( ent,WOLF_DYNAMITE_DIFFUSE );
 									scored++;
 									hit->spawnflags &= ~OBJECTIVE_DESTROYED; // "re-activate" objective since it wasn't destroyed
 								}
-								G_matchPrintInfo(va("Allies defused dynamite near %s!", hit->track));
+								trap_SendServerCommand( -1, "cp \"Allied engineer disarmed the Dynamite!\n\"" );
 								traceEnt->s.eventParm = G_SoundIndex( "sound/multiplayer/allies/a-dynamite_defused.wav" );
 								traceEnt->s.teamNum = TEAM_BLUE;
 							}
@@ -797,9 +798,6 @@ void weapon_callAirStrike( gentity_t *ent ) {
 		// move pos for next bomb
 		VectorAdd( pos,bombaxis,pos );
 	}
-	// OSPx - Stats
-	if (g_gamestate.integer == GS_PLAYING)
-		ent->parent->client->sess.aWeaponStats[WS_AIRSTRIKE].atts++;
 }
 
 // JPW NERVE -- sound effect for spotter round, had to do this as half-second bomb warning
@@ -971,8 +969,8 @@ void Weapon_Artillery( gentity_t *ent ) {
 				bomb->splashDamage  = 400;
 				bomb->splashRadius  = 400;
 			}
-			bomb->methodOfDeath         = MOD_ARTY;	// OSPx - Was MOD_AIRSTRIKE which mapped wrong in stats..
-			bomb->splashMethodOfDeath   = MOD_ARTY;
+			bomb->methodOfDeath         = MOD_AIRSTRIKE;
+			bomb->splashMethodOfDeath   = MOD_AIRSTRIKE;
 			bomb->clipmask = MASK_MISSILESHOT;
 			bomb->s.pos.trType = TR_STATIONARY; // was TR_GRAVITY,  might wanna go back to this and drop from height
 			bomb->s.pos.trTime = level.time;        // move a bit on the very first frame
@@ -1022,10 +1020,9 @@ void Weapon_Artillery( gentity_t *ent ) {
 		}
 		ent->client->ps.classWeaponTime = level.time;
 	}
-	// OSPx - Stats
-	if (g_gamestate.integer == GS_PLAYING)
+	// L0 - OSP Stats
+	if ( g_gamestate.integer == GS_PLAYING )
 		ent->client->sess.aWeaponStats[WS_ARTILLERY].atts++;
-
 }
 
 gentity_t *LaunchItem( gitem_t *item, vec3_t origin, vec3_t velocity, int ownerNum );
@@ -1605,13 +1602,20 @@ Bullet_Fire
 */
 void Bullet_Fire( gentity_t *ent, float spread, int damage ) {
 	vec3_t end;
+     // nihi added below
+	// L0 - Antilag
+	if ( g_antilag.integer && ent->client &&
+        !(ent->r.svFlags & SVF_BOT) ) {
+        G_TimeShiftAllClients( ent->client->pers.cmd.serverTime, ent );
+    } // End
 
-	// OSPx - Antilag
-	if (g_antilag.integer && ent->client && !(ent->r.svFlags & SVF_BOT)) {
-		G_TimeShiftAllClients(ent->client->pers.cmd.serverTime, ent);
-	}
+
 	Bullet_Endpos( ent, spread, &end );
 	Bullet_Fire_Extended( ent, ent, muzzleTrace, end, spread, damage );
+	// L0 - Stats
+	ent->client->pers.life_acc_shots++;
+	ent->client->sess.acc_shots++;
+	// End
 }
 
 
@@ -1631,13 +1635,12 @@ void Bullet_Fire_Extended( gentity_t *source, gentity_t *attacker, vec3_t start,
 
 	damage *= s_quadFactor;
 
-	trap_Trace(&tr, start, NULL, NULL, end, source->s.number, MASK_SHOT);
-
-	// OSPx - Antilag
-	if (tr.surfaceFlags & SURF_NOIMPACT) {
+	G_HistoricalTrace( source, &tr, start, NULL, NULL, end, source->s.number, MASK_SHOT );
+	// nihi added below
+	 // L0 - antilag
+	if ( tr.surfaceFlags & SURF_NOIMPACT ) {
 		goto untimeshift;
-	}
-
+    } // End
 	// DHM - Nerve :: only in single player
 	if ( g_gametype.integer == GT_SINGLE_PLAYER ) {
 		AICast_ProcessBullet( attacker, start, tr.endpos );
@@ -1682,6 +1685,10 @@ void Bullet_Fire_Extended( gentity_t *source, gentity_t *attacker, vec3_t start,
 		tent->s.eventParm = traceEnt->s.number;
 		if ( LogAccuracyHit( traceEnt, attacker ) ) {
 			attacker->client->ps.persistant[PERS_ACCURACY_HITS]++;
+			// L0 - Stats
+			attacker->client->pers.life_acc_hits++;
+			attacker->client->sess.acc_hits++;
+			// End
 		}
 
 //----(SA)	added
@@ -1789,11 +1796,13 @@ void Bullet_Fire_Extended( gentity_t *source, gentity_t *attacker, vec3_t start,
 
 		}
 	}
-	// OSPx- Antilag
+	// nihi added below
+	// L0 - antilag
 	untimeshift:
-	if (g_antilag.integer && attacker->client && !(attacker->r.svFlags & SVF_BOT)) {
-		G_UnTimeShiftAllClients(attacker);
-	}
+    if ( g_antilag.integer && attacker->client &&
+        !(attacker->r.svFlags & SVF_BOT) ) {
+        G_UnTimeShiftAllClients( attacker );
+    } // L0 - end
 }
 
 
@@ -1968,11 +1977,12 @@ void VenomPattern( vec3_t origin, vec3_t origin2, int seed, gentity_t *ent ) {
 	VectorNormalize2( origin2, forward );
 	PerpendicularVector( right, forward );
 	CrossProduct( forward, right, up );
-
-	// OSPx - Antilag
-	if (g_antilag.integer && ent->client &&	!(ent->r.svFlags & SVF_BOT)) {
-		G_TimeShiftAllClients(ent->client->pers.cmd.serverTime, ent);
-	}
+	// nihi added below
+	// L0 Antilag
+    if ( g_antilag.integer && ent->client &&
+        !(ent->r.svFlags & SVF_BOT) ) {
+        G_TimeShiftAllClients( ent->client->pers.cmd.serverTime, ent );
+    } // end
 	oldScore = ent->client->ps.persistant[PERS_SCORE];
 
 	// generate the "random" spread pattern
@@ -1986,10 +1996,14 @@ void VenomPattern( vec3_t origin, vec3_t origin2, int seed, gentity_t *ent ) {
 			hitClient = qtrue;
 			ent->client->ps.persistant[PERS_ACCURACY_HITS]++;
 		}
+
 	}
-	if (g_antilag.integer && ent->client && !(ent->r.svFlags & SVF_BOT)) {
-		G_UnTimeShiftAllClients(ent);
-	}
+		// nihi added below
+		// L0 - Antilag
+    if ( g_antilag.integer && ent->client &&
+        !(ent->r.svFlags & SVF_BOT) ) {
+        G_UnTimeShiftAllClients( ent );
+    } // end
 }
 
 /*
@@ -2116,16 +2130,17 @@ void G_BurnMeGood( gentity_t *self, gentity_t *body ) {
 	body->flameQuotaTime = level.time;
 
 	// JPW NERVE -- yet another flamethrower damage model, trying to find a feels-good damage combo that isn't overpowered
-	if (level.time - body->lastBurnedFrameNumber >= 1) {
-		G_Damage(body, self->parent, self->parent, vec3_origin, self->r.currentOrigin, 4, 0, MOD_FLAMETHROWER);
-		body->lastBurnedFrameNumber = level.time;
+	if ( body->lastBurnedFrameNumber != level.framenum ) {
+		G_Damage( body,self->parent,self->parent,vec3_origin,self->r.currentOrigin,5,0,MOD_FLAMETHROWER );   // was 2 dmg in release ver, hit avg. 2.5 times per frame
+		body->lastBurnedFrameNumber = level.framenum;
 	}
 	// jpw
 
 	// make em burn
 	if ( body->client && ( body->health <= 0 || body->flameQuota > 0 ) ) { // JPW NERVE was > FLAME_THRESHOLD
-		if (body->s.onFireEnd < level.time)
+		if ( body->s.onFireEnd < level.time ) {
 			body->s.onFireStart = level.time;
+		}
 
 		body->s.onFireEnd = level.time + FIRE_FLASH_TIME;
 		body->flameBurnEnt = self->s.number;
@@ -2344,7 +2359,7 @@ FireWeapon
 void FireWeapon( gentity_t *ent ) {
 	float aimSpreadScale;
 	vec3_t viewang;  // JPW NERVE
-	int shots = 1;	 // OSPx - Stats
+	int shots = 1;	 // L0 - OSP Stats
 
 	// Rafael mg42
 	if ( ent->client->ps.persistant[PERS_HWEAPON_USE] && ent->active ) {
@@ -2498,9 +2513,9 @@ void FireWeapon( gentity_t *ent ) {
 	default:
 		break;
 	}
-	// OSPx - Stats
-	if (g_gamestate.integer == GS_PLAYING)
-		ent->client->sess.aWeaponStats[BG_WeapStatForWeapon(ent->s.weapon)].atts += shots;
+	// L0 - OSP Stats
+	if ( g_gamestate.integer == GS_PLAYING )
+		ent->client->sess.aWeaponStats[BG_WeapStatForWeapon( ent->s.weapon )].atts += shots;
 }
 
 

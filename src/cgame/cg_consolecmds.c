@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -118,6 +118,7 @@ static void CG_ScoresUp_f( void ) {
 		cg.scoreFadeTime = cg.time;
 	}
 }
+
 
 extern menuDef_t *menuScoreboard;
 void Menu_Reset();          // FIXME: add to right include file
@@ -524,23 +525,26 @@ static void CG_DumpLocation_f( void ) {
 }
 
 /*
-	
-	OSPx - New stuff
+===================
+OSPx
 
++vstr
+===================
 */
+
+/************ L0 - OSP dump ************/
 const char *aMonths[12] = {
 	"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 	"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
 
 // currentime
-void CG_currentTime_f(void) {
+void CG_currentTime_f( void ) {
 	qtime_t ct;
 
-	trap_RealTime(&ct);
-	CG_Printf("[cgnotify]Current time: ^3%02d:%02d:%02d (%02d %s %d)\n", ct.tm_hour, ct.tm_min, ct.tm_sec, ct.tm_mday, aMonths[ct.tm_mon], 1900 + ct.tm_year);
+	trap_RealTime( &ct );
+	CG_Printf( "[cgnotify]Current time: ^3%02d:%02d:%02d (%02d %s %d)\n", ct.tm_hour, ct.tm_min, ct.tm_sec, ct.tm_mday, aMonths[ct.tm_mon], 1900 + ct.tm_year );
 }
-
 // Dynamically names a demo and sets up the recording
 void CG_autoRecord_f(void) {	// Due rtcw bug we need to sync"h" first..but to avoid any bugs we set it to 0 first..
 	trap_SendConsoleCommand(va("g_synchronousclients 0;g_synchronousclients 1;record %s;g_synchronousclients 0\n", CG_generateFilename()));
@@ -550,8 +554,6 @@ void CG_autoRecord_f(void) {	// Due rtcw bug we need to sync"h" first..but to av
 void CG_autoScreenShot_f(void) {
 	trap_SendConsoleCommand(va("screenshot%s %s\n", ((cg_useScreenshotJPEG.integer) ? "JPEG" : ""), CG_generateFilename()));
 }
-
-// +vstr
 void CG_vstrDown_f(void) {
 	if (trap_Argc() == 5) {
 		trap_SendConsoleCommand(va("vstr %s;", CG_Argv(1)));
@@ -559,7 +561,13 @@ void CG_vstrDown_f(void) {
 	else { CG_Printf("[cgnotify]^3Usage: ^7+vstr [down_vstr] [up_vstr]\n"); }
 }
 
-// -vstr
+/*
+===================
+OSPx
+
+-vstr
+===================
+*/
 void CG_vstrUp_f(void) {
 	if (trap_Argc() == 5) {
 		trap_SendConsoleCommand(va("vstr %s;", CG_Argv(2)));
@@ -567,22 +575,23 @@ void CG_vstrUp_f(void) {
 	else { CG_Printf("[cgnotify]^3Usage: ^7+vstr [down_vstr] [up_vstr]\n"); }
 }
 
+
 // +wstats
-void CG_wStatsDown_f(void) {
-	if (!cg.demoPlayback) {
+void CG_wStatsDown_f( void ) {
+	if ( !cg.demoPlayback ) {
 		int i = cg.snap->ps.clientNum;
 
-		if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR) {
-			CPri("You must be a player or following a player to use +wstats\n");
+		if ( cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR ) {
+			CPri( "You must be a player or following a player to use +wstats\n" );
 			return;
 		}
 
 		// wstats overlap so close them first if they're open
-		if (cgs.clientGameStats.show == SHOW_ON) {
+		if ( cgs.clientGameStats.show == SHOW_ON ) {
 			CG_StatsUp_f();
 		}
 
-		if (cgs.gamestats.show == SHOW_SHUTDOWN && cg.time < cgs.gamestats.fadeTime) {
+		if ( cgs.gamestats.show == SHOW_SHUTDOWN && cg.time < cgs.gamestats.fadeTime ) {
 			cgs.gamestats.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.gamestats.fadeTime;
 		} else if ( cgs.gamestats.show != SHOW_ON ) {
 			cgs.gamestats.fadeTime = cg.time + STATS_FADE_TIME;
@@ -590,43 +599,44 @@ void CG_wStatsDown_f(void) {
 
 		cgs.gamestats.show = SHOW_ON;
 
-		if (cgs.gamestats.requestTime < cg.time) {
-			cgs.gamestats.requestTime = cg.time + 2000;			
-			trap_SendClientCommand(va("wstats %d", i)); // OSPx - Decide which window will this draw..
+		if ( cgs.gamestats.requestTime < cg.time ) {
+			cgs.gamestats.requestTime = cg.time + 2000;
+			//trap_SendClientCommand( va( "sgstats %d", i ) );
+			trap_SendClientCommand( va( "wstats %d", i ) ); // L0 - Decide which window will this draw..
 		}
 	}
 }
 
 // -wstats
-void CG_wStatsUp_f(void) {
-	if (cgs.gamestats.show == SHOW_ON) {
+void CG_wStatsUp_f( void ) {
+	if ( cgs.gamestats.show == SHOW_ON ) {
 		cgs.gamestats.show = SHOW_SHUTDOWN;
-		if (cg.time < cgs.gamestats.fadeTime) {
+		if ( cg.time < cgs.gamestats.fadeTime ) {
 			cgs.gamestats.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.gamestats.fadeTime;
 		} else {
 			cgs.gamestats.fadeTime = cg.time + STATS_FADE_TIME;
 		}
-		CG_windowFree(cg.statsWindow);
+		CG_windowFree( cg.statsWindow );
 		cg.statsWindow = NULL;
 	}
 }
 
 // +stats
-void CG_StatsDown_f(void) {
-	if (!cg.demoPlayback) {
+void CG_StatsDown_f( void ) {
+	if ( !cg.demoPlayback ) {
 		int i = cg.snap->ps.clientNum;
 
-		if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR) {
-			CPri("You must be a player or following a player to use +stats\n");
+		if ( cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR ) {
+			CPri( "You must be a player or following a player to use +stats\n" );
 			return;
 		}
 
 		// wstats overlap so close them first if they're open
-		if (cgs.gamestats.show == SHOW_ON) {
+		if ( cgs.gamestats.show == SHOW_ON ) {
 			CG_wStatsUp_f();
 		}
 
-		if (cgs.clientGameStats.show == SHOW_SHUTDOWN && cg.time < cgs.clientGameStats.fadeTime) {
+		if ( cgs.clientGameStats.show == SHOW_SHUTDOWN && cg.time < cgs.clientGameStats.fadeTime ) {
 			cgs.clientGameStats.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.clientGameStats.fadeTime;
 		} else if ( cgs.clientGameStats.show != SHOW_ON ) {
 			cgs.clientGameStats.fadeTime = cg.time + STATS_FADE_TIME;
@@ -634,31 +644,31 @@ void CG_StatsDown_f(void) {
 
 		cgs.clientGameStats.show = SHOW_ON;
 
-		if (cgs.clientGameStats.requestTime < cg.time) {
+		if ( cgs.clientGameStats.requestTime < cg.time ) {
 			cgs.clientGameStats.requestTime = cg.time + 2000;
-			trap_SendClientCommand(va("cstats %d", i));
+			trap_SendClientCommand( va( "cstats %d", i ) );
 		}
 	}
 }
 
 // -stats
-void CG_StatsUp_f(void) {
-	if (cgs.clientGameStats.show == SHOW_ON) {
+void CG_StatsUp_f( void ) {
+	if ( cgs.clientGameStats.show == SHOW_ON ) {
 		cgs.clientGameStats.show = SHOW_SHUTDOWN;
-		if (cg.time < cgs.clientGameStats.fadeTime) {
+		if ( cg.time < cgs.clientGameStats.fadeTime ) {
 			cgs.clientGameStats.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.clientGameStats.fadeTime;
 		} else {
 			cgs.clientGameStats.fadeTime = cg.time + STATS_FADE_TIME;
 		}
-		CG_windowFree(cg.clientStatsWindow);
+		CG_windowFree( cg.clientStatsWindow );
 		cg.clientStatsWindow = NULL;
 	}
 }
 
 // +topshots
-void CG_topshotsDown_f(void) {
-	if (!cg.demoPlayback) {
-		if (cgs.topshots.show == SHOW_SHUTDOWN && cg.time < cgs.topshots.fadeTime) {
+void CG_topshotsDown_f( void ) {
+	if ( !cg.demoPlayback ) {
+		if ( cgs.topshots.show == SHOW_SHUTDOWN && cg.time < cgs.topshots.fadeTime ) {
 			cgs.topshots.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.topshots.fadeTime;
 		} else if ( cgs.topshots.show != SHOW_ON ) {
 			cgs.topshots.fadeTime = cg.time + STATS_FADE_TIME;
@@ -666,40 +676,36 @@ void CG_topshotsDown_f(void) {
 
 		cgs.topshots.show = SHOW_ON;
 
-		if (cgs.topshots.requestTime < cg.time) {
+		if ( cgs.topshots.requestTime < cg.time ) {
 			cgs.topshots.requestTime = cg.time + 2000;
-			trap_SendClientCommand("stshots");
+			trap_SendClientCommand( "stshots" );
 		}
 	}
 }
 
 // -topshots
-void CG_topshotsUp_f(void) {
-	if (cgs.topshots.show == SHOW_ON) {
+void CG_topshotsUp_f( void ) {
+	if ( cgs.topshots.show == SHOW_ON ) {
 		cgs.topshots.show = SHOW_SHUTDOWN;
-		if (cg.time < cgs.topshots.fadeTime) {
+		if ( cg.time < cgs.topshots.fadeTime ) {
 			cgs.topshots.fadeTime = 2 * cg.time + STATS_FADE_TIME - cgs.topshots.fadeTime;
 		} else {
 			cgs.topshots.fadeTime = cg.time + STATS_FADE_TIME;
 		}
-		CG_windowFree(cg.topshotsWindow);
+		CG_windowFree( cg.topshotsWindow );
 		cg.topshotsWindow = NULL;
 	}
 }
 
 // Dumps stats in file
-void CG_dumpStats_f(void) {
-	if (cgs.dumpStatsTime < cg.time) {
+void CG_dumpStats_f( void ) {
+	if ( cgs.dumpStatsTime < cg.time ) {
 		cgs.dumpStatsTime = cg.time + 2000;
-		trap_SendClientCommand(((cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_SPECTATOR)) ? "statsall" : "weaponstats");
+		trap_SendClientCommand( ( (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_SPECTATOR) ) ? "statsall" : "weaponstats" );
 	}
 }
 
-// Force tapout
-void CG_ForceTapOut_f(void) {
-	trap_SendClientCommand("forcetapout");
-}
-
+/************ L0 - OSP dump ends here ************/
 typedef struct {
 	char    *cmd;
 	void ( *function )( void );
@@ -753,8 +759,7 @@ static consoleCommand_t commands[] = {
 	{ "SetWeaponCrosshair", CG_SetWeaponCrosshair_f },
 	// -NERVE - SMF
 
-
-	// OSPx	
+	// OSPx
 	{ "statsdump", CG_dumpStats_f },
 	{ "+zoomView", CG_zoomViewSet_f },
 	{ "-zoomView", CG_zoomViewRevert_f },
@@ -762,30 +767,17 @@ static consoleCommand_t commands[] = {
 	{ "-vstr", CG_vstrUp_f },
 	{ "autoRecord", CG_autoRecord_f },
 	{ "autoScreenshot", CG_autoScreenShot_f },
-	{ "currentTime", CG_currentTime_f },
-	{ "time", CG_currentTime_f },
 	{ "+wstats", CG_wStatsDown_f },
 	{ "-wstats", CG_wStatsUp_f },
 	{ "+stats", CG_StatsDown_f },
 	{ "-stats", CG_StatsUp_f },
 	{ "+wtopshots", CG_topshotsDown_f },
 	{ "-wtopshots", CG_topshotsUp_f },
-	{ "forcetapout", CG_ForceTapOut_f },
+//	{ "forcetapout", CG_ForceTapOut_f },
 	// -OSPx
 
 	// Arnout
 	{ "dumploc", CG_DumpLocation_f },
-	
-#ifdef MV_SUPPORT
-	{ "mvactivate",      CG_mvToggleAll_f },
-	{ "mvdel",           CG_mvDelete_f },
-	{ "mvhide",          CG_mvHideView_f },
-	{ "mvnew",           CG_mvNew_f },
-	{ "mvshow",          CG_mvShowView_f },
-	{ "mvswap",          CG_mvSwapViews_f },
-	{ "mvtoggle",        CG_mvToggleView_f },
-	{ "spechelp",        CG_toggleSpecHelp_f },
-#endif
 };
 
 
@@ -883,64 +875,39 @@ void CG_InitConsoleCommands( void ) {
 	trap_AddCommand( "reset_match" );
 	trap_AddCommand( "swap_teams" );
 	// -NERVE - SMF
-	// OSP
-	// Admins
-	trap_AddCommand("login");
-	trap_AddCommand("@login");
-	trap_AddCommand("logout");
-	trap_AddCommand("getstatus");
-	trap_AddCommand( "ref" );
-	trap_AddCommand( "?" );
+	// L0 - Make it more available..
+	trap_AddCommand( "getstatus" );		// Prints user info (IP, GUID, STATUS..)
+	trap_AddCommand( "login" );			// Logs user as admin
+	trap_AddCommand( "@login" );		// Silently logs user as admin
+	trap_AddCommand( "logout" );		// Logs out user and revokes admin/ref status
+	trap_AddCommand( "incognito" );		// Toggles admin visibilite status to players
+	trap_AddCommand( "gib" );			// Kills player and sends him/her straight to limbo
+	trap_AddCommand( "pm" );			// Private message
+	trap_AddCommand( "msg" );			// Private message (alternative)
+	trap_AddCommand( "smoke" );			// Toggles between smoke and Air Strike (only for LT's)
+	trap_AddCommand( "private" );		// Private chat for admins
 	trap_AddCommand( "commands" );
-	trap_AddCommand( "follow" );
-	trap_AddCommand( "lock" );
-
-	// Speclock
-	trap_AddCommand("speclock");
-	trap_AddCommand("specunlock");
-	trap_AddCommand("specinvite");
-	trap_AddCommand("specuninvite");
-	trap_AddCommand("specuninviteall");
-
+	trap_AddCommand( "speclock" );		// Locks team from specs
+	trap_AddCommand( "specunlock" );	// Opens team for specs
+	trap_AddCommand( "specinvite" );		// Invites player to spec team
+	trap_AddCommand( "specuninvite" );		// Takes players ability to spec the team
+	trap_AddCommand( "specuninviteall" );	// Removes all spectators from that team
 	// Pause
 	trap_AddCommand("pause");
 	trap_AddCommand("unpause");
 	trap_AddCommand("timein");
 	trap_AddCommand("timeout");
-
-	
 	// Ready
-	trap_AddCommand("ready");
-	trap_AddCommand("notready");
 	trap_AddCommand("readyteam");
-	//trap_AddCommand("unreadyteam");
-
 	// Misc
 	trap_AddCommand("players");
-	trap_AddCommand("time");
-	trap_AddCommand("currenttime");
-	trap_AddCommand("sui");			// Suicide (soft kill)
-	trap_AddCommand("players");
-	// Chats
-	trap_AddCommand("say_teamnl");
-	trap_AddCommand("say_team");
-	trap_AddCommand("say_admin");
-	trap_AddCommand("private");
 	// Stats
-	trap_AddCommand("scores");
-	trap_AddCommand("weaponstats");
-	trap_AddCommand("topshots");
-	trap_AddCommand("bottomshots");
-	trap_AddCommand("stats");
-	trap_AddCommand("statsall");
-	trap_AddCommand("statsdump");
-
-#ifdef MV_SUPPORT
-	trap_AddCommand( "mvadd" );
-	trap_AddCommand( "mvaxis" );
-	trap_AddCommand( "mvallies" );
-	trap_AddCommand( "mvall" );
-	trap_AddCommand( "mvnone" );
-#endif
-	// OSP
+	trap_AddCommand( "scores" );		// Prints score table
+	trap_AddCommand( "weaponstats" );	// +wstats equivalent for console
+	trap_AddCommand( "topshots" );		// +topshots equivalent for console
+	trap_AddCommand( "bottomshots" );	// Dumps to console
+	trap_AddCommand( "stats" );			// Dumps to console (same as +stats just no fancy window)
+	trap_AddCommand( "statsall" );		// Dumps stats of all players
+	trap_AddCommand( "statsdump" );		// Dumps current stats
+	// End
 }

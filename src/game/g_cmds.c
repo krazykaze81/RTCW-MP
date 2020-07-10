@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -166,22 +166,17 @@ SanitizeString
 Remove case and control characters
 ==================
 */
-void SanitizeString(char *in, char *out, qboolean fToLower) {
-	while (*in) {
-		if (*in == 27 || *in == '^') {
-			in++;       // skip color code
-			if (*in) {
-				in++;
-			}
+void SanitizeString( char *in, char *out ) {
+	while ( *in ) {
+		if ( *in == 27 ) {
+			in += 2;        // skip color code
 			continue;
 		}
-
-		if (*in < 32) {
+		if ( *in < 32 ) {
 			in++;
 			continue;
 		}
-
-		*out++ = (fToLower) ? tolower(*in++) : *in++;
+		*out++ = tolower( *in++ );
 	}
 
 	*out = 0;
@@ -200,93 +195,37 @@ int ClientNumberFromString( gentity_t *to, char *s ) {
 	int idnum;
 	char s2[MAX_STRING_CHARS];
 	char n2[MAX_STRING_CHARS];
-	qboolean fIsNumber = qtrue;
-
-	// See if its a number or string
-	for (idnum = 0; idnum < strlen(s) && s[idnum] != 0; idnum++) {
-		if (s[idnum] < '0' || s[idnum] > '9') {
-			fIsNumber = qfalse;
-			break;
-		}
-	}
-
-	// check for a name match
-	SanitizeString(s, s2, qtrue);
-	for (idnum = 0, cl = level.clients; idnum < level.maxclients; idnum++, cl++) {
-		if (cl->pers.connected != CON_CONNECTED) {
-			continue;
-		}
-
-		SanitizeString(cl->pers.netname, n2, qtrue);
-		if (!strcmp(n2, s2)) {
-			return(idnum);
-		}
-	}
 
 	// numeric values are just slot numbers
-	if (fIsNumber) {
-		idnum = atoi(s);
-		if (idnum < 0 || idnum >= level.maxclients) {
-			CPx(to - g_entities, va("print \"Bad client slot: [lof]%i\n\"", idnum));
+	if ( s[0] >= '0' && s[0] <= '9' ) {
+		idnum = atoi( s );
+		if ( idnum < 0 || idnum >= level.maxclients ) {
+			trap_SendServerCommand( to - g_entities, va( "print \"Bad client slot: [lof]%i\n\"", idnum ) );
 			return -1;
 		}
 
 		cl = &level.clients[idnum];
-		if (cl->pers.connected != CON_CONNECTED) {
-			CPx(to - g_entities, va("print \"Client[lof] %i [lon]is not active\n\"", idnum));
+		if ( cl->pers.connected != CON_CONNECTED ) {
+			trap_SendServerCommand( to - g_entities, va( "print \"Client[lof] %i [lon]is not active\n\"", idnum ) );
 			return -1;
 		}
-		return(idnum);
+		return idnum;
 	}
 
-	CPx(to - g_entities, va("print \"User [lof]%s [lon]is not on the server\n\"", s));
-	return(-1);
-}
-
-/*
-===========
-OSPx - ClientNumberFromNameMatch
-
-Get client number from name
-===========
-*/
-int ClientNumberFromNameMatch(char *name, int *matches) {
-	int i, textLen;
-	char nm[32];
-	char c;
-	int index = 0;
-
-	Q_strncpyz(nm, name, sizeof(nm));
-	Q_CleanStr(nm);
-	textLen = strlen(nm);
-	c = *nm;
-
-	for (i = 0; i < level.maxclients; i++)
-	{
-		int j, len;
-		char playerName[32];
-
-		if ((!g_entities[i].client) || (g_entities[i].client->pers.connected != CON_CONNECTED))
+	// check for a name match
+	SanitizeString( s, s2 );
+	for ( idnum = 0,cl = level.clients ; idnum < level.maxclients ; idnum++,cl++ ) {
+		if ( cl->pers.connected != CON_CONNECTED ) {
 			continue;
-
-		Q_strncpyz(playerName, g_entities[i].client->pers.netname, sizeof(playerName));
-		Q_CleanStr(playerName);
-		len = strlen(playerName);
-
-		for (j = 0; j < len; j++)
-		{
-			if (tolower(c) == tolower(playerName[j]))
-			{
-				if (!Q_stricmpn(nm, playerName + j, textLen))
-				{
-					matches[index] = i;
-					index++;
-					break;
-				}
-			}
+		}
+		SanitizeString( cl->pers.netname, n2 );
+		if ( !strcmp( n2, s2 ) ) {
+			return idnum;
 		}
 	}
-	return index;
+
+	trap_SendServerCommand( to - g_entities, va( "print \"User [lof]%s [lon]is not on the server\n\"", s ) );
+	return -1;
 }
 
 /*
@@ -564,97 +503,67 @@ void Cmd_LevelShot_f( gentity_t *ent ) {
 
 /*
 =================
-Cmd_Kill_f
+L0 - Cmd_Gib_f
 =================
 */
-void Cmd_Kill_f( gentity_t *ent ) {
-	int dmg = 0; // OSPx - Needed for Team Damage stats..
+void Cmd_Gib_f( gentity_t *ent ) {
 
-	// OSPx - Account for pause as well..
-	if (ent->client->sess.sessionTeam == TEAM_SPECTATOR ||
-		(ent->client->ps.pm_flags & PMF_LIMBO) ||
-		ent->health <= 0 || level.match_pause != PAUSE_NONE) {
+	// L0 - Patched for Pause
+	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ||
+		 ( ent->client->ps.pm_flags & PMF_LIMBO ) ||
+		 ent->health <= 0 || level.paused != PAUSE_NONE ) {
+		return;
+	}
+	if ( g_gametype.integer >= GT_WOLF && ent->client->ps.pm_flags & PMF_LIMBO ) {
 		return;
 	}
 
-	dmg = ent->health;
+
 	ent->flags &= ~FL_GODMODE;
 	ent->client->ps.stats[STAT_HEALTH] = ent->health = 0;
-	ent->client->ps.persistant[PERS_HWEAPON_USE] = 0; // TTimo - if using /kill while at MG42
+	ent->client->ps.persistant[PERS_HWEAPON_USE] = 0;		// TTimo - if using /kill while at MG42
 	player_die (ent, ent, ent, ent->health, MOD_SUICIDE);	// L0 - Straight to limbo!
 	ent->client->sess.suicides++;							// L0 - Record it here..as it's easier..
 }
 
-/*
-=================
-OSPx - Cmd_SoftKill_f
 
-Same as kill, just doesn't gib so player can still be revived.
+
+/*
+Cmd_Kill_f
 =================
 */
-void Cmd_SoftKill_f(gentity_t *ent) {
-	int dmg = 0;
-
-	if (ent->client->sess.sessionTeam == TEAM_SPECTATOR ||
-		(ent->client->ps.pm_flags & PMF_LIMBO) ||
-		ent->health <= 0 || level.match_pause != PAUSE_NONE ||
-		!g_allowSoftKill.integer) {
+void Cmd_Kill_f( gentity_t *ent ) {
+    int dmg = 0; // OSPx - Needed for Team Damage stats..
+	// L0 - Patched for Pause
+	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ||
+		 ( ent->client->ps.pm_flags & PMF_LIMBO ) ||
+		 ent->health <= 0 || level.paused != PAUSE_NONE ) {
 		return;
 	}
-	
-	dmg = ent->health;
+	if ( g_gamestate.integer != GS_PLAYING ) {
+		return;
+	}
+	if ( g_gametype.integer >= GT_WOLF && ent->client->ps.pm_flags & PMF_LIMBO ) {
+		return;
+	}
+    dmg = ent->health;
 	ent->flags &= ~FL_GODMODE;
 	ent->client->ps.stats[STAT_HEALTH] = ent->health = 0;
-	ent->client->ps.persistant[PERS_HWEAPON_USE] = 0; 
-	player_die(ent, ent, ent, dmg, MOD_SELFKILL);
+	ent->client->ps.persistant[PERS_HWEAPON_USE] = 0; // TTimo - if using /kill while at MG42
+//	player_die( ent, ent, ent, 100000, MOD_SUICIDE );
+
+    player_die( ent, ent, ent, dmg, MOD_SUICIDE );
+	ent->client->sess.suicides++;							// L0 - Record it here..as it's easier.. // nihi added
 }
 
-/*
-=================
-OSPx - ET Port
-=================
-*/
-void G_TeamDataForString(const char* teamstr, int clientNum, team_t* team, spectatorState_t* sState, int* specClient) {
-	*sState = SPECTATOR_NOT;
-	if (!Q_stricmp(teamstr, "follow1")) {
-		*team = TEAM_SPECTATOR;
-		*sState = SPECTATOR_FOLLOW;
-		if (specClient) {
-			*specClient = -1;
-		}
-	}
-	else if (!Q_stricmp(teamstr, "follow2")) {
-		*team = TEAM_SPECTATOR;
-		*sState = SPECTATOR_FOLLOW;
-		if (specClient) {
-			*specClient = -2;
-		}
-	}
-	else if (!Q_stricmp(teamstr, "spectator") || !Q_stricmp(teamstr, "s")) {
-		*team = TEAM_SPECTATOR;
-		*sState = SPECTATOR_FREE;
-	}
-	else if (!Q_stricmp(teamstr, "red") || !Q_stricmp(teamstr, "r") || !Q_stricmp(teamstr, "axis")) {
-		*team = TEAM_RED;
-	}
-	else if (!Q_stricmp(teamstr, "blue") || !Q_stricmp(teamstr, "b") || !Q_stricmp(teamstr, "allies")) {
-		*team = TEAM_BLUE;
-	}
-	else {
-		*team = PickTeam(clientNum);
-		if (!G_teamJoinCheck(*team, &g_entities[clientNum])) {
-			*team = ((TEAM_RED | TEAM_BLUE) & ~*team);
-		}
-	}
-}
 
 /*
 =================
 SetTeam
 =================
 */
-void SetTeam(gentity_t *ent, char *s, qboolean forced) {
-	team_t team, oldTeam;
+void SetTeam( gentity_t *ent, char *s , qboolean forced ) {
+	int team, oldTeam;
 	gclient_t           *client;
 	int clientNum;
 	spectatorState_t specState;
@@ -668,93 +577,126 @@ void SetTeam(gentity_t *ent, char *s, qboolean forced) {
 	clientNum = client - level.clients;
 	specClient = 0;
 
-	// OSPx - New way of handling..
-	oldTeam = client->sess.sessionTeam; // RtcwPro moved oldTeam initialization to here
-	G_TeamDataForString(s, client - level.clients, &team, &specState, &specClient);
+	specState = SPECTATOR_NOT;
+	if ( !Q_stricmp( s, "scoreboard" ) || !Q_stricmp( s, "score" )  ) {
+		team = TEAM_SPECTATOR;
+		specState = SPECTATOR_SCOREBOARD;
+	} else if ( !Q_stricmp( s, "follow1" ) ) {
+		team = TEAM_SPECTATOR;
+		specState = SPECTATOR_FOLLOW;
+		specClient = -1;
+	} else if ( !Q_stricmp( s, "follow2" ) ) {
+		team = TEAM_SPECTATOR;
+		specState = SPECTATOR_FOLLOW;
+		specClient = -2;
+	} else if ( !Q_stricmp( s, "spectator" ) || !Q_stricmp( s, "s" ) ) {
+		team = TEAM_SPECTATOR;
+		specState = SPECTATOR_FREE;
+	} else if ( g_gametype.integer >= GT_TEAM ) {
+		// if running a team game, assign player to one of the teams
+		specState = SPECTATOR_NOT;
+		if ( !Q_stricmp( s, "red" ) || !Q_stricmp( s, "r" ) ) {
+			team = TEAM_RED;
+		} else if ( !Q_stricmp( s, "blue" ) || !Q_stricmp( s, "b" ) ) {
+			team = TEAM_BLUE;
+		} else {
+			// pick the team with the least number of players
+			team = PickTeam( clientNum );
+		}
 
-	//
-	// decide if we will allow the change
-	//
-	if (team == oldTeam && team != TEAM_SPECTATOR) {
-		return;
-	}
-
-	// OSPx - No joining during countdown with tourny (g_doWarmup/ready) turned on
-	if (g_doWarmup.integer && g_gamestate.integer == GS_WARMUP_COUNTDOWN) {
-		CPx(clientNum, "cp \"^nYou cannot switch teams during countdown.\n\"3");
-		return;
-	}
-
-	// OSPx - Pause check 
-	// NOTE: Admin can still force user/self. but has to be explicitly requested...
-	if (level.match_pause != PAUSE_NONE && !forced) {
-		CPx(clientNum, "cp \"You cannot switch teams while Match is Paused!\n\"");
-		return; // ignore the request
-	}
-
-	// OSPx - New way ..
-	if ( team != TEAM_SPECTATOR && !forced) {
-
-		// OSPx - Ensure the player can join
-		if (!G_teamJoinCheck(team, ent)) {
-			// Leave them where they were before the command was issued			
+		// L0 - lock teams
+		if (g_gamelocked.integer && !forced  )
+		{
+			if ( team == TEAM_RED && g_gamelocked.integer == 1 )
+			{
+				CP("cp \"^1Axis^7 team is locked^1!\n\"2");
+				return;
+			}
+			if ( team == TEAM_BLUE && g_gamelocked.integer == 2 )
+			{
+				CP("cp \"^4Allied^7 team is locked^4!\n\"2");
+				return;
+			}
+			if ( (team == TEAM_RED || team == TEAM_BLUE) && g_gamelocked.integer == 3)
+			{
+				CP("cp \"^3Both ^7teams are locked^3!\n\"2");
+				return;
+			}
+		} // end
+		// NERVE - SMF
+		// L0 - Ready (temporary) lock
+		if (teamInfo[team].team_lock && !forced) {
+			CP(va("cp \"You cannot join %s team as countdown has already started!\n\"2", aTeams[team]));
 			return;
 		}
 
-		// NERVE - SMF
-		if (oldTeam != TEAM_SPECTATOR && g_noTeamSwitching.integer && team != ent->client->sess.sessionTeam && g_gamestate.integer == GS_PLAYING) { // RtcwPro added oldteam check
-			CPx(clientNum, "cp \"You cannot switch during a match, please wait until the round ends.\n\"");
+		if ( g_noTeamSwitching.integer && team != ent->client->sess.sessionTeam && g_gamestate.integer == GS_PLAYING ) {
+			trap_SendServerCommand( clientNum, "cp \"You cannot switch during a match, please wait until the round ends.\n\"" );
 			return; // ignore the request
 		}
 
 		// NERVE - SMF - merge from team arena
-		if (g_teamForceBalance.integer) {
+		if ( g_teamForceBalance.integer  ) {
 			int counts[TEAM_NUM_TEAMS];
 
-			counts[TEAM_BLUE] = TeamCount(ent - g_entities, TEAM_BLUE);
-			counts[TEAM_RED] = TeamCount(ent - g_entities, TEAM_RED);
+			counts[TEAM_BLUE] = TeamCount( ent - g_entities, TEAM_BLUE );
+			counts[TEAM_RED] = TeamCount( ent - g_entities, TEAM_RED );
 
 			// We allow a spread of one
-			if (team == TEAM_RED && counts[TEAM_RED] - counts[TEAM_BLUE] >= 1) {
-				CPx(clientNum, "cp \"The ^1Axis ^7has too many players.\n\"");
+			if ( team == TEAM_RED && counts[TEAM_RED] - counts[TEAM_BLUE] >= 1 ) {
+				trap_SendServerCommand( clientNum,
+										"cp \"The Axis has too many players.\n\"" );
 				return; // ignore the request
 			}
-			if (team == TEAM_BLUE && counts[TEAM_BLUE] - counts[TEAM_RED] >= 1) {
-				CPx(clientNum, "cp \"The ^4Allies ^7have too many players.\n\"");
+			if ( team == TEAM_BLUE && counts[TEAM_BLUE] - counts[TEAM_RED] >= 1 ) {
+				trap_SendServerCommand( clientNum,
+										"cp \"The Allies have too many players.\n\"" );
 				return; // ignore the request
 			}
 
 			// It's ok, the team we are switching to has less or same number of players
 		}
+		// -NERVE - SMF
+	} else {
+		// force them to spectators if there aren't any spots free
+		team = TEAM_FREE;
 	}
-	
-	// OSPx - Maybe I should remove this? - Since team_maxplayers is essentially a same thing..
-	if (g_maxGameClients.integer > 0 && level.numNonSpectatorClients >= g_maxGameClients.integer && !forced) {		
-		CPx(clientNum, va("cp \"The %s team is full!\n\"2", aTeams[team]));
+
+	// override decision if limiting the players
+	if ( g_gametype.integer == GT_TOURNAMENT
+		 && level.numNonSpectatorClients >= 2 ) {
 		team = TEAM_SPECTATOR;
+	} else if ( g_maxGameClients.integer > 0 &&
+				level.numNonSpectatorClients >= g_maxGameClients.integer ) {
+		team = TEAM_SPECTATOR;
+	}
+
+	//
+	// decide if we will allow the change
+	//
+	oldTeam = client->sess.sessionTeam;
+	if ( team == oldTeam && team != TEAM_SPECTATOR ) {
+		return;
 	}
 
 	// NERVE - SMF - prevent players from switching to regain deployments
 	if ( g_maxlives.integer > 0 && ent->client->ps.persistant[PERS_RESPAWNS_LEFT] == 0 &&
-		 oldTeam != TEAM_SPECTATOR && !forced) {
-		CPx( clientNum, "cp \"You can't switch teams because you are out of lives.\n\" 3" );
+		 oldTeam != TEAM_SPECTATOR ) {
+		trap_SendServerCommand( clientNum,
+								"cp \"You can't switch teams because you are out of lives.\n\" 3" );
 		return; // ignore the request
 	}
-
+// nihi commented below
+/*
 	// DHM - Nerve :: Force players to wait 30 seconds before they can join a new team.
-	if ( g_gametype.integer >= GT_WOLF && team != oldTeam && level.warmupTime == 0 && !client->pers.initialSpawn	
-		 && ((level.time - client->pers.connectTime) > 5000) && ((level.time - client->pers.enterTime) < 5000) && !forced ) {
-		CPx( ent - g_entities, va( "cp \"^3You must wait %i seconds before joining ^3a new team.\n\"3", (int)( 5 - ( ( level.time - client->pers.enterTime ) / 1000 ) ) ) );
+	if ( g_gametype.integer >= GT_WOLF && team != oldTeam && level.warmupTime == 0 && !client->pers.initialSpawn
+		 && ( ( level.time - client->pers.connectTime ) > 10000 ) && ( ( level.time - client->pers.enterTime ) < 30000 ) ) {
+		trap_SendServerCommand( ent - g_entities,
+								va( "cp \"^3You must wait %i seconds before joining ^3a new team.\n\" 3", (int)( 30 - ( ( level.time - client->pers.enterTime ) / 1000 ) ) ) );
 		return;
 	}
+*/
 	// dhm
-
-	// OSPx - Handle warmup team switch nuke
-	// - In warmup without a check, one can switch teams (scripted) which floods and eventually crashes the server..
-	if (team != oldTeam && level.warmupTime && ((level.time - client->pers.connectTime) > 5000) && ((level.time - client->pers.enterTime) < 2000) && !forced) {
-		CPx(ent - g_entities, va("cp \"^3You must wait %i seconds before joining ^3a new team.\n\"3", (int)(2 - ((level.time - client->pers.enterTime) / 1000))));
-		return;
-	}
 
 	//
 	// execute the team change
@@ -769,22 +711,10 @@ void SetTeam(gentity_t *ent, char *s, qboolean forced) {
 	client->pers.teamState.state = TEAM_BEGIN;
 	if ( oldTeam != TEAM_SPECTATOR ) {
 		if ( !( ent->client->ps.pm_flags & PMF_LIMBO ) ) {
-			int i;
 			// Kill him (makes sure he loses flags, etc)
 			ent->flags &= ~FL_GODMODE;
 			ent->client->ps.stats[STAT_HEALTH] = ent->health = 0;
-			player_die( ent, ent, ent, 100000, MOD_SWITCHTEAM ); // OSPx - Fix this for stats..
-			// L0 - Remove any spectators if speclock is on	
-			for (i = 0; i < level.maxclients; i++) {
-				if (level.clients[i].sess.sessionTeam == TEAM_SPECTATOR
-					&& level.clients[i].sess.spectatorState == SPECTATOR_FOLLOW
-					&& level.clients[i].sess.spectatorClient == clientNum &&
-					teamInfo[team].spec_lock &&
-					ent->client->sess.specInvited != team)
-				{
-					StopFollowing(&g_entities[i]);
-				}
-			}
+			player_die( ent, ent, ent, 100000, MOD_SUICIDE );
 		}
 	}
 	// they go to the end of the line for tournements
@@ -792,67 +722,28 @@ void SetTeam(gentity_t *ent, char *s, qboolean forced) {
 		client->sess.spectatorTime = level.time;
 	}
 
-	client->sess.specLocked = 0;
 	client->sess.sessionTeam = team;
 	client->sess.spectatorState = specState;
 	client->sess.spectatorClient = specClient;
-	client->pers.ready = qfalse;
 
 	if ( team == TEAM_RED ) {
-		AP(va( "print \"[lof]%s" S_COLOR_WHITE " [lon]joined the ^1Axis ^7team.\n\"", client->pers.netname ) );
+		trap_SendServerCommand( -1, va( "cp \"[lof]%s" S_COLOR_WHITE " [lon]joined the Axis team.\n\"",
+										client->pers.netname ) );
 	} else if ( team == TEAM_BLUE ) {
-		AP(va( "print \"[lof]%s" S_COLOR_WHITE " [lon]joined the ^4Allied ^7team.\n\"",	client->pers.netname ) );
+		trap_SendServerCommand( -1, va( "cp \"[lof]%s" S_COLOR_WHITE " [lon]joined the Allied team.\n\"",
+										client->pers.netname ) );
 	} else if ( team == TEAM_SPECTATOR && oldTeam != TEAM_SPECTATOR ) {
-		AP(va( "print \"[lof]%s" S_COLOR_WHITE " [lon]joined the ^3spectators^7.\n\"", client->pers.netname ) );
+		trap_SendServerCommand( -1, va( "cp \"[lof]%s" S_COLOR_WHITE " [lon]joined the spectators.\n\"",
+										client->pers.netname ) );
 	} else if ( team == TEAM_FREE ) {
-		AP(va( "print \"[lof]%s" S_COLOR_WHITE " [lon]joined the ^2battle^7.\n\"", client->pers.netname ) );
+		trap_SendServerCommand( -1, va( "cp \"[lof]%s" S_COLOR_WHITE " [lon]joined the battle.\n\"",
+										client->pers.netname ) );
 	}
 
-	// L0 - connect message
-	CP(va( "cp \"%s\n\"2", g_serverMessage.string));
-
-	// L0 - Advertise
-	CPx(clientNum, va("print \"This server is running ^3%s\n\"", GAMEVERSION));
-	CPx(clientNum, "print \"^7Type ^3/commands ^7to see the list of all available options.\n\"");
-
-	// L0 - Headshots only..
-	//if (g_headshotsOnly.integer)
-	//	CPx(clientNum, "chat \"console: ^3Headshots Only ^7mode is enabled.\n\"");
-
-	// L0 - Notify them it's DM
-	//if (g_deathMatch.integer)
-	//	CPx(ent - g_entities, "chat \"console: This server is running in ^3DeathMatch ^7mode.\n\"");
-
-	// L0 - Notify them that stuff is forced..
-	/*if (g_forceClass.integer != -1) {
-		if (g_forceClass.integer == 0)
-			CPx(ent - g_entities, "print \"^3Info^7: Server is forcing everyone to play as Soldier!\n\"");
-		else if (g_forceClass.integer == 1)
-			CPx(ent - g_entities, "print \"^3Info^7: Server is forcing everyone to play as Medic!\n\"");
-		else if (g_forceClass.integer == 2)
-			CPx(ent - g_entities, "print \"^3Info^7: Server is forcing everyone to play as Engineer!\n\"");
-		else if (g_forceClass.integer == 3)
-			CPx(ent - g_entities, "print \"^3Info^7: Server is forcing everyone to play as Leut!\n\"");
-	}*/
 	// get and distribute relevent paramters
 	ClientUserinfoChanged( clientNum );
 
 	ClientBegin( clientNum );
-
-// OSPx
-	// ydnar: restore old respawn count (players cannot jump from team to team to regain lives)
-	if (ent->client->ps.persistant[PERS_RESPAWNS_LEFT] >= 0 && oldTeam != TEAM_SPECTATOR) {
-		client->ps.persistant[PERS_RESPAWNS_LEFT] = client->ps.persistant[PERS_RESPAWNS_LEFT];
-	}
-
-	// Track stuff..
-	G_verifyMatchState(oldTeam);
-
-	// Reset stats when changing teams
-	if (team != oldTeam) {
-		G_deleteStats(clientNum);
-	}
-// -OSPx
 }
 
 // DHM - Nerve
@@ -980,47 +871,36 @@ void Cmd_Follow_f( gentity_t *ent ) {
 		return;
 	}
 
-	// OSPx - Et port..
-	if (ent->client->ps.pm_flags & PMF_LIMBO) {
-		CP("print \"Can't issue a follow command while in limbo.\n\"");
-		CP("print \"Hit FIRE to switch between teammates.\n\"");
-		return;
-	}
-
 	trap_Argv( 1, arg, sizeof( arg ) );
 	i = ClientNumberFromString( ent, arg );
 	if ( i == -1 ) {
-		// OSPx - Account for speclock & empty teams
-		if (!Q_stricmp(arg, "allies")) {
+		// L0 - OSP speclock
+		if ( !Q_stricmp( arg, "allies" ) ) {
 			i = TEAM_BLUE;
-		}
-		else if (!Q_stricmp(arg, "axis")) {
+		} else if ( !Q_stricmp( arg, "axis" ) ) {
 			i = TEAM_RED;
-		}
-		else { return; }
+		} else { return; }
 
-		if (!TeamCount(ent - g_entities, i)) {
-			CP(va("print \"The %s team %s empty! Follow command ignored.\n\"", aTeams[i],
-				((ent->client->sess.sessionTeam != i) ? "is" : "would be")));
+		if ( !TeamCount( ent - g_entities, i ) ) {
+			CP( va( "print \"The %s team %s empty!  Follow command ignored.\n\"", aTeams[i],
+					( ( ent->client->sess.sessionTeam != i ) ? "is" : "would be" ) ) );
 			return;
 		}
 
 		// Allow for simple toggle
-		if (ent->client->sess.specLocked != i) {
-			if (teamInfo[i].spec_lock && !(ent->client->sess.specInvited & i)) {
-				CP(va("print \"Sorry, the %s team is locked from spectators.\n\"", aTeams[i]));
-			}
-			else {
+		if ( ent->client->sess.specLocked != i ) {
+			if ( teamInfo[i].spec_lock && !( ent->client->sess.specInvited & i ) ) {
+				CP( va( "print \"Sorry, the %s team is locked from spectators.\n\"", aTeams[i] ) );
+			} else {
 				ent->client->sess.specLocked = i;
-				CP(va("print \"Spectator follow is now locked on the %s team.\n\"", aTeams[i]));
-				Cmd_FollowCycle_f(ent, 1);
+				CP( va( "print \"Spectator follow is now locked on the %s team.\n\"", aTeams[i] ) );
+				Cmd_FollowCycle_f( ent, 1 );
 			}
-		}
-		else {
+		} else {
 			ent->client->sess.specLocked = 0;
-			CP(va("print \"%s team spectating is now disabled.\n\"", aTeams[i]));
+			CP( va( "print \"%s team spectating is now disabled.\n\"", aTeams[i] ) );
 		}
-		// -OSPx
+		// End
 		return;
 	}
 
@@ -1046,11 +926,10 @@ void Cmd_Follow_f( gentity_t *ent ) {
 	}
 
 	// OSP - can't follow a player on a speclocked team, unless allowed
-	if (!G_allowFollow(ent, level.clients[i].sess.sessionTeam)) {
-		CP(va("print \"Sorry, the %s team is locked from spectators.\n\"", aTeams[level.clients[i].sess.sessionTeam]));
+	if ( !G_allowFollow( ent, level.clients[i].sess.sessionTeam ) ) {
+		CP( va( "print \"Sorry, the %s team is locked from spectators.\n\"", aTeams[level.clients[i].sess.sessionTeam] ) );
 		return;
 	}
-
 	// first set them to spectator
 	if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR ) {
 		SetTeam( ent, "spectator", qfalse );
@@ -1070,7 +949,7 @@ void Cmd_FollowCycle_f( gentity_t *ent, int dir ) {
 	int original;
    // nihi added below
 	// L0 - Pause
-	if (level.match_pause != PAUSE_NONE)
+	if (level.paused != PAUSE_NONE)
 		return;
 //end
 	// if they are playing a tournement game, count as a loss
@@ -1079,7 +958,7 @@ void Cmd_FollowCycle_f( gentity_t *ent, int dir ) {
 	}
 	// first set them to spectator
 	if ( ( ent->client->sess.spectatorState == SPECTATOR_NOT ) && ( !( ent->client->ps.pm_flags & PMF_LIMBO ) ) ) { // JPW NERVE for limbo state
-		SetTeam( ent, "spectator", qfalse );
+		SetTeam( ent, "spectator" ,qfalse);
 	}
 
 	if ( dir != 1 && dir != -1 ) {
@@ -1134,12 +1013,12 @@ void Cmd_FollowCycle_f( gentity_t *ent, int dir ) {
 				continue;
 			}
 		}
-
-		// OSPx - Speclock
-		if (!G_desiredFollow(ent, level.clients[clientnum].sess.sessionTeam)) {
+ 		  // nihi added below
+		// OSP
+		if ( !G_desiredFollow( ent, level.clients[clientnum].sess.sessionTeam ) ) {
 			continue;
 		}
-
+		//end
 		// this is good, we can use it
 		ent->client->sess.spectatorClient = clientnum;
 		ent->client->sess.spectatorState = SPECTATOR_FOLLOW;
@@ -1160,9 +1039,7 @@ G_Say
 #define SAY_ALL     0
 #define SAY_TEAM    1
 #define SAY_TELL    2
-#define SAY_LIMBO   3	// NERVE - SMF
-#define SAY_TEAMNL	4	// OSPx
-#define SAY_ADMIN	5	// OSPx
+#define SAY_LIMBO   3           // NERVE - SMF
 
 void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, const char *name, const char *message, qboolean localize ) { // removed static so it would link
 	if ( !other ) {
@@ -1173,23 +1050,24 @@ void G_SayTo( gentity_t *ent, gentity_t *other, int mode, int color, const char 
 	}
 	if ( !other->client ) {
 		return;
-	}					  // OSPx
-	if ((mode == SAY_TEAM || mode == SAY_TEAMNL) && !OnSameTeam(ent, other)) {
+	}
+	if ( mode == SAY_TEAM  && !OnSameTeam( ent, other ) ) {
+		return;
+	}
+	// no chatting to players in tournements
+	if ( g_gametype.integer == GT_TOURNAMENT
+		 && other->client->sess.sessionTeam == TEAM_FREE
+		 && ent->client->sess.sessionTeam != TEAM_FREE ) {
 		return;
 	}
 
-	// OSPx - Admin chat is visible only to admins..
-	if (mode == SAY_ADMIN) {
-		if (!ent->client->sess.admin || !other->client->sess.admin)
-			return;
-	}
-
 	// NERVE - SMF - if spectator, no chatting to players in WolfMP
-	if (match_mutespecs.integer && !ent->client->sess.admin // OSPx
+/*	if ( g_gametype.integer >= GT_WOLF
 		 && ( ( ent->client->sess.sessionTeam == TEAM_FREE && other->client->sess.sessionTeam != TEAM_FREE ) ||
 			  ( ent->client->sess.sessionTeam == TEAM_SPECTATOR && other->client->sess.sessionTeam != TEAM_SPECTATOR ) ) ) {
 		return;
 	}
+	*/ // nihi rmeoved
 
 	// NERVE - SMF
 	if ( mode == SAY_LIMBO ) {
@@ -1213,37 +1091,67 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	char text[MAX_SAY_TEXT];
 	char location[64];
 	qboolean localize = qfalse;
-// OSPx
-	char *tag = "";
-	char arg[MAX_SAY_TEXT]; // ! & ? 
+
+	// L0 - Admin stuff
+	char *tag;
+	char arg[MAX_SAY_TEXT]; // ! & ?
 	char cmd1[128];
 	char cmd2[128];
 	char cmd3[128];
-	
-	Q_strncpyz(text, chatText, sizeof(text));
 
 	// Admin commands
-	if (ent->client->sess.admin != USER_REGULAR) {
+	Q_strncpyz ( text, chatText, sizeof( text ) );
+	if ( !ent->client->sess.admin == ADM_NONE ) {
 		// Command
-		if ((text[0] == '?') || (text[0] == '!')) {
+		if ( text[0] == '!' ){
 			ParseAdmStr(text, cmd1, arg);
 			ParseAdmStr(arg, cmd2, cmd3);
-
-			Q_strncpyz(ent->client->pers.cmd1, cmd1, sizeof(ent->client->pers.cmd1));
-			Q_strncpyz(ent->client->pers.cmd2, cmd2, sizeof(ent->client->pers.cmd2));
-			Q_strncpyz(ent->client->pers.cmd3, cmd3, sizeof(ent->client->pers.cmd3));
-
-			cmds_admin(ent, text[0] == '?' ? qtrue : qfalse);
+			Q_strncpyz ( ent->client->pers.cmd1, cmd1, sizeof( ent->client->pers.cmd1 ) );
+			Q_strncpyz ( ent->client->pers.cmd2, cmd2, sizeof( ent->client->pers.cmd2 ) );
+			Q_strncpyz ( ent->client->pers.cmd3, cmd3, sizeof( ent->client->pers.cmd3 ) );
+			cmds_admin("!", ent);
+			return;
+		// Help
+		} else if ( text[0] == '?' ){
+			ParseAdmStr(text, cmd1, arg);
+			ParseAdmStr(arg, cmd2, cmd3);
+			Q_strncpyz ( ent->client->pers.cmd1, cmd1, sizeof( ent->client->pers.cmd1 ) );
+			Q_strncpyz ( ent->client->pers.cmd2, cmd2, sizeof( ent->client->pers.cmd2 ) );
+			Q_strncpyz ( ent->client->pers.cmd3, cmd3, sizeof( ent->client->pers.cmd3 ) );
+			cmds_admin("?", ent);
 			return;
 		}
-	}
+	}  // end
 
-	// Admin tags..
-	if (!ent->client->sess.incognito && ent->client->sess.admin) {
-		tag = va("^7(%s)", usrTag(ent, qfalse));
-	}
-// -OSPx
+	// L0 - Ignored
+	if ( ent->client->sess.ignored ) {
+		if (ent->client->sess.ignored == 1)
+			CP( "cp \"You are ignored^1!\n\"2" );
+		else
+			CP( "print \"You are ^zpermanently ^7ignored^1!\n\"" );
+		return;
+	} // End
 
+
+
+	// L0 - Deal with Admin tags..
+	if (!ent->client->sess.incognito) {
+		if (ent->client->sess.admin == ADM_1)
+			tag = va("^7(%s^7)", a1_tag.string);
+		else if (ent->client->sess.admin == ADM_2)
+			tag = va("^7(%s^7)", a2_tag.string);
+		else if (ent->client->sess.admin == ADM_3)
+			tag = va("^7(%s^7)", a3_tag.string);
+		else if (ent->client->sess.admin == ADM_4)
+			tag = va("^7(%s^7)", a4_tag.string);
+		else if (ent->client->sess.admin == ADM_5)
+			tag = va("^7(%s^7)", a5_tag.string);
+		else
+			tag = "";
+	// If Admin is hidden or not an admin at all..no tag.
+	} else {
+		tag = "";
+	} // End
 	if ( g_gametype.integer < GT_TEAM && mode == SAY_TEAM ) {
 		mode = SAY_ALL;
 	}
@@ -1251,14 +1159,14 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	switch ( mode ) {
 	default:
 	case SAY_ALL:
-		G_LogPrintf( "say: %s: %s\n", ent->client->pers.netname, chatText );	// OSPx - Tag
-		Com_sprintf(name, sizeof(name), "%s%s%c%c: ", ent->client->pers.netname, tag, Q_COLOR_ESCAPE, COLOR_WHITE);
+		G_LogPrintf( "say: %s: %s\n", ent->client->pers.netname, chatText );
+		Com_sprintf( name, sizeof( name ), "%s%c%c: ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 		color = COLOR_GREEN;
 		break;
 	case SAY_TEAM:
 		localize = qtrue;
 		G_LogPrintf( "sayteam: %s: %s\n", ent->client->pers.netname, chatText );
-		if ( Team_GetLocationMsg( ent, location, sizeof( location ), qfalse ) ) {
+		if ( Team_GetLocationMsg( ent, location, sizeof( location ) ) ) {
 			Com_sprintf( name, sizeof( name ), "[lof](%s%c%c) (%s): ",
 						 ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE, location );
 		} else {
@@ -1270,7 +1178,7 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	case SAY_TELL:
 		if ( target && g_gametype.integer >= GT_TEAM &&
 			 target->client->sess.sessionTeam == ent->client->sess.sessionTeam &&
-			 Team_GetLocationMsg( ent, location, sizeof( location ), qfalse ) ) {
+			 Team_GetLocationMsg( ent, location, sizeof( location ) ) ) {
 			Com_sprintf( name, sizeof( name ), "[%s%c%c] (%s): ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE, location );
 		} else {
 			Com_sprintf( name, sizeof( name ), "[%s%c%c]: ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
@@ -1284,25 +1192,10 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 		color = COLOR_GREEN;
 		break;
 		// -NERVE - SMF
-	// OSPx 
-	// Team chat with no location..
-	case SAY_TEAMNL:
-		G_LogPrintf("sayteamnl: %s: %s\n", ent->client->pers.netname, chatText);
-		Com_sprintf(name, sizeof(name), "(%s^7): ", ent->client->pers.netname);
-		color = COLOR_CYAN;
-		break;
-	// Admin Chat
-	case SAY_ADMIN:
-		if (ent->client->sess.admin == USER_REGULAR) {
-			CP("print \"^1Error: ^7Only Referee and Admins can chat on a private channel.\n\"");
-			return;
-		}
-		G_LogPrintf("say_admin: %s: %s\n", ent->client->pers.netname, chatText);
-		Com_sprintf(name, sizeof(name), "^3Private Channel(^7%s^3): ", ent->client->pers.netname);
-		color = COLOR_WHITE;
-		break;
-	// -OSPx
+
 	}
+
+	Q_strncpyz( text, chatText, sizeof( text ) );
 
 	if ( target ) {
 		G_SayTo( ent, target, mode, color, name, text, localize );
@@ -1441,27 +1334,6 @@ void G_Voice( gentity_t *ent, gentity_t *target, int mode, const char *id, qbool
 		return;
 	}
 	// dhm
-
-	// OSPx - Fix some annoying vsay exploits..
-	if (mode == SAY_TEAM && (
-		!Q_stricmp(id, "DynamiteDefused") ||
-		!Q_stricmp(id, "DynamitePlanted")))
-	{
-		return;
-	}
-
-	if (mode == SAY_ALL &&
-		(!Q_stricmp(id, "DynamiteDefused") ||
-		!Q_stricmp(id, "DynamitePlanted")))
-	{
-		return;
-	} 
-	
-	// No vsay's for specs..
-	if (ent->client->sess.sessionTeam == TEAM_SPECTATOR) {
-		CP("cp \"You cannot voice chat as spectator^3!\n\"2");
-		return;
-	} // -OSPx
 
 	if ( target ) {
 		G_VoiceTo( ent, target, mode, id, voiceonly );
@@ -1675,110 +1547,166 @@ static const char *gameNames[] = {
 Cmd_CallVote_f
 ==================
 */
-qboolean Cmd_CallVote_f(gentity_t *ent, qboolean fRefCommand) { // unsigned int dwCommand
+void Cmd_CallVote_f( gentity_t *ent ) {
 	int i;
 	char arg1[MAX_STRING_TOKENS];
 	char arg2[MAX_STRING_TOKENS];
+	char cleanName[64];    // JPW NERVE
+	int mask = 0;
 
-	// Normal checks, if its not being issued as a referee command
-	if (!fRefCommand) {
-		if (level.voteInfo.voteTime) {
-			CP("cpm \"A vote is already in progress.\n\"");
-			return qfalse;
-		}
-		else if (level.intermissiontime) {
-			CP("cpm \"Cannot callvote during intermission.\n\"");
-			return qfalse;
-		}
-		else if (!ent->client->sess.referee) {
-			if (g_voteFlags.integer == VOTING_DISABLED) {
-				CP("cpm \"Voting not enabled on this server.\n\"");
-				return qfalse;
-			}
-			else if (vote_limit.integer > 0 && ent->client->pers.voteCount >= vote_limit.integer) {
-				CP(va("cpm \"You have already called the maximum number of votes (%d).\n\"", vote_limit.integer));
-				return qfalse;
-			}
-			else if (ent->client->sess.sessionTeam == TEAM_SPECTATOR) {
-				CP("cpm \"Not allowed to call a vote as a spectator.\n\"");
-				return qfalse;
-			}
-		}
+	if ( !g_voteFlags.integer ) {
+		trap_SendServerCommand( ent - g_entities, "print \"Voting not enabled on this server.\n\"" );
+		return;
+	}
+
+	if ( level.voteTime ) {
+		trap_SendServerCommand( ent - g_entities, "print \"A vote is already in progress.\n\"" );
+		return;
+	}
+	if ( ent->client->pers.voteCount >= MAX_VOTE_COUNT ) {
+		trap_SendServerCommand( ent - g_entities, "print \"You have called the maximum number of votes.\n\"" );
+		return;
+	}
+	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
+		trap_SendServerCommand( ent - g_entities, "print \"Not allowed to call a vote as spectator.\n\"" );
+		return;
 	}
 
 	// make sure it is a valid command to vote on
-	trap_Argv(1, arg1, sizeof(arg1));
-	trap_Argv(2, arg2, sizeof(arg2));
+	trap_Argv( 1, arg1, sizeof( arg1 ) );
+	trap_Argv( 2, arg2, sizeof( arg2 ) );
 
-	if (strchr(arg1, ';') || strchr(arg2, ';')) {
-		char *strCmdBase = (!fRefCommand) ? "vote" : "ref command";
-
-		G_refPrintf(ent, "Invalid %s string.", strCmdBase);
-		return(qfalse);
+	if ( strchr( arg1, ';' ) || strchr( arg2, ';' ) ) {
+		trap_SendServerCommand( ent - g_entities, "print \"Invalid vote string.\n\"" );
+		return;
 	}
 
+	if ( !Q_stricmp( arg1, "map_restart" ) ) {
+		mask = VOTEFLAGS_RESTART;
+	} else if ( !Q_stricmp( arg1, "nextmap" ) ) {
+		mask = VOTEFLAGS_NEXTMAP;
+	} else if ( !Q_stricmp( arg1, "map" ) ) {
+		mask = VOTEFLAGS_MAP;
+	} else if ( !Q_stricmp( arg1, "g_gametype" ) ) {
+		mask = VOTEFLAGS_TYPE;
+	} else if ( !Q_stricmp( arg1, "kick" ) ) {
+		mask = VOTEFLAGS_KICK;
+	} else if ( !Q_stricmp( arg1, "clientkick" ) ) {
+		mask = VOTEFLAGS_KICK;
+	} else if ( !Q_stricmp( arg1, "start_match" ) ) {        // NERVE - SMF
+		mask = VOTEFLAGS_STARTMATCH;
+	} else if ( !Q_stricmp( arg1, "reset_match" ) ) {        // NERVE - SMF
+		mask = VOTEFLAGS_RESETMATCH;
+	} else if ( !Q_stricmp( arg1, "swap_teams" ) ) {     // NERVE - SMF
+		mask = VOTEFLAGS_SWAP;
+// JPW NERVE
+#ifndef PRE_RELEASE_DEMO
+	} else if ( !Q_stricmp( arg1, testid1 ) ) {
+	} else if ( !Q_stricmp( arg1, testid2 ) ) {
+	} else if ( !Q_stricmp( arg1, testid3 ) ) {
+#endif
+// jpw
+	} else {
+		trap_SendServerCommand( ent - g_entities, "print \"Invalid vote string.\n\"" );
+		trap_SendServerCommand( ent - g_entities, "print \"Vote commands are: map_restart, nextmap, start_match, swap_teams, reset_match, map <mapname>, g_gametype <n>, kick <player>, clientkick <clientnum>\n\"" );
+		return;
+	}
 
-	if (trap_Argc() > 1 && (i = G_voteCmdCheck(ent, arg1, arg2, fRefCommand)) != G_NOTFOUND) {   //  --OSP
-		if (i != G_OK) {
-			if (i == G_NOTFOUND) {
-				return(qfalse);               // Command error
+	if ( !( g_voteFlags.integer & mask ) ) {
+		trap_SendServerCommand( ent - g_entities, va( "print \"Voting for %s disabled on this server\n\"", arg1 ) );
+		return;
+	}
+
+	// if there is still a vote to be executed
+	if ( level.voteExecuteTime ) {
+		level.voteExecuteTime = 0;
+		trap_SendConsoleCommand( EXEC_APPEND, va( "%s\n", level.voteString ) );
+	}
+
+	// special case for g_gametype, check for bad values
+	if ( !Q_stricmp( arg1, "g_gametype" ) ) {
+		i = atoi( arg2 );
+		if ( i < GT_WOLF || i >= GT_MAX_GAME_TYPE ) {
+			trap_SendServerCommand( ent - g_entities, "print \"Invalid gametype.\n\"" );
+			return;
+		}
+
+		Com_sprintf( level.voteString, sizeof( level.voteString ), "%s %d", arg1, i );
+		Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ), "%s %s", arg1, gameNames[i] );
+	} else if ( !Q_stricmp( arg1, "map_restart" ) ) {
+		// NERVE - SMF - do a warmup when we restart maps
+		if ( strlen( arg2 ) ) {
+			Com_sprintf( level.voteString, sizeof( level.voteString ), "%s \"%s\"", arg1, arg2 );
+		} else {
+			Com_sprintf( level.voteString, sizeof( level.voteString ), "%s", arg1, arg2 );
+		}
+
+		Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ), "%s", level.voteString );
+	} else if ( !Q_stricmp( arg1, "map" ) ) {
+		// special case for map changes, we want to reset the nextmap setting
+		// this allows a player to change maps, but not upset the map rotation
+		char s[MAX_STRING_CHARS];
+
+		trap_Cvar_VariableStringBuffer( "nextmap", s, sizeof( s ) );
+		if ( *s ) {
+			Com_sprintf( level.voteString, sizeof( level.voteString ), "%s %s; set nextmap \"%s\"", arg1, arg2, s );
+		} else {
+			Com_sprintf( level.voteString, sizeof( level.voteString ), "%s %s", arg1, arg2 );
+		}
+		Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ), "%s", level.voteString );
+	} else if ( !Q_stricmp( arg1, "nextmap" ) ) {
+		char s[MAX_STRING_CHARS];
+
+		trap_Cvar_VariableStringBuffer( "nextmap", s, sizeof( s ) );
+		if ( !*s ) {
+			trap_SendServerCommand( ent - g_entities, "print \"nextmap not set.\n\"" );
+			return;
+		}
+		Com_sprintf( level.voteString, sizeof( level.voteString ), "vstr nextmap" );
+		Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ), "%s", level.voteString );
+// JPW NERVE
+	} else if ( !Q_stricmp( arg1,"kick" ) ) {
+		int i,kicknum = MAX_CLIENTS;
+		for ( i = 0; i < MAX_CLIENTS; i++ ) {
+			if ( level.clients[i].pers.connected != CON_CONNECTED ) {
+				continue;
 			}
-			else { return(qtrue); }
+// strip the color crap out
+			Q_strncpyz( cleanName, level.clients[i].pers.netname, sizeof( cleanName ) );
+			Q_CleanStr( cleanName );
+			if ( !Q_stricmp( cleanName, arg2 ) ) {
+				kicknum = i;
+			}
 		}
-	}
-	else {
-		if (!fRefCommand) {
-			CP(va("print \"\n^3>>> Unknown vote command: ^7%s %s\n\"", arg1, arg2));
-			G_voteHelp(ent, qtrue);
+		Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ), "kick %s", level.clients[kicknum].pers.netname );
+		if ( kicknum != MAX_CLIENTS ) { // found a client # to kick, so override votestring with better one
+			Com_sprintf( level.voteString, sizeof( level.voteString ),"clientkick \"%d\"",kicknum );
+		} else { // if it can't do a name match, don't allow kick (to prevent votekick text spam wars)
+			trap_SendServerCommand( ent - g_entities, "print \"Client not on server.\n\"" );
+			return;
 		}
-		return(qfalse);
+// jpw
+	} else {
+		Com_sprintf( level.voteString, sizeof( level.voteString ), "%s \"%s\"", arg1, arg2 );
+		Com_sprintf( level.voteDisplayString, sizeof( level.voteDisplayString ), "%s", level.voteString );
 	}
 
-	Com_sprintf(level.voteInfo.voteString, sizeof(level.voteInfo.voteString), "%s %s", arg1, arg2);
+	trap_SendServerCommand( -1, va( "print \"[lof]%s [lon]called a vote.\n\"", ent->client->pers.netname ) );
+    AAPS("sound/world/klaxon2.wav");
+	// start the voting, the caller autoamtically votes yes
+	level.voteTime = level.time;
+	level.voteYes = 1;
+	level.voteNo = 0;
 
-	// start the voting, the caller automatically votes yes
-	// If a referee, vote automatically passes.	// OSP
-	if (fRefCommand) {
-		//		level.voteInfo.voteYes = level.voteInfo.numVotingClients + 10;	// JIC :)
-				// Don't announce some votes, as in comp mode, it is generally a ref
-				// who is policing people who shouldn't be joining and players don't want
-				// this sort of spam in the console
-		if (level.voteInfo.vote_fn != G_Kick_v && level.voteInfo.vote_fn != G_Mute_v) {
-			AP("cp \"^1** Referee Server Setting Change **\n\"");
-		}
-
-		// Gordon: just call the stupid thing.... don't bother with the voting faff
-		level.voteInfo.vote_fn(NULL, 0, NULL, NULL, qfalse);
-
-		G_globalSound("sound/misc/referee.wav");
+	for ( i = 0 ; i < level.maxclients ; i++ ) {
+		level.clients[i].ps.eFlags &= ~EF_VOTED;
 	}
-	else {
-		level.voteInfo.voteYes = 1;
-		AP(va("print \"[lof]%s^7 [lon]called a vote.[lof]  Voting for: %s\n\"", ent->client->pers.netname, level.voteInfo.voteString));
-		AP(va("cp \"[lof]%s\n^7[lon]called a vote.\n\"", ent->client->pers.netname));
-		//G_globalSound("sound/misc/vote.wav");
-		G_globalSound("sound/match/klaxon2.wav");
-	}
+	ent->client->ps.eFlags |= EF_VOTED;
 
-	level.voteInfo.voteTime = level.time;
-	level.voteInfo.voteNo = 0;
-
-	// Don't send the vote info if a ref initiates (as it will automatically pass)
-	if (!fRefCommand) {
-		for (i = 0; i < level.numConnectedClients; i++) {
-			level.clients[level.sortedClients[i]].ps.eFlags &= ~EF_VOTED;
-		}
-
-		ent->client->pers.voteCount++;
-		ent->client->ps.eFlags |= EF_VOTED;
-
-		trap_SetConfigstring(CS_VOTE_YES, va("%i", level.voteInfo.voteYes));
-		trap_SetConfigstring(CS_VOTE_NO, va("%i", level.voteInfo.voteNo));
-		trap_SetConfigstring(CS_VOTE_STRING, level.voteInfo.voteString);
-		trap_SetConfigstring(CS_VOTE_TIME, va("%i", level.voteInfo.voteTime));
-	}
-
-	return(qtrue);
+	trap_SetConfigstring( CS_VOTE_TIME, va( "%i", level.voteTime ) );
+	trap_SetConfigstring( CS_VOTE_STRING, level.voteDisplayString );
+	trap_SetConfigstring( CS_VOTE_YES, va( "%i", level.voteYes ) );
+	trap_SetConfigstring( CS_VOTE_NO, va( "%i", level.voteNo ) );
 }
 
 /*
@@ -1825,13 +1753,9 @@ void Cmd_Vote_f( gentity_t *ent ) {
 
 			trap_SendServerCommand( cl->ps.clientNum, va( "print \"^1Warning^7: Complaint filed against you. [lof](%d [lon]until kicked[lof])\n\"", num ) );
 			trap_SendServerCommand( ent - g_entities, "complaint -1" );
-		} else
+		} else {
 			trap_SendServerCommand( ent - g_entities, "complaint -2" );
-			// L0 - Inform about dismissed complain :)
-			if ( msg[0] == 'n' || msg[1] == 'N' || msg[1] == '1' ) 
-			{
-				CPx( cl->ps.clientNum, va("print \"Complain dismissed^3!\n\"" ) );
-			}
+		}
 
 		return;
 	}
@@ -1841,7 +1765,7 @@ void Cmd_Vote_f( gentity_t *ent ) {
 	ent->client->pers.complaintEndTime = -1;
 	ent->client->pers.complaintClient = -1;
 
-	if ( !level.voteInfo.voteTime ) {
+	if ( !level.voteTime ) {
 		trap_SendServerCommand( ent - g_entities, "print \"No vote in progress.\n\"" );
 		return;
 	}
@@ -1861,11 +1785,11 @@ void Cmd_Vote_f( gentity_t *ent ) {
 	trap_Argv( 1, msg, sizeof( msg ) );
 
 	if ( msg[0] == 'y' || msg[1] == 'Y' || msg[1] == '1' ) {
-		level.voteInfo.voteYes++;
-		trap_SetConfigstring( CS_VOTE_YES, va( "%i", level.voteInfo.voteYes ) );
+		level.voteYes++;
+		trap_SetConfigstring( CS_VOTE_YES, va( "%i", level.voteYes ) );
 	} else {
-		level.voteInfo.voteNo++;
-		trap_SetConfigstring( CS_VOTE_NO, va( "%i", level.voteInfo.voteNo ) );
+		level.voteNo++;
+		trap_SetConfigstring( CS_VOTE_NO, va( "%i", level.voteNo ) );
 	}
 
 	// a majority will be determined in G_CheckVote, which will also account
@@ -2619,33 +2543,11 @@ void Cmd_SetSpawnPoint_f( gentity_t *clent ) {
 }
 // -NERVE - SMF
 
-//
-// OSPx - New client commands
-//
-
-/*
-===================
-Stats
-===================
-*/
-void G_scores_cmd(gentity_t *ent) {
-	G_printMatchInfo(ent, qfalse);
-}
-// Shows a player's stats to the requesting client.
-void G_weaponStats_cmd(gentity_t *ent) {
-	G_statsPrint(ent, 0);
-}
-
-//
-// -OSPx
-//
-
 /*
 =================
 ClientCommand
 =================
 */
-void limbo(gentity_t *ent, qboolean makeCorpse); // OSPx
 void ClientCommand( int clientNum ) {
 	gentity_t *ent;
 	char cmd[MAX_TOKEN_CHARS];
@@ -2657,103 +2559,32 @@ void ClientCommand( int clientNum ) {
 
 	trap_Argv( 0, cmd, sizeof( cmd ) );
 
-	// OSPx - New commands for players..
-	if (playerCommandsExt(ent, cmd)) {
-		return;
-	}
-
 	if ( Q_stricmp( cmd, "say" ) == 0 ) {
-		// OSPx - Ignored
-		if (!ent->client->sess.ignored) {
-			Cmd_Say_f(ent, SAY_ALL, qfalse);
-			return;
-		}
-		else {
-			CP("print \"You are ^1ignored^7!\n\"");
-			return;
-		}
+		Cmd_Say_f( ent, SAY_ALL, qfalse );
+		return;
 	}
 	if ( Q_stricmp( cmd, "say_team" ) == 0 ) {
-		// OSPx - Ignored
-		if (!ent->client->sess.ignored) {
-			Cmd_Say_f(ent, SAY_TEAM, qfalse);
-			return;
-		}
-		else {
-			CP("print \"You are ^1ignored^7!\n\"");
-			return;
-		}
-	}
-
-// OSPx
-	// Team chat with no location..
-	if (Q_stricmp(cmd, "say_teamnl") == 0) {
-		// Ignored
-		if (!ent->client->sess.ignored) {
-			Cmd_Say_f(ent, SAY_TEAMNL, qfalse);
-			return;
-		}
-		else {
-			CP("print \"You are ^1ignored^7!\n\"");
-			return;
-		}
-	}
-
-	// Admin chat
-	if (Q_stricmp(cmd, "say_admin") == 0 || 
-		Q_stricmp(cmd, "private") == 0) {
-		Cmd_Say_f(ent, SAY_ADMIN, qfalse);
+		Cmd_Say_f( ent, SAY_TEAM, qfalse );
 		return;
 	}
-
-// -OSPx
-
 	// NERVE - SMF
 	if ( Q_stricmp( cmd, "say_limbo" ) == 0 ) {
-		// OSPx - Ignored
-		if (!ent->client->sess.ignored) {
-			Cmd_Say_f(ent, SAY_LIMBO, qfalse);
-			return;
-		}
-		else {
-			CP("print \"You are ^1ignored^7!\n\"");
-			return;
-		}
+		Cmd_Say_f( ent, SAY_LIMBO, qfalse );
+		return;
 	}
 	if ( Q_stricmp( cmd, "vsay" ) == 0 ) {
-		// OSPx - Ignored
-		if (!ent->client->sess.ignored) {
-			Cmd_Voice_f(ent, SAY_ALL, qfalse, qfalse);
-			return;
-		}
-		else {
-			CP("print \"You are ^1ignored^7!\n\"");
-			return;
-		}
+		Cmd_Voice_f( ent, SAY_ALL, qfalse, qfalse );
+		return;
 	}
 	if ( Q_stricmp( cmd, "vsay_team" ) == 0 ) {
-		// OSPx - Ignored
-		if (!ent->client->sess.ignored) {
-			Cmd_Voice_f(ent, SAY_TEAM, qfalse, qfalse);
-			return;
-		}
-		else {
-			CP("print \"You are ^1ignored^7!\n\"");
-			return;
-		}
+		Cmd_Voice_f( ent, SAY_TEAM, qfalse, qfalse );
+		return;
 	}
 	// -NERVE - SMF
 
 	if ( Q_stricmp( cmd, "tell" ) == 0 ) {
-		// OSPx - Ignored
-		if (!ent->client->sess.ignored) {
-			Cmd_Tell_f(ent);
-			return;
-		}
-		else {
-			CP("print \"You are ^1ignored^7!\n\"");
-			return;
-		}
+		Cmd_Tell_f( ent );
+		return;
 	}
 	if ( Q_stricmp( cmd, "score" ) == 0 ) {
 		Cmd_Score_f( ent );
@@ -2765,64 +2596,20 @@ void ClientCommand( int clientNum ) {
 		Cmd_Team_f( ent );
 		return;
 	}
-
-// OSPx
-	// Admins
-	if (Q_stricmp(cmd, "login") == 0) {
-		cmd_doLogin(ent, qfalse);
-		return;
+	if ( Q_stricmp( cmd, "login" ) == 0 ) {
+		cmd_do_login( ent, qfalse );
+	return;
 	}
-	if (Q_stricmp(cmd, "@login") == 0) {
-		cmd_doLogin(ent, qtrue);
-		return;
+	if ( Q_stricmp( cmd, "@login" ) == 0 ) {
+		cmd_do_login( ent, qtrue );
+	return;
 	}
-	if (Q_stricmp(cmd, "logout") == 0) {
-		cmd_doLogout(ent);
-		return;
+	if ( Q_stricmp( cmd, "logout" ) == 0 ) {
+		cmd_do_logout( ent );
+	return;
 	}
-
-	// Stats
-	else if (!Q_stricmp(cmd, "wstats"))	{ 
-		G_statsPrint(ent, 1);
-		return; 
-	}
-	else if (!Q_stricmp(cmd, "cstats")) { 
-		G_clientStatsPrint(ent, 1, qtrue);	
-		return; 
-	}
-	else if (!Q_stricmp(cmd, "stats")) { 
-		G_clientStatsPrint(ent, 1, qfalse);	
-		return; 
-	}
-	else if (!Q_stricmp(cmd, "sgstats")) { 
-		G_statsPrint(ent, 2);
-		return; 
-	}
-	else if (!Q_stricmp(cmd, "stshots")) { 
-		G_weaponStatsLeaders_cmd(ent, qtrue, qtrue);
-		return;
-	}
-	else if (!Q_stricmp(cmd, "scores"))	{ 
-		G_scores_cmd(ent);	
-		return; 
-	}
-	else if (!Q_stricmp(cmd, "statsall")) { 
-		G_statsall_cmd(ent, 0, qfalse);	
-		return; 
-	}
-	else if (!Q_stricmp(cmd, "bottomshots")) { 
-		G_weaponRankings_cmd(ent, qtrue, qfalse);
-		return;
-	}
-	else if (!Q_stricmp(cmd, "topshots")) { 
-		G_weaponRankings_cmd(ent, qtrue, qtrue);
-		return; 
-	}
-	else if (!Q_stricmp(cmd, "weaponstats")) { 
-		G_weaponStats_cmd(ent);	
-		return; 
-	}
-// -OSPx
+	// L0 - Player commands
+	if(playerCmds(ent, cmd)) return;
 
 	// ignore all other commands when at intermission
 	if ( level.intermissiontime ) {
@@ -2842,19 +2629,12 @@ void ClientCommand( int clientNum ) {
 		Cmd_Noclip_f( ent );
 	} else if ( Q_stricmp( cmd, "kill" ) == 0 )  {
 		Cmd_Kill_f( ent );
-// OSPx
-	// Suicide
-	} else if (Q_stricmp(cmd, "sui") == 0)  {
-		Cmd_SoftKill_f(ent);
-	// Instant tapout
-	} else if (!Q_stricmp(cmd, "forcetapout")) {		
-		if (ent->client->ps.stats[STAT_HEALTH] <= 0 &&
-			(ent->client->sess.sessionTeam == TEAM_RED || ent->client->sess.sessionTeam == TEAM_BLUE) ) 
-		{
-			limbo(ent, qtrue);
-		}
-		return;
-// -OSPx
+	// L0 - Kill kills but doesn't gib..GIB..gets player straight to limbo..
+	} else if ( Q_stricmp( cmd, "gib" ) == 0 )  {
+		Cmd_Gib_f( ent );
+	} else if (Q_stricmp(cmd, "hitsound") == 0) {
+		Cmd_hitsounds(ent);
+	// End
 	} else if ( Q_stricmp( cmd, "levelshot" ) == 0 )  {
 		Cmd_LevelShot_f( ent );
 	} else if ( Q_stricmp( cmd, "follow" ) == 0 )  {
@@ -2869,14 +2649,7 @@ void ClientCommand( int clientNum ) {
 	else if ( Q_stricmp( cmd, "where" ) == 0 ) {
 		Cmd_Where_f( ent );
 	} else if ( Q_stricmp( cmd, "callvote" ) == 0 )  {
-		// OSPx - Ignored
-		if (!ent->client->sess.ignored) {
-			Cmd_CallVote_f(ent, qfalse);
-		}
-		else {
-			CP("print \"You are ^1ignored^7!\n\"");
-			return;
-		}
+		Cmd_CallVote_f( ent );
 	} else if ( Q_stricmp( cmd, "vote" ) == 0 )  {
 		Cmd_Vote_f( ent );
 	} else if ( Q_stricmp( cmd, "gc" ) == 0 )  {

@@ -2724,7 +2724,6 @@ static void PM_Weapon( void ) {
 	if ( pm->waterlevel == 3 ) {
 		if ( pm->ps->weapon != WP_KNIFE &&
 			 pm->ps->weapon != WP_KNIFE2 &&
-			 pm->ps->weapon != WP_MEDIC_SYRINGE &&
 			 pm->ps->weapon != WP_GRENADE_LAUNCHER &&
 			 pm->ps->weapon != WP_GRENADE_PINEAPPLE &&
 			 pm->ps->weapon != WP_DYNAMITE &&
@@ -3264,10 +3263,6 @@ void PM_UpdateLean( playerState_t *ps, usercmd_t *cmd, pmove_t *tpm ) {
 		return;
 	}
 
-	// OSPx - Don't bother with this..
-	if (ps->pm_type == PM_FREEZE) {
-		return;
-	}
 	if ( ( cmd->wbuttons & ( WBUTTON_LEANLEFT | WBUTTON_LEANRIGHT ) )  && !cmd->forwardmove && cmd->upmove <= 0 ) {
 		// if both are pressed, result is no lean
 		if ( cmd->wbuttons & WBUTTON_LEANLEFT ) {
@@ -3749,29 +3744,14 @@ void PM_Sprint( void ) {
 			pm->ps->sprintTime += 10;
 		} else {
 			if ( pm->gametype != GT_SINGLE_PLAYER ) {
-// L0 - Stamina boost
-				extern vmCvar_t	g_staminaBoost;
-
-				if(g_staminaBoost.integer > 0) {
-					if(pm->ps->pm_flags & PMF_DUCKED) {  
-						pm->ps->sprintTime += 3000*pml.frametime;					
-				}
-
-				// we still need this for when we are standing	
-				pm->ps->sprintTime += 500*pml.frametime;	
-
-				if (pm->ps->sprintTime > 5000)
-					pm->ps->sprintTime += 500*pml.frametime;
-				
-				} else {
-					pm->ps->sprintTime += 500*pml.frametime;		// JPW NERVE adjusted for framerate independence
-					if (pm->ps->sprintTime > 5000)
-						pm->ps->sprintTime += 500*pml.frametime;	// JPW NERVE adjusted for framerate independence
+				pm->ps->sprintTime += 500 * pml.frametime;        // JPW NERVE adjusted for framerate independence
+				if ( pm->ps->sprintTime > 5000 ) {
+					pm->ps->sprintTime += 500 * pml.frametime;    // JPW NERVE adjusted for framerate independence
 				}
 			} else {
 				pm->ps->sprintTime += 5;
 			}
-// L0 end
+			// jpw
 		}
 #endif // GAMEDLL
 		if ( pm->ps->sprintTime > 20000 ) {
@@ -4028,47 +4008,6 @@ void PmoveSingle( pmove_t *pmove ) {
 		// entering / leaving water splashes
 		PM_WaterEvents();
 
-// OSPx - fixed physics / ET port
-		// snap some parts of playerstate to save network bandwidth
-		if (pm->fixedphysicsfps && pm->ps->stats[STAT_HEALTH] > 0) {
-			// forty - Haste's Pmove Accurate Code
-			// the new way: don't care so much about 6 bytes/frame
-			// or so of network bandwidth, and add some mostly framerate-
-			// independent error to make up for the lack of rounding error
-			// halt if not going fast enough (0.5 units/sec)
-			if (VectorLengthSquared(pm->ps->velocity) < 0.25f) {
-				VectorClear(pm->ps->velocity);
-			}
-			else {
-				int i;
-				float fac;
-
-				fac = (float)pml.msec / (1000.0f / (float)pm->fixedphysicsfps);
-
-				// add some error...
-				for (i = 0; i < 3; i++) {
-					// ...if the velocity in this direction changed enough
-					if (fabs(pm->ps->velocity[i] - pml.previous_velocity[i]) > 0.5f / fac) {
-						if (pm->ps->velocity[i] < 0) {
-							pm->ps->velocity[i] -= 0.5f * fac;
-						}
-						else {
-							pm->ps->velocity[i] += 0.5f * fac;
-						}
-					}
-				}
-				// we can stand a little bit of rounding error for the sake
-				// of lower bandwidth
-				VectorScale(pm->ps->velocity, 64.0f, pm->ps->velocity);
-				trap_SnapVector(pm->ps->velocity);
-				VectorScale(pm->ps->velocity, 1.0f / 64.0f, pm->ps->velocity);
-			}
-		}
-		else {
-			// snap some parts of playerstate to save network bandwidth
-			trap_SnapVector(pm->ps->velocity);
-		}
-// -OSPx
 		// snap some parts of playerstate to save network bandwidth
 		trap_SnapVector( pm->ps->velocity );
 //		SnapVector( pm->ps->velocity );
