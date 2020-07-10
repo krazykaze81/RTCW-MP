@@ -276,8 +276,8 @@ void G_addStats( gentity_t *targ, gentity_t *attacker, int dmg_ref, int mod ) {
 
 		// RtcwPro
 		// if damage is more than the target's health don't give them more damage than necessary
-		if (dmg > fabs(targ->health))
-			dmg = fabs(targ->health);
+		/*if (dmg > fabs(targ->health))
+			dmg = fabs(targ->health);*/
 
 		attacker->client->sess.damage_given += dmg;
 		targ->client->sess.damage_received += dmg;
@@ -607,7 +607,7 @@ void G_printMatchInfo( gentity_t *ent ) {
 	int i, j, cnt, eff;
 	float tot_acc = 0.00f;
 	int tot_rev, tot_kills, tot_deaths, tot_gp, tot_hs, tot_sui, tot_tk, tot_dg, tot_dr, tot_td, tot_hits, tot_shots;
-	int tot_mo, tot_ot, tot_or, tot_ro, tot_do, tot_ok, tot_fk, tot_ft, tot_et, tot_sp, tot_dp, tot_dd; // new totals
+	int tot_mo, tot_ot, tot_or, tot_ro, tot_do, tot_ok, tot_fk, tot_of, tot_ef, tot_sp, tot_dp, tot_dd; // new totals
 	gclient_t *cl;
 	char *ref;
 	char n1[MAX_NETNAME];
@@ -746,13 +746,13 @@ void G_printMatchInfo( gentity_t *ent ) {
 			continue;
 		}
 
-		tot_mo = tot_ot = tot_or = tot_ro = tot_do = tot_ok = tot_fk = tot_ft = tot_et = tot_sp = tot_dp = tot_dd = 0; // new totals
+		tot_mo = tot_ot = tot_or = tot_ro = tot_do = tot_ok = tot_fk = tot_of = tot_ef = tot_sp = tot_dp = tot_dd = 0; // new totals
 
 		CP(va("print \"Objective Stats\n\""));
 
 		CP(va("sc \%s ^7Team\n"
 			"^7-------------------------------------------------------------------"
-			"\nPlayer          ^eMO  OT  OR  RO  DO  OK  FK  FT  ET  SP  DP  DD\n"
+			"\nPlayer          ^eMO  OT  OR  RO  DO  OK  FK  OF  EF  SP  DP  DD\n"
 			"^7-------------------------------------------------------------------\n\"", (i == TEAM_RED) ? "^1Axis" : "^4Allied"));
 
 		for (j = 0; j < level.numPlayingClients; j++) {
@@ -783,8 +783,8 @@ void G_printMatchInfo( gentity_t *ent ) {
 			tot_do += cl->sess.dynamiteObjective;
 			tot_ok += cl->sess.objectiveCarrierKills;
 			tot_fk += cl->sess.flagKills;
-			tot_ft += cl->sess.ownFlagTaken;
-			tot_et += cl->sess.enemyFlagTaken;
+			tot_of += cl->sess.ownFlagTaken;
+			tot_ef += cl->sess.enemyFlagTaken;
 			tot_sp += cl->sess.spawnPointProtect;
 			tot_dp += cl->sess.dynamitePlanted;
 			tot_dd += cl->sess.dynamiteDefused;
@@ -826,8 +826,8 @@ void G_printMatchInfo( gentity_t *ent ) {
 			tot_do,
 			tot_ok,
 			tot_fk,
-			tot_ft,
-			tot_et,
+			tot_of,
+			tot_ef,
 			tot_sp,
 			tot_dp,
 			tot_dd));

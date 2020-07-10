@@ -70,16 +70,16 @@ statsMODs MODtoStats(meansOfDeath_t mod) {
 		return STATS_KNIFE;
 	case MOD_KNIFE_STEALTH:
 		return STATS_KNIFESTEALTH;
-	case MOD_KNIFETHROW:
-		return STATS_KNIFETHROW;
+	//case MOD_KNIFETHROW:
+	//	return STATS_KNIFETHROW;
 	case MOD_AIRSTRIKE:
 		return STATS_AIRSTRIKE;
 	case MOD_ARTILLERY:
 		return STATS_ARTILLERY;
-	case MOD_POISONED:
+	/*case MOD_POISONED:
 		return STATS_POISON;
 	case MOD_GOOMBA:
-		return STATS_GOOMBA;
+		return STATS_GOOMBA;*/
 	case MOD_FALLING:
 		return STATS_FALLING;
 	case MOD_MORTAR_SPLASH:
@@ -88,16 +88,16 @@ statsMODs MODtoStats(meansOfDeath_t mod) {
 		return STATS_SUICIDE;
 	case MOD_SUICIDE:
 		return STATS_SUICIDE;
-	case MOD_CHICKEN:
-		return STATS_CHICKEN;
+	/*case MOD_CHICKEN:
+		return STATS_CHICKEN;*/
 	case MOD_WATER:
 		return STATS_DROWN;
 	case MOD_TRIGGER_HURT:
 		return STATS_WORLD;
 	case MOD_CRUSH:
 		return STATS_WORLD;
-	case MOD_ADMIN:
-		return STATS_ADMIN;
+	/*case MOD_ADMIN:
+		return STATS_ADMIN;*/
 	default:
 		return STATS_MAX;
 	}
@@ -303,7 +303,7 @@ void globalStats_weaponShots(gentity_t *ent, int sWeapon) {
 
 	weapon = weaponStats(sWeapon);	
 	if (weapon < STATS_MAX)
-		ent->client->pers.stats.wShotsFired[weapon]++;
+		ent->client->
 }
 
 /*
@@ -316,7 +316,7 @@ void globalStats_weaponHits(gentity_t *attacker, gentity_t *target, int mod, qbo
 	
 	weapon = MODtoStats(mod);
 	if (weapon < STATS_MAX) {
-		attacker->client->pers.stats.wShotsHit[weapon]++;
+		attacker->client->sess.s
 		target->client->pers.stats.wShotsRec[weapon]++;
 
 		if (headshot) {

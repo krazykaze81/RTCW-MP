@@ -30,9 +30,12 @@ If you have questions concerning this license or the applicable additional terms
 
 // g_local.h -- local definitions for game module
 
+//#ifndef _G_LOCAL_H
+//#define _G_LOCAL_H
 #include "q_shared.h"
 #include "bg_public.h"
 #include "g_public.h"
+#include "g_stats.h" // L0 - Global stats
 
 //==================================================================
 
@@ -520,6 +523,17 @@ typedef struct {
 	int acc_shots, acc_hits;
 	weapon_stat_t aWeaponStats[WS_MAX + 1];   // Weapon stats.  +1 to avoid invalid weapon check
 	int	clientFlags;		// Sort some stuff based upon user settings   // nihi addded
+	
+	// Global Stats
+	web_MODs_s MODs[STATS_MAX];							// MODs (Means Of Death)
+	web_deathList_s hitList[MAX_CLIENTS];				// Clients that killed the player	
+	web_classTime_s playerClass[4];						// Count for player classes
+	web_statsTimers_s statsTimers;						// Just some timers for statistics..
+	statsClientData_t stats;
+
+	// HTTP (Web Stats)
+	int		httpCmdIssued;					// debounce time
+	
 // -OSPx
 } clientSession_t;
 
@@ -803,7 +817,9 @@ typedef struct {
 	int frameStartTime;					// OSPx - time the frame started, for antilag stuff
 
 	int startTime;                      // level.time the map was started
-
+	int			timeCurrent;			// L0 - Real game clock
+	int			timeDelta;				// L0 - Pause, match info..
+	int paused;
 	int teamScores[TEAM_NUM_TEAMS];
 	int lastTeamLocationTime;               // last time of client team location update
 
@@ -923,18 +939,23 @@ typedef struct {
 	int	HAlastPrintTime;
 
 	int server_settings;
-
+	int			leftCheck;			// When it was checked the last time..
+	int			lastVoteTime;		// Delay between votes..
 	voteInfo_t voteInfo;
 	// Weapons restrictions
 	int axisSniper, alliedSniper;
 	int axisPF, alliedPF;
 	int axisVenom, alliedVenom;
 	int axisFlamer, alliedFlamer;
-	// Timers
-	int paused;
-	int timeCurrent;                        // Real game clock
-	int timeDelta;                          // Offset from internal clock - used to calculate real match time
-
+	
+	// Map Stats
+	unsigned int	topScore;
+	char			topOwner[MAX_NETNAME+1];
+	qboolean		mapStatsPrinted;	
+	// Last Blood 
+	char		lastKiller[MAX_NETNAME+1];
+	char		lastVictim[MAX_NETNAME+1];
+	
 	// Countdown	
 	int axisTimeouts;
 	int alliedTimeouts;
@@ -951,6 +972,17 @@ typedef struct {
 	int			statsPrint;
 	qboolean	statsStarted;
 	
+	char		*roundID;
+	int			winningTeam;
+	char		firstBloodAttacker[PB_GUID_LENGTH];
+	char		firstBloodVictim[PB_GUID_LENGTH];
+	char		firstHeadshotAttacker[PB_GUID_LENGTH];
+	char		firstHeadshotVictim[PB_GUID_LENGTH];
+	char		lastBloodAttacker[PB_GUID_LENGTH];
+	char		lastBloodVictim[PB_GUID_LENGTH];
+	int			gsTime;
+	int			gsStepping;
+	int			oneSecActions;
 	// Reinforcements offset
 	int dwBlueReinfOffset;
 	int dwRedReinfOffset;
@@ -1598,9 +1630,29 @@ extern vmCvar_t g_pauseLimit;
 extern vmCvar_t g_duelAutoPause;
 extern vmCvar_t team_commands;
 
+// HTTP Stats
+extern vmCvar_t		g_httpToken;
+extern vmCvar_t		g_httpStatsUrl;
+extern vmCvar_t		g_httpStatsAPI;
+extern vmCvar_t		g_httpDebug;
+extern vmCvar_t		g_httpUseThreads;
+extern vmCvar_t		g_httpFlushFile;
+extern vmCvar_t		g_httpIgnoreSafeSize;
+extern vmCvar_t		g_httpEvent;
+extern vmCvar_t		g_httpEventPaused;
 // Stats
-extern vmCvar_t	g_showLifeStats;
-extern vmCvar_t	g_roundStats;
+extern vmCvar_t		g_showLifeStats;
+extern vmCvar_t		g_doubleKills;
+extern vmCvar_t		g_killingSprees;
+extern vmCvar_t		g_deathSprees;
+extern vmCvar_t		g_killerSpree;
+extern vmCvar_t		g_showFirstHeadshot;
+extern vmCvar_t		g_showFirstBlood;
+extern vmCvar_t		g_showLastBlood;
+extern vmCvar_t		g_mapStats;
+extern vmCvar_t		g_mapStatsNotify;
+extern vmCvar_t		g_roundStats;
+extern vmCvar_t		g_excludedRoundStats;
 
 //
 // NOTE!!! If any vote flags are added, MAKE SURE to update the voteFlags struct in bg_misc.c w/appropriate info,
@@ -1940,6 +1992,43 @@ void G_resetModeState(void);
 //qboolean G_smvRunCamera( gentity_t *ent );
 //void G_smvUpdateClientCSList( gentity_t *ent );
 */
+
+// g_stats.c
+//
+void stats_DoubleKill (gentity_t *ent, int meansOfDeath );
+void stats_FirstHeadshot (gentity_t *attacker, gentity_t *targ);
+void stats_FirstBlood (gentity_t *self, gentity_t *attacker);
+void stats_LastBloodMessage(qboolean fOut);
+void stats_KillingSprees ( gentity_t *ent, int score );
+void stats_DeathSpree ( gentity_t *ent );
+void stats_KillerSpree(gentity_t *ent, int score);
+void stats_MatchInfo( void );
+void stats_MapStats( void );
+void write_MapStats( gentity_t *ent, unsigned int score, int type );
+void write_RoundStats(char *player, unsigned int score, unsigned int stats);
+void add_RoundStats( void );
+void stats_RoundStats( void );
+
+//
+// g_stats_global.c
+//
+void globalStats_writeMOD(gentity_t *victim, meansOfDeath_t MOD);
+void globalStats_hitList(gentity_t *victim, gentity_t *attacker);
+void globalStats_playerClass(int client, int type);
+void globalStats_playerTimers(gclient_t *client);
+void globalStats_statsTimers(gclient_t *client);
+void globalStats_overallTimer(void);
+void globalStats_rename(gclient_t *client, char *name);
+void globalStats_weaponShots(gentity_t *ent, int sWeapon);
+void globalStats_weaponHits(gentity_t *attacker, gentity_t *target, int mod, qboolean headshot);
+void globalStats_damageStats(gentity_t *attacker, gentity_t *target, int mod, int dmg, qboolean onSameTeam);
+void globalStats_gibStats(gentity_t *attacker, gentity_t *target, int uWeapon);
+void globalStats_roundToken(void);
+void globalStats_clientDisconnect(gentity_t *ent);
+void globalStats_buildStats(void);
+void globalStats_dump(void);
+void globalStats_cleanList(void);
+
 ///////////////////////
 // ET g_referee.c
 //
