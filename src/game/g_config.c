@@ -71,7 +71,7 @@ static const modeCvarTable_t aCompSettings[] = {
 	{ M_ALL, "team_nocontrols", "0" },
 	{ M_ALL, "sv_allowDownload", "1" },
 	{ M_ALL, "sv_floodProtect", "0" },
-	{ M_ALL, "sv_fps", "30" },  // changed from 20 to 30
+	{ M_ALL, "sv_fps", "20" },
 	{ M_ALL, "vote_limit", "10" },
 	{ 0, NULL, NULL }
 };
@@ -95,7 +95,7 @@ static const modeCvarTable_t aPubSettings[] = {
 	{ M_ALL, "team_nocontrols", "1" },
 	{ M_ALL, "sv_allowDownload", "1" },
 	{ M_ALL, "sv_floodProtect", "0" },
-	{ M_ALL, "sv_fps", "30" }, // changed from 20 to 30
+	{ M_ALL, "sv_fps", "20" },
 	{ M_ALL, "vote_limit", "5" },
 	{ 0, NULL, NULL }
 };
