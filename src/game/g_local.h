@@ -1451,6 +1451,7 @@ extern vmCvar_t g_privateServer;
 extern vmCvar_t TXThandle;
 extern vmCvar_t g_serverMessage;
 extern vmCvar_t g_maxVotes;
+extern vmCvar_t	g_antiWarp;
 extern vmCvar_t g_showFlags;
 
 // SAB
@@ -1777,6 +1778,14 @@ void G_weaponRankings_cmd( gentity_t *ent, unsigned int dwCommand, qboolean stat
 void G_printMatchInfo( gentity_t *ent );
 void G_matchInfoDump( unsigned int dwDumpType );
 void G_statsall_cmd( gentity_t *ent, unsigned int dwCommand, qboolean fDump );
+
+//
+// g_antiwarp.c
+//
+qboolean G_DoAntiwarp(gentity_t *ent);
+void etpro_AddUsercmd(int clientNum, usercmd_t *cmd);
+void DoClientThinks(gentity_t *ent);
+
 // OSPx - New stuff below
 //
 // g_cmds.c

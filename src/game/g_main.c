@@ -187,7 +187,8 @@ vmCvar_t sv_hostname;	// So it's more accesible
 vmCvar_t svx_serverStreaming; // So it's more accessible
 vmCvar_t g_extendedLog;	// Logs various admin actions in a seperate logs
 vmCvar_t g_bannedMSG;	// Message that's printed to banned users
-vmCvar_t	g_hitsounds;			// Hitsounds - Requires soundpack
+vmCvar_t g_antiWarp;				// Enable Anti warp..
+vmCvar_t g_hitsounds;			// Hitsounds - Requires soundpack
 vmCvar_t g_privateServer; // If disabled it doesn't check for password but instead re-uses it for ban bypass based on NO-SQL solution.
 vmCvar_t TXThandle;		// Optional so text (file) based checks (ip/guid tempban-ban) can be disabled..
 // MOTD's
@@ -395,6 +396,7 @@ cvarTable_t gameCvarTable[] = {
 	{ &a5_allowAll, "a5_allowAll", "0", CVAR_ARCHIVE, 0, qfalse },
 	{ &adm_help, "adm_help", "1", CVAR_ARCHIVE, 0, qfalse },
 	{ &g_maxVotes, "g_maxVotes", "2", CVAR_ARCHIVE | CVAR_LATCH, 0, qfalse },
+	{ &g_antiWarp, "g_antiWarp", "1", CVAR_ARCHIVE, 0, qfalse },
 	{ &g_showFlags, "g_showFlags", "1", 0 },
 	{ &g_gamelocked, "g_gamelocked", "0", CVAR_ROM, 0, qfalse },
 	{ &g_hitsounds, "g_hitsounds", "0", CVAR_ARCHIVE, 0, qfalse },
