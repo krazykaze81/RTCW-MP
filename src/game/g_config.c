@@ -60,6 +60,8 @@ static const modeCvarTable_t aCompSettings[] = {
 	{ M_ALL, "g_teamforcebalance", "0" },
 	{ M_ALL, "g_voicechatsallowed", "50" },
 	{ M_ALL, "g_warmup", "10" },
+	{ M_ALL, "g_antiWarp", "1" },
+	{ M_ALL, "g_antilag", "1" },
 	{ M_ALL, "g_noTeamSwitching", "1"}, // RtcwPro fix for readyup system
 	{ M_ALL, "g_minGameClients", "2"}, // RtcwPro fix for readyup system
 	{ M_ALL, "match_minclients", "2"}, // RtcwPro fix for readyup system
@@ -84,6 +86,8 @@ static const modeCvarTable_t aPubSettings[] = {
 	{ M_ALL, "g_teamforcebalance", "1" },
 	{ M_ALL, "g_voicechatsallowed", "50" },
 	{ M_ALL, "g_warmup", "10" },
+	{ M_ALL, "g_antiWarp", "1" },
+	{ M_ALL, "g_antilag", "1" },
 	{ M_ALL, "g_noTeamSwitching", "1"}, // RtcwPro added this
 	{ M_ALL, "g_minGameClients", "2"}, // RtcwPro added this
 	{ M_ALL, "match_minclients", "2"}, // RtcwPro added this
