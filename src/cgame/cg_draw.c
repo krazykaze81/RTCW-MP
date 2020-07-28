@@ -58,6 +58,60 @@ void Controls_GetConfig( void );
 ///////////////////////
 ///////////////////////
 
+/*
+	OSPx - HUD names ETpro port
+*/
+int	numnames = 0;
+
+typedef struct {
+	float x;
+	float y;
+	float dist;
+	char name[MAX_NAME_LENGTH + 1];
+} etpro_name_t;
+
+etpro_name_t hudnames[128];
+
+void VP_ResetNames(void) {
+	numnames = 0;
+}
+int RealStrLen(char *s){
+	int ret = strlen(s);
+	for (; *s; s++) {
+		if (Q_IsColorString(s))
+			ret -= 2;
+	}
+	return ret < 50 ? ret : 50;
+}
+void VP_DrawNames(void) {
+	int i;
+	float fontsize;
+	float dist;
+
+	for (i = 0; i < numnames; i++) 
+	{
+		//need to come up with better scaler
+		fontsize = cgs.media.charsetShader;
+		dist = hudnames[i].dist > 1000.0f ? 1000.0f : hudnames[i].dist;
+		dist /= 2000.0f;
+		fontsize -= (dist * fontsize);
+
+		CG_DrawStringExt((hudnames[i].x - ((RealStrLen(hudnames[i].name) * 6) >> 1)),
+			hudnames[i].y, hudnames[i].name, colorWhite, qfalse, qfalse, 6, 12, 50);
+	}
+}
+void VP_AddName(int x, int y, float dist, int clientNum) {
+
+	if (clientNum == cg.clientNum)
+		return;
+
+	hudnames[numnames].x = x;
+	hudnames[numnames].y = y;
+	hudnames[numnames].dist = dist;
+	Q_strncpyz(hudnames[numnames].name, cgs.clientinfo[clientNum].name, sizeof(hudnames[numnames].name));
+	numnames++;
+
+}
 int CG_Text_Width( const char *text, float scale, int limit ) {
 	int count,len;
 	float out;
@@ -772,6 +826,7 @@ static float CG_DrawTeamOverlay( float y ) {
 			// NERVE - SMF
 			// determine class type
 			val = cg_entities[ ci->clientNum ].currentState.teamNum;
+		
 			if ( val == 0 ) {
 				classType[0] = 'S';
 			} else if ( val == 1 ) {
@@ -885,27 +940,45 @@ char *CG_CalculateReinfTime( void ) {
 }
 */
 
-float CG_CalculateReinfTime_Float( void ) {
+/**
+ * @brief CG_CalculateReinfTime_Float
+ * @param[in] menu
+ * @return
+ */
+float CG_CalculateReinfTime_Float(qboolean menu)
+{
 	team_t team;
-	int dwDeployTime;
+	int    dwDeployTime;
 
-	team = cgs.clientinfo[cg.snap->ps.clientNum].team;
+	if (menu)
+	{
+		if (cgs.clientinfo[cg.clientNum].team == TEAM_SPECTATOR)
+		{
+			team = cgs.ccSelectedTeam == 0 ? TEAM_RED : TEAM_BLUE;
+		}
+		else
+		{
+			team = cgs.clientinfo[cg.clientNum].team;
+		}
+	}
+	else
+	{
+		team = cgs.clientinfo[cg.snap->ps.clientNum].team;
+	}
 
 	dwDeployTime = (team == TEAM_RED) ? cg_redlimbotime.integer : cg_bluelimbotime.integer;
-//	return (1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
-//	return (1 + (dwDeployTime - ((1000+cg.time  - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
-  //  if (cgs.pauseState) {
-   //	cg.pauseTime += 1000;
-  //  }   //nihi added
-   // else {
-	return (1 + (dwDeployTime - ((cg.time) % dwDeployTime)) * 0.001f);    //nihi added -cg.pauseTime
-	//}
+	return (1 + (dwDeployTime - ((cgs.aReinfOffset[team] + cg.time - cgs.levelStartTime) % dwDeployTime)) * 0.001f);
 }
 
-int CG_CalculateReinfTime( void ) {
-	return((int)CG_CalculateReinfTime_Float());
+/**
+ * @brief CG_CalculateReinfTime
+ * @param menu
+ * @return
+ */
+int CG_CalculateReinfTime(qboolean menu)
+{
+	return (int)(CG_CalculateReinfTime_Float(menu));
 }
-
 
 
 
@@ -934,9 +1007,9 @@ static float CG_DrawRespawnTimer(float y) {
 	else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_SPECTATOR)
 		str = "";
 	else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED)
-		str = va("Re: %d", CG_CalculateReinfTime());
+		str = va("RT: %d", CG_CalculateReinfTime(qfalse));
 	else if (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_BLUE)
-		str = va("Re: %d", CG_CalculateReinfTime());
+		str = va("RT: %d", CG_CalculateReinfTime(qfalse));
 
 	w = CG_DrawStrlen(str) * TINYCHAR_WIDTH;
 
@@ -2638,12 +2711,18 @@ static void CG_DrawLimboMessage( void ) {
 	// JPW NERVE
 	if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
 		str = CG_TranslateString( "No more reinforcements this round." );
-	} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
-		str = va( CG_TranslateString( "Reinforcements deploy in %d seconds." ),
-				  (int)( 1 + (float)( cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer ) ) * 0.001f ) );
-	} else {
-		str = va( CG_TranslateString( "Reinforcements deploy in %d seconds." ),
-				  (int)( 1 + (float)( cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer ) ) * 0.001f ) );
+	}	else
+	{
+		int reinfTime = CG_CalculateReinfTime(qfalse);
+
+		if (reinfTime > 1)
+		{
+			str = va(CG_TranslateString("Deploying in ^3%d ^7seconds"), reinfTime);
+		}
+		else
+		{
+			str = va(CG_TranslateString("Deploying in ^3%d ^7second"), reinfTime);
+		}
 	}
 
 	CG_DrawSmallStringColor( INFOTEXT_STARTX, 104, str, color );
@@ -2678,13 +2757,20 @@ static qboolean CG_DrawFollow( void ) {
 		color[2] = 0.0;
 		if ( cg.snap->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
 			sprintf( deploytime, CG_TranslateString( "No more deployments this round" ) );
-		} else if ( cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_RED ) {
-			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
-					 (int)( 1 + (float)( cg_redlimbotime.integer - ( cg.time % cg_redlimbotime.integer ) ) * 0.001f ) );
-		} else {
-			sprintf( deploytime, CG_TranslateString( "Deploying in %d seconds" ),
-					 (int)( 1 + (float)( cg_bluelimbotime.integer - ( cg.time % cg_bluelimbotime.integer ) ) * 0.001f ) );
 		}
+		else
+        {
+				int reinfTime = CG_CalculateReinfTime(qfalse);
+
+				if (reinfTime > 1)
+				{
+					sprintf(deploytime, CG_TranslateString("Deploying in ^3%d ^7seconds"), reinfTime);
+				}
+				else
+				{
+					sprintf(deploytime, CG_TranslateString("Deploying in ^3%d ^7second"), reinfTime);
+				}
+        }
 
 		CG_DrawStringExt( INFOTEXT_STARTX, 68, deploytime, color, qtrue, qfalse, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 80 );
 
@@ -2766,8 +2852,9 @@ static void CG_DrawWarmup( void ) {
 			CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
 
 
-			s1 = va( CG_TranslateString( "Waiting for at least ^n%i ^7%s to ready" ), cgs.minclients, cgs.minclients == 1 ? "player" : "players" );
-			s2 = CG_TranslateString( "Type ^n\\ready ^7in the console to start" );
+			//s1 = va( CG_TranslateString( "Waiting for at least ^n%i ^7%s to ready" ), cgs.minclients, cgs.minclients == 1 ? "player" : "players" );
+			s1 = va( CG_TranslateString( "^3WARMUP:^7 Waiting on ^2%i ^7%s" ), cgs.minclients, cgs.minclients == 1 ? "player" : "players" );   // nihi changed
+			s2 = CG_TranslateString( "Type ^3\\ready ^7in the console to start" );
 
 			w = CG_DrawStrlen( s1 );
 			CG_DrawStringExt( 320 - w * cw / 2, 160, s1, colorWhite,
@@ -2780,13 +2867,14 @@ static void CG_DrawWarmup( void ) {
 		} else {
 
 			// No need to bother with count..scoreboard gives info..
-			s = CG_TranslateString( "^nGame Stopped ^7- Waiting for players to ready up" );
+		//	s = CG_TranslateString( "^nGame Stopped ^7- Waiting for players to ready up" );
+			s = va( CG_TranslateString( "^3WARMUP:^7 Waiting on ^2%i ^7%s" ), cgs.minclients, cgs.minclients == 1 ? "player" : "players" );   // nihi changed
 			w = CG_DrawStrlen( s );
 			CG_DrawStringExt( 320 - w * 6, 120, s, colorWhite, qfalse, qtrue, 12, 18, 0 );
 
 			if ( !cg.demoPlayback && cg.snap->ps.persistant[PERS_TEAM] != TEAM_SPECTATOR &&
 			   ( !( cg.snap->ps.pm_flags & PMF_FOLLOW ) || ( cg.snap->ps.pm_flags & PMF_LIMBO ) ) ) {
-				s1 = CG_TranslateString( "Type ^n\\ready ^7in the console to start" );
+				s1 = CG_TranslateString( "Type ^3\\ready ^7in the console to start" );
 				w = CG_DrawStrlen( s1 );
 				CG_DrawStringExt( 320 - w * cw / 2, 160, s1, colorWhite,
 								  qfalse, qtrue, cw, (int)( cw * 1.5 ), 0 );
@@ -3621,6 +3709,60 @@ static void CG_ScreenFade( void ) {
 	}
 }
 
+// OSPx - Draw HUD Names
+void CG_DrawOnScreenNames(void)
+{
+	static vec3_t	mins = { -1, -1, -1 };
+	static vec3_t	maxs = { 1, 1, 1 };
+	vec4_t			white = { 1.0f, 1.0f, 1.0f, 1.0f };
+	specName_t		*spcNm;
+	trace_t			tr;
+	int				clientNum;
+	int				FadeOut = 0;
+	int				FadeIn = 0;
+
+	for (clientNum = 0; clientNum < cgs.maxclients; clientNum++) {
+
+		if (!cgs.clientinfo[clientNum].infoValid)
+			continue;
+
+		spcNm = &cg.specOnScreenNames[clientNum];
+		if (!spcNm || !spcNm->visible)
+			continue;
+
+		CG_Trace(&tr, cg.refdef.vieworg, mins, maxs, spcNm->origin, -1, CONTENTS_SOLID);
+
+		if (tr.fraction < 1.0f) {
+			spcNm->lastInvisibleTime = cg.time;
+		}
+		else {
+			spcNm->lastVisibleTime = cg.time;
+		}
+
+		FadeOut = cg.time - spcNm->lastVisibleTime;
+		FadeIn = cg.time - spcNm->lastInvisibleTime;
+
+		if (FadeIn) {
+			white[3] = (FadeIn > 500) ? 1.0 : FadeIn / 500.0f;
+			if (white[3] < spcNm->alpha)
+				white[3] = spcNm->alpha;
+		}
+		if (FadeOut) {
+			white[3] = (FadeOut > 500) ? 0.0 : 1.0 - FadeOut / 500.0f;
+			if (white[3] > spcNm->alpha)
+				white[3] = spcNm->alpha;
+		}
+		if (white[3] > 1.0)
+			white[3] = 1.0;
+
+		spcNm->alpha = white[3];
+		if (spcNm->alpha <= 0.0) continue;	// no alpha = nothing to draw..
+
+		CG_Text_Paint_ext2(spcNm->x, spcNm->y, spcNm->scale, white, spcNm->text, 0, 0, 0);
+		// expect update next frame again
+		spcNm->visible = qfalse;
+	}
+}
 // JPW NERVE
 void CG_Draw2D2( void ) {
 	qhandle_t weapon;
@@ -3828,6 +3970,11 @@ static void CG_Draw2D( void ) {
 		return;
 	}
 
+	// OSPx - Hud Names
+	if (vp_drawnames.integer)
+		VP_DrawNames();
+
+	VP_ResetNames();
 	CG_DrawFlashBlendBehindHUD();
 
 #ifndef PRE_RELEASE_DEMO
@@ -3841,7 +3988,10 @@ static void CG_Draw2D( void ) {
 	if ( cg.snap->ps.persistant[PERS_TEAM] == TEAM_SPECTATOR ) {
 		CG_DrawSpectator();
 		CG_DrawCrosshair();
-		CG_DrawCrosshairNames();
+		if (cg_drawNames.integer)
+			CG_DrawOnScreenNames();
+		else
+			CG_DrawCrosshairNames();
 
 		// NERVE - SMF - we need to do this for spectators as well
 		if ( cgs.gametype >= GT_TEAM ) {
@@ -3931,7 +4081,7 @@ void CG_ShakeCamera() {
 
 	// JPW NERVE starts at 1, approaches 0 over time
 	x = ( cg.cameraShakeTime - cg.time ) / cg.cameraShakeLength;
-
+/*
 	// OSPx - NQ's shake cam..
 	val = sin(M_PI * 7 * x + cg.cameraShakePhase) * x * 4.0f * cg.cameraShakeScale;
 	cg.refdef.vieworg[2] += val;
@@ -3940,7 +4090,17 @@ void CG_ShakeCamera() {
 	val = cos(M_PI * 17 * x + cg.cameraShakePhase) * x * 4.0f * cg.cameraShakeScale;
 	cg.refdef.vieworg[0] += val;
 	// End
+*/   // nihi commented for shake
 
+
+	// up/down
+
+	val = sin(M_PI * 8 * x + cg.cameraShakePhase) * x * 18.0f * cg.cameraShakeScale;
+	cg.refdefViewAngles[0] += val;
+
+	// left/right
+	val = sin(M_PI * 15 * x + cg.cameraShakePhase) * x * 16.0f * cg.cameraShakeScale;
+	cg.refdefViewAngles[1] += val;
 	AnglesToAxis( cg.refdefViewAngles, cg.refdef.viewaxis );
 }
 // -NERVE - SMF

@@ -1224,11 +1224,8 @@ void CG_PlayVoiceChat( bufferedVoiceChat_t *vchat ) {
 		return;
 	}
 */
-
-	if ( !cg_noVoiceChats.integer ) {
-		trap_S_StartLocalSound( vchat->snd, CHAN_VOICE );
-
-		// DHM - Nerve :: Show icon above head
+ // nihi moved outside of novoicechats
+	// DHM - Nerve :: Show icon above head
 		if ( vchat->clientNum == cg.snap->ps.clientNum ) {
 			cg.predictedPlayerEntity.voiceChatSprite = vchat->sprite;
 			if ( vchat->sprite == cgs.media.voiceChatShader ) {
@@ -1245,6 +1242,11 @@ void CG_PlayVoiceChat( bufferedVoiceChat_t *vchat ) {
 				cg_entities[ vchat->clientNum ].voiceChatSpriteTime = cg.time + cg_voiceSpriteTime.integer * 2;
 			}
 		}
+		//end nihi
+	if ( !cg_noVoiceChats.integer ) {
+		trap_S_StartLocalSound( vchat->snd, CHAN_VOICE );
+
+	  // NIHI MOVED THE ABOVE SECTION FROM HERE
 		// dhm - end
 
 #ifdef MISSIONPACK
@@ -1584,7 +1586,7 @@ void CG_parseClientStats_cmd (void( txt_dump ) ( char * ) ) {
 //	qboolean fFull = qtrue;  // nihi added
 	char strName[MAX_STRING_CHARS];
 	int kills, headshots, deaths, team_kills, suicides, acc_shots, acc_hits, damage_giv, damage_rec;
-	int bleed, ammo_giv, med_giv, revived, poisoned, gibs, kill_peak;
+	int bleed, ammo_giv, med_giv, revived, gibs, kill_peak;
 	unsigned int iArg = 1;
 	unsigned int nClient = atoi( CG_Argv( iArg++ ) );
 	float acc;
@@ -1618,7 +1620,6 @@ void CG_parseClientStats_cmd (void( txt_dump ) ( char * ) ) {
 	med_giv = atoi( CG_Argv( iArg++ ) );
 	ammo_giv = atoi( CG_Argv( iArg++ ) );
 	revived = atoi( CG_Argv( iArg++ ) );
-	poisoned = atoi( CG_Argv( iArg++ ) );
 	kill_peak = atoi( CG_Argv( iArg++ ) );
 
 	acc = ( acc_shots > 0 ) ? (((float)acc_hits / (float)acc_shots ) * 100.00f) : 0.00;
@@ -1637,8 +1638,8 @@ void CG_parseClientStats_cmd (void( txt_dump ) ( char * ) ) {
 
 	if (ammo_giv > 0 || med_giv > 0)
 		txt_dump( va("^cAmmopacks: ^7%-3d    ^cHealthpacks: ^7%d\n", ammo_giv, med_giv ));
-	if (revived > 0 || poisoned > 0)
-		txt_dump( va("^cRevives  : ^7%-3d    ^cPoisoned   : ^7%d\n", revived, poisoned ));
+	if (revived > 0)
+		txt_dump( va("^cRevives  : ^7%-3d\n", revived ));
 	if (kill_peak > 0 || gibs > 0)
 		txt_dump( va("^cKill Peak: ^7%-3d    ^cGibbed     : ^7%d\n", kill_peak, gibs ));
 	if (acc_shots > 0 || acc_hits > 0)
@@ -1817,7 +1818,8 @@ void CG_TopShotsParse_cmd( void ) {
 void CG_scores_cmd( void ) {
 	const char *str = CG_Argv( 1 );
 
-	CG_Printf( "[skipnotify]%s", str );	// L0 - FIXME - this causes double prints..
+	//CG_Printf( "[skipnotify]%s", str );	// L0 - FIXME - this causes double prints..
+	CG_Printf( "%s", str );	// L0 - FIXME - this causes double prints..
 	if ( cgs.dumpStatsFile > 0 ) {
 		char s[MAX_STRING_CHARS];
 
@@ -1891,7 +1893,7 @@ void CG_dumpStats( void ) {
 	}
 }
 /**************** L0 - OSP Stats dump ends here *****************/
-
+void CG_ForceTapOut_f(void); // OSPx - Tapout
 /*
 =================
 CG_ServerCommand
@@ -2015,7 +2017,13 @@ static void CG_ServerCommand( void ) {
 		return;
 	}
 // L0 -End OSP Stats dump
-
+	// Force tapout on respawn (reuse instant tapout..)
+	if (!Q_stricmp(cmd, "reqforcetapout")) {
+		 if (cg_forceTapout.integer) {
+			CG_ForceTapOut_f();
+		}
+		return;
+	}
 	if ( !strcmp( cmd, "cs" ) ) {
 		CG_ConfigStringModified();
 		return;

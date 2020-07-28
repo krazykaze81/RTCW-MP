@@ -33,8 +33,10 @@ If you have questions concerning this license or the applicable additional terms
 // Ridah, new bounding box
 //static vec3_t	playerMins = {-15, -15, -24};
 //static vec3_t	playerMaxs = {15, 15, 32};
-vec3_t playerMins = {-18, -18, -24};
-vec3_t playerMaxs = {18, 18, 48};
+//vec3_t playerMins = {-18, -18, -24};
+//vec3_t playerMaxs = {18, 18, 48};
+vec3_t	playerMins = {-18, -18, -24}; //-24
+vec3_t	playerMaxs = {18, 18, 51};  //elver fix bounding box, fuck yea!
 // done.
 
 /*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 32) initial
@@ -1187,11 +1189,12 @@ static void ClientCleanName( const char *in, char *out, int outSize ) {
 				break;
 			}
 
-			// don't allow black in a name, period
+		/*	// don't allow black in a name, period
 			if ( ColorIndex( *in ) == 0 ) {
 				in++;
 				continue;
 			}
+			*/   // nihi commented out to allow black names
 
 			// make sure room in dest for both chars
 			if ( len > outSize - 2 ) {
@@ -1356,6 +1359,43 @@ qboolean G_ParseAnimationFiles( char *modelname, gclient_t *cl ) {
 	return qtrue;
 }
 
+/*
+===========
+OSPx - Store Client's IP
+============
+*/
+void SaveIP_f(gclient_t * client, char * sip)
+{
+	if (strcmp(sip, "localhost") == 0 || sip == NULL) {
+		// Localhost, just enter 0 for all values:
+		client->sess.ip[0] = 0;
+		client->sess.ip[1] = 0;
+		client->sess.ip[2] = 0;
+		client->sess.ip[3] = 0;
+		return;
+	}
+
+	sscanf(sip, "%3i.%3i.%3i.%3i",
+		(int *)&client->sess.ip[0], (int *)&client->sess.ip[1],
+		(int *)&client->sess.ip[2], (int *)&client->sess.ip[3]);
+	return;
+}
+
+/*
+===========
+OSPx - To save some time..
+============
+*/
+char *clientIP(gentity_t *ent, qboolean full)
+{
+	if (full) {
+		return va("%d.%d.%d.%d",
+			ent->client->sess.ip[0], ent->client->sess.ip[1], ent->client->sess.ip[2], ent->client->sess.ip[3]);
+	}
+	else {
+		return va("%d.*.*.*", ent->client->sess.ip[0]);
+	}
+}
 
 /*
 ===========
@@ -1396,8 +1436,23 @@ void ClientUserinfoChanged( int clientNum ) {
 
 	// check for local client
 	s = Info_ValueForKey( userinfo, "ip" );
+	// OSPx - save IP
+	if (s[0] != 0) {
+		SaveIP_f(client, s);
+	}
 	if ( s && !strcmp( s, "localhost" ) ) {
 		client->pers.localClient = qtrue;
+		client->sess.referee = RL_REFEREE;
+	} // OSPx - Country Flags
+	else if (!(ent->r.svFlags & SVF_BOT) && !strlen(s)) {
+		// To solve the IP bug..
+		s =	va("%i.%i.%i.%i",
+			client->sess.ip[0],
+			client->sess.ip[1],
+			client->sess.ip[2],
+			client->sess.ip[3]
+		);
+		sscanf(s, "%[^z]s:%*s", s);
 	}
 	int cGender = 0;
 	s = Info_ValueForKey( userinfo, "cg_uinfo" );
@@ -1546,21 +1601,46 @@ void ClientUserinfoChanged( int clientNum ) {
 
 	if ( ent->r.svFlags & SVF_BOT ) {
 
-		s = va( "n\\%s\\t\\%i\\model\\%s\\head\\%s\\c1\\%s\\hc\\%i\\w\\%i\\l\\%i\\skill\\%s",
+		s = va("n\\%s\\t\\%i\\model\\%s\\head\\%s\\c1\\%s\\hc\\%i\\w\\%i\\l\\%i\\skill\\%s\\country\\255",  // nihi added
+	//	s = va( "n\\%s\\t\\%i\\model\\%s\\head\\%s\\c1\\%s\\hc\\%i\\w\\%i\\l\\%i\\skill\\%s",
 				client->pers.netname, client->sess.sessionTeam, model, head, c1,
 				client->pers.maxHealth, client->sess.wins, client->sess.losses,
 				Info_ValueForKey( userinfo, "skill" ) );
 	} else {
-		s = va( "n\\%s\\t\\%i\\model\\%s\\head\\%s\\c1\\%s\\hc\\%i\\w\\%i\\l\\%i",
+	//	s = va( "n\\%s\\t\\%i\\model\\%s\\head\\%s\\c1\\%s\\hc\\%i\\w\\%i\\l\\%i",
+			s = va("n\\%s\\t\\%i\\model\\%s\\head\\%s\\c1\\%s\\hc\\%i\\w\\%i\\l\\%i\\country\\%i\\mu\\%i",  // nihi added
 				client->pers.netname, client->sess.sessionTeam, model, head, c1,
-				client->pers.maxHealth, client->sess.wins, client->sess.losses );
+				client->pers.maxHealth, client->sess.wins, client->sess.losses,
+				client->sess.uci, (client->sess.ignored ? 1 : 0));
 	}
 
 //----(SA) end
 
 	trap_SetConfigstring( CS_PLAYERS + clientNum, s );
 
-	// this is not the userinfo actually, it's the config string
+	// OSPx - We need to send client private info (ip..) only to log and not a configstring,
+	// as \configstrings reveals all user data in it which is something we don't want..
+	if (!(ent->r.svFlags & SVF_BOT)) {
+		char *team;
+
+		team = (client->sess.sessionTeam == TEAM_RED) ? "Axis" :
+			((client->sess.sessionTeam == TEAM_BLUE) ? "Allied" : "Spectator");
+
+		// Print essentials and skip the garbage
+		s = va("name\\%s\\team\\%s\\IP\\%d.%d.%d.%d\\country\\%i\\ignored\\%s\\status\\%i\\timenudge\\%i\\maxpackets\\%i",
+			client->pers.netname, team, client->sess.ip[0], client->sess.ip[1], client->sess.ip[2],
+			client->sess.ip[3], client->sess.uci, (client->sess.ignored ? "yes" : "no"), client->sess.admin,
+			client->pers.clientTimeNudge, client->pers.clientMaxPackets);
+	}
+	// Account for bots..
+	else {
+		char *team;
+
+		team = (client->sess.sessionTeam == TEAM_RED) ? "Axis" :
+			((client->sess.sessionTeam == TEAM_BLUE) ? "Allied" : "Spectator");
+
+		s = va("Bot: name\\%s\\team\\%s", client->pers.netname, team);
+	}
 	G_LogPrintf( "ClientUserinfoChanged: %i %s\n", clientNum, s );
 	G_DPrintf( "ClientUserinfoChanged: %i :: %s\n", clientNum, s );
 }
@@ -1601,15 +1681,22 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 	// recommanding PB based IP / GUID banning, the builtin system is pretty limited
 	// check to see if they are on the banned IP list
 	value = Info_ValueForKey( userinfo, "ip" );
-	if ( G_FilterPacket( value ) ) {
+	if ( G_FilterIPBanPacket( value ) ) {
 		return "You are banned from this server.";
 	}
 
 	// Xian - check for max lives enforcement ban
 	if ( g_enforcemaxlives.integer && ( g_maxlives.integer > 0 || g_axismaxlives.integer > 0 || g_alliedmaxlives.integer > 0 ) ) {
-		value = Info_ValueForKey( userinfo, "cl_guid" );
-		if ( G_FilterMaxLivesPacket( value ) ) {
-			return "Max Lives Enforcement Temp Ban";
+		if ( trap_Cvar_VariableIntegerValue( "sv_punkbuster" ) ) {
+			value = Info_ValueForKey( userinfo, "cl_guid" );
+			if ( G_FilterMaxLivesPacket( value ) ) {
+				return "Max Lives Enforcement Temp Ban. You will be able to reconnect when the next round starts. This ban is enforced to ensure you don't reconnect to get additional lives.";
+			}
+		} else {
+			value = Info_ValueForKey( userinfo, "ip" ); // this isn't really needed, oh well.
+			if ( G_FilterMaxLivesIPPacket( value ) ) {
+				return "Max Lives Enforcement Temp Ban. You will be able to reconnect when the next round starts. This ban is enforced to ensure you don't reconnect to get additional lives.";
+			}
 		}
 	}
 	// End Xian
@@ -1655,6 +1742,38 @@ char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot ) {
 		}
 	}
 
+	// OSPx - Country Flags
+	if (gidb != NULL) {
+		value = Info_ValueForKey(userinfo, "ip");
+
+		if (!strcmp(value, "localhost")) {
+			client->sess.uci = 0;
+		}
+		else {
+			unsigned long ip = GeoIP_addr_to_num(value);
+
+			if (((ip & 0xFF000000) == 0x0A000000) ||
+				((ip & 0xFFF00000) == 0xAC100000) ||
+				((ip & 0xFFFF0000) == 0xC0A80000)) {
+
+				client->sess.uci = 0;
+			}
+			else {
+				unsigned int ret = GeoIP_seek_record(gidb, ip);
+
+				if (ret > 0) {
+					client->sess.uci = ret;
+				}
+				else {
+					client->sess.uci = 246;
+					G_LogPrintf("GeoIP: This IP:%s cannot be located\n", value);
+				}
+			}
+		}
+	}
+	else {
+		client->sess.uci = 255;
+	} // -OSPx
 	// get and distribute relevent paramters
 	G_LogPrintf( "ClientConnect: %i\n", clientNum );
 	ClientUserinfoChanged( clientNum );
@@ -2055,7 +2174,15 @@ void ClientSpawn( gentity_t *ent, qboolean revived ) {
 			if ( g_fastres.integer == 1 && revived ) {
 				client->ps.powerups[PW_INVULNERABLE] = level.time + g_fastResMsec.integer;
 			} else {
-				client->ps.powerups[PW_INVULNERABLE] = level.time + 3000;
+				// L0 - Spawn protection
+				if (client->sess.sessionTeam == TEAM_RED)
+					client->ps.powerups[PW_INVULNERABLE] = level.time + g_axisSpawnProtectionTime.integer;
+				else if (client->sess.sessionTeam == TEAM_BLUE)
+					client->ps.powerups[PW_INVULNERABLE] = level.time + g_alliedSpawnProtectionTime.integer;
+				// We don't know what team player is...default it
+				else
+					client->ps.powerups[PW_INVULNERABLE] = level.time + 3000;
+				// End
 			}
 		}
 
@@ -2115,7 +2242,7 @@ void ClientSpawn( gentity_t *ent, qboolean revived ) {
 	BG_PlayerStateToEntityState( &client->ps, &ent->s, qtrue );
 
 	// show_bug.cgi?id=569
-//	G_ResetMarkers( ent );   //nihi removed
+	//G_ResetMarkers( ent );   //nihi removed
 }
 
 

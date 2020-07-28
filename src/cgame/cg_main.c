@@ -296,6 +296,7 @@ vmCvar_t cg_crosshairAlpha;
 vmCvar_t cg_crosshairAlphaAlt;
 vmCvar_t cg_crosshairColor;
 vmCvar_t cg_crosshairColorAlt;
+vmCvar_t ch_font;
 vmCvar_t cg_hitsounds;
 vmCvar_t cg_drawWeaponIconFlash;
 vmCvar_t cg_printObjectiveInfo;
@@ -307,14 +308,17 @@ vmCvar_t cg_noVoice;
 vmCvar_t cg_zoomedFOV;
 vmCvar_t cg_statsList;			// 0 = player only, 1 = team stats, 2 = stats of all players
 vmCvar_t cg_zoomedSens;
+vmCvar_t vp_drawnames;
+vmCvar_t cg_drawNames;
 vmCvar_t cg_announcer;
 vmCvar_t cg_autoAction;
 vmCvar_t cf_wstats;             // OSP's Font scale for +wstats window
 vmCvar_t cf_wtopshots;          // OSP's Font scale for +wtopshots window
+vmCvar_t authLevel;
 vmCvar_t cg_noAmmoAutoSwitch;
 vmCvar_t cg_uinfo;
 vmCvar_t cg_useScreenshotJPEG;
-
+vmCvar_t cg_forceTapout;
 // -OSPx
 vmCvar_t demo_avifpsF1;
 vmCvar_t demo_avifpsF2;
@@ -326,6 +330,10 @@ vmCvar_t demo_infoWindow;
 vmCvar_t int_cl_maxpackets;
 vmCvar_t int_cl_timenudge;
 vmCvar_t int_ui_blackout;
+
+// added from et - nihi
+vmCvar_t cg_spawnTimer_set;         // spawntimer
+vmCvar_t cg_spawnTimer_period;      // spawntimer
 
 typedef struct {
 	vmCvar_t    *vmCvar;
@@ -422,7 +430,7 @@ cvarTable_t cvarTable[] = {
 	{ &cg_showmiss, "cg_showmiss", "0", 0 },
 	{ &cg_footsteps, "cg_footsteps", "1", CVAR_CHEAT },
 	//{ &cg_tracerChance, "cg_tracerchance", "0.4", CVAR_CHEAT },   // nihi cmmmented to allow cg_tracerchance
-    { &cg_tracerChance, "cg_tracerchance", "0.4", CVAR_ARCHIVE },
+	{ &cg_tracerChance, "cg_tracerchance", "0.4", CVAR_CHEAT },
 	{ &cg_tracerWidth, "cg_tracerwidth", "0.8", CVAR_CHEAT },
 	{ &cg_tracerSpeed, "cg_tracerSpeed", "4500", CVAR_CHEAT },
 	{ &cg_tracerLength, "cg_tracerlength", "160", CVAR_CHEAT },
@@ -539,6 +547,7 @@ cvarTable_t cvarTable[] = {
 	{ &cg_crosshairAlphaAlt, "cg_crosshairAlphaAlt", "1.0", CVAR_ARCHIVE },
 	{ &cg_crosshairColor, "cg_crosshairColor", "White", CVAR_ARCHIVE },
 	{ &cg_crosshairColorAlt, "cg_crosshairColorAlt", "White", CVAR_ARCHIVE },
+	{ &ch_font, "ch_font", "0", CVAR_ARCHIVE | CVAR_LATCH },
 	{ &cg_drawWeaponIconFlash, "cg_drawWeaponIconFlash", "0", CVAR_ARCHIVE },
 	{ &cg_hitsounds, "cg_hitsounds", "0", CVAR_ARCHIVE},
 //	{ &cg_hitsounds, "cg_hitsounds", "0", CVAR_ARCHIVE},
@@ -551,6 +560,8 @@ cvarTable_t cvarTable[] = {
 	{ &cg_zoomedFOV, "cg_zoomedFOV", "90", CVAR_ARCHIVE },
 	{ &cg_statsList, "cg_statsList", "0", CVAR_ARCHIVE },
 	{ &cg_zoomedSens, "cg_zoomedSens", ".3", CVAR_ARCHIVE },
+	{ &vp_drawnames, "vp_drawnames", "0", CVAR_ARCHIVE | CVAR_CHEAT },
+	{ &cg_drawNames, "cg_drawNames", "1", CVAR_ROM },
 	{ &cg_announcer, "cg_announcer", "1", CVAR_ARCHIVE },
 	{ &cg_autoAction, "cg_autoAction", "0", CVAR_ARCHIVE },
 	{ &cg_useScreenshotJPEG, "cg_useScreenshotJPEG", "1", CVAR_ARCHIVE },
@@ -558,8 +569,12 @@ cvarTable_t cvarTable[] = {
 	{ &cf_wstats, "cf_wstats", "1.2", CVAR_ARCHIVE },
 	{ &cf_wtopshots, "cf_wtopshots", "1.0", CVAR_ARCHIVE },
 	{ &int_cl_maxpackets, "cl_maxpackets", "30", CVAR_ARCHIVE },
-	{ &cg_noAmmoAutoSwitch, "cg_noAmmoAutoSwitch", "1", CVAR_ARCHIVE },
+	{ &cg_noAmmoAutoSwitch, "cg_noAmmoAutoSwitch", "0", CVAR_ARCHIVE },
+    { &cg_forceTapout, "cg_forceTapout", "0", CVAR_ARCHIVE },
 	{ &int_cl_timenudge, "cl_timenudge", "0", CVAR_ARCHIVE|CVAR_LATCH },
+	// et
+    { &cg_spawnTimer_set, "cg_spawnTimer_set", "-1", CVAR_TEMP },
+	{ &cg_spawnTimer_period, "cg_spawnTimer_period", "0", CVAR_TEMP },
 	// -OSPx
 	{ &int_ui_blackout, "ui_blackout", "0", CVAR_ROM },
 	{ &cg_antilag, "g_antilag", "0", 0 }
@@ -805,7 +820,8 @@ char *CG_generateFilename( void ) {
 }
 // Console prints for stats
 void CG_printConsoleString( char *str ) {
-	CG_Printf( "[skipnotify]%s", str );
+	//CG_Printf( "[skipnotify]%s", str );
+    CG_Printf( "%s", str );  // nihi changed
 }
 // End
 
@@ -1183,7 +1199,7 @@ static void CG_RegisterSounds( void ) {
 	trap_S_RegisterSound( "sound/Loogie/sizzle.wav" );
 */
 	// L0 - sounds
-	cgs.media.countFightSound = trap_S_RegisterSound( "sound/scenaric/fight.wav" );
+	cgs.media.countFightSound = trap_S_RegisterSound( "sound/match/fight.wav" );
 	// Hitsounds
 	cgs.media.headShot = trap_S_RegisterSound( "EliteMod/sound/game/hitH.wav" );
 	cgs.media.bodyShot = trap_S_RegisterSound( "EliteMod/sound/game/hit.wav" );
@@ -1391,8 +1407,23 @@ static void CG_RegisterGraphics( void ) {
 		cg.crosshairShaderAlt[i] = trap_R_RegisterShader( va( "gfx/2d/crosshair%c_alt_OSPx", 'a' + i ) );
 	}
 
+	// L0 - Charset
+	if ( ch_font.integer == 1 ) {
+		cgs.media.charsetShader     = trap_R_RegisterShader( "gfx/2d/hudchars_OSP1" );
+		cgs.media.menucharsetShader = trap_R_RegisterShader( "gfx/2d/hudchars_OSP1" );
+	} else if ( ch_font.integer == 2 )    {
+		cgs.media.charsetShader     = trap_R_RegisterShader( "gfx/2d/hudchars_OSP2" );
+		cgs.media.menucharsetShader = trap_R_RegisterShader( "gfx/2d/hudchars_OSP2" );
+	// Defaults to wolf.
+	} else {
+		cgs.media.charsetShader     = trap_R_RegisterShader( "gfx/2d/hudchars" );
+		cgs.media.menucharsetShader = trap_R_RegisterShader( "gfx/2d/hudchars" );
+	}
+	// End
 	cgs.media.backTileShader = trap_R_RegisterShader( "gfx/2d/backtile" );
 	cgs.media.noammoShader = trap_R_RegisterShader( "icons/noammo" );
+	// OSPx - Country Flags (by mcwf)
+	cgs.media.countryFlags = trap_R_RegisterShaderNoMip("gfx/flags/world_flags");
 
 	// powerup shaders
 //	cgs.media.quadShader = trap_R_RegisterShader("powerups/quad" );
@@ -2451,10 +2482,10 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum ) {
 	cgs.serverCommandSequence = serverCommandSequence;
 
 	// load a few needed things before we do any screen updates
-	// nihi changed hudchars to hudchars_OSP1
-	cgs.media.charsetShader     = trap_R_RegisterShader( "gfx/2d/hudchars_OSP1" ); //trap_R_RegisterShader( "gfx/2d/bigchars" );
+
+	cgs.media.charsetShader     = trap_R_RegisterShader( "gfx/2d/hudchars" ); //trap_R_RegisterShader( "gfx/2d/bigchars" );
 	// JOSEPH 4-17-00
-	cgs.media.menucharsetShader = trap_R_RegisterShader( "gfx/2d/hudchars_OSP1" );
+	cgs.media.menucharsetShader = trap_R_RegisterShader( "gfx/2d/hudchars" );
 	// END JOSEPH
 	cgs.media.whiteShader       = trap_R_RegisterShader( "white" );
 	cgs.media.charsetProp       = trap_R_RegisterShaderNoMip( "menu/art/font1_prop.tga" );

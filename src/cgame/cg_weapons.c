@@ -2679,9 +2679,13 @@ void CG_AddPlayerWeapon( refEntity_t *parent, playerState_t *ps, centity_t *cent
 
 	// OSPx - Disable muzzleFlash if they have it off..
 	// NOTE: Patched for zoomed FOV
-	if (!cg_muzzleFlash.integer || cg.zoomedFOV) {
+
+
+	if ( isPlayer || !cg_muzzleFlash.integer || cg.zoomedFOV) {
+
 		flash.hModel = 0;
 	}
+
 
 	// weaps with barrel smoke
 	if ( ps || cg.renderingThirdPerson || !isPlayer ) {
@@ -2825,7 +2829,10 @@ void CG_AddViewWeapon( playerState_t *ps ) {
 	if ( cg.renderingThirdPerson ) {
 		return;
 	}
-
+	// no gun if in third person view
+	if ( !ps ) {
+		return;
+	}
 	// allow the gun to be completely removed
 	if ( ( !cg_drawGun.integer ) || ( cg_uselessNostalgia.integer ) ) {
 		vec3_t origin;
@@ -4254,8 +4261,8 @@ void CG_OutOfAmmoChange( qboolean allowforceswitch ) {
 		// jpw
 
 		// never switch weapon if auto-reload is disabled
-		if (!cg.pmext.bAutoReload && IS_AUTORELOAD_WEAPON(cg.weaponSelect)
-			&& !cg_noAmmoAutoSwitch.integer) {   // OSPx - Account for cg_noAmmoAutoSwitch variable.. //nihi added
+		if (!cg.pmext.bAutoReload && IS_AUTORELOAD_WEAPON(cg.weaponSelect) ){
+	//		&& !cg_noAmmoAutoSwitch.integer) {   // OSPx - Account for cg_noAmmoAutoSwitch variable.. //nihi added
 			return;
 		}
 
@@ -4564,6 +4571,7 @@ void CG_FireWeapon( centity_t *cent ) {
 		else
 		{
 			cent->muzzleFlashTime = 0;
+			//cent->muzzleFlashTime = cg.time;
 		}
 
 		return;
@@ -4589,6 +4597,7 @@ void CG_FireWeapon( centity_t *cent ) {
 	else
 	{
 		cent->muzzleFlashTime = 0;
+
 	}
 
 	// RF, kick angles

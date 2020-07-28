@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "q_shared.h"
 #include "bg_public.h"
+#include "../../MAIN//ui_mp/menudef.h"
 
 // JPW NERVE -- added because I need to check single/multiplayer instances and branch accordingly
 #ifdef CGAMEDLL
@@ -3362,8 +3363,18 @@ This needs to be the same for client side prediction and server use.
 qboolean    BG_CanItemBeGrabbed( const entityState_t *ent, const playerState_t *ps ) {
 	gitem_t *item;
 	int ammoweap,weapbank;     // JPW NERVE
-
-
+// nihi
+// L0 - unlockWeapons
+#ifdef GAMEDLL
+		extern vmCvar_t g_unlockWeapons;
+		extern vmCvar_t g_disableSMGPickup;
+		int unlockWeapons = g_unlockWeapons.integer;
+		int disableSMGPickup = g_disableSMGPickup.integer;
+#else
+		int unlockWeapons = 0;
+		int disableSMGPickup = 0;
+#endif
+// end
 	if ( ent->modelindex < 1 || ent->modelindex >= bg_numItems ) {
 		Com_Error( ERR_DROP, "BG_CanItemBeGrabbed: index out of range" );
 	}
@@ -3372,21 +3383,46 @@ qboolean    BG_CanItemBeGrabbed( const entityState_t *ent, const playerState_t *
 
 	switch ( item->giType ) {
 	case IT_WEAPON:
-// JPW NERVE -- medics & engineers can only pick up same weapon type
-		if ( item->giTag == WP_AMMO ) { // magic ammo for any two-handed weapon
-			return qtrue;
+	// L0 - disable SMG Pickup if client already has a SMG
+		if (disableSMGPickup)
+		{
+			// We only check for SMG's
+			if ((item->giTag == WP_MP40) ||
+				(item->giTag == WP_THOMPSON) ||
+				(item->giTag == WP_STEN))
+			{
+				// If client has it, do not pick it up..
+				if (COM_BitCheck(ps->weapons, item->giTag))
+					return qfalse;
+			}
 		}
-		if ( ( ps->stats[STAT_PLAYER_CLASS] == PC_MEDIC ) || ( ps->stats[STAT_PLAYER_CLASS] == PC_ENGINEER ) ) {
-			if ( !COM_BitCheck( ps->weapons, item->giTag ) ) {
-				return qfalse;
-			} else {
+// End
+
+// JPW NERVE -- medics & engineers can only pick up same weapon type
+		if (item->giTag == WP_AMMO) // magic ammo for any two-handed weapon
+			return qtrue;
+		if ((ps->stats[STAT_PLAYER_CLASS] == PC_MEDIC) || (ps->stats[STAT_PLAYER_CLASS] == PC_ENGINEER)) {
+			if (!COM_BitCheck( ps->weapons, item->giTag)) {
+// L0 - unlockWeapons
+				// if this cvar is disabled, then behave like normal
+				if (unlockWeapons == 0)
+					return qfalse;
+				// If it's 1, meds and engs can pickup smg's
+				else if ((unlockWeapons == 1) && ((item->giTag != WP_MP40) && (item->giTag != WP_THOMPSON) && (item->giTag != WP_STEN)))
+					return qfalse;
+// L0 - end
+			}
+			else {
 				return qtrue;
 			}
 		}
 
 		if ( ps->stats[STAT_PLAYER_CLASS] == PC_LT ) {
-			if ( ( item->giTag != WP_MP40 ) && ( item->giTag != WP_THOMPSON ) && ( item->giTag != WP_STEN ) ) {
-				return qfalse;
+			if ( (item->giTag != WP_MP40) && (item->giTag != WP_THOMPSON) && (item->giTag != WP_STEN) ) {
+				// L0 - allow picking any weapons for all classes if it's set to 2.. includes -> snipers, panzer, flamer..
+				if (unlockWeapons < 2)
+					return qfalse;
+				// End
 			}
 		}
 
@@ -4155,15 +4191,37 @@ void BG_setCrosshair(char *colString, float *col, float alpha, char *cvarName) {
 	trap_Cvar_Set(cvarName, "White");
 }
 
+const voteType_t voteToggles[] =
+{
+	{ "vote_allow_comp",         CV_SVF_COMP },
+	{ "vote_allow_gametype",     CV_SVF_GAMETYPE },
+	{ "vote_allow_kick",         CV_SVF_KICK },
+	{ "vote_allow_map",              CV_SVF_MAP },
+	{ "vote_allow_matchreset",       CV_SVF_MATCHRESET },
+	{ "vote_allow_mutespecs",        CV_SVF_MUTESPECS },
+	{ "vote_allow_nextmap",          CV_SVF_NEXTMAP },
+	{ "vote_allow_pub",              CV_SVF_PUB },
+	{ "vote_allow_referee",          CV_SVF_REFEREE },
+	{ "vote_allow_shuffleteamsxp",   CV_SVF_SHUFFLETEAMS },
+	{ "vote_allow_swapteams",        CV_SVF_SWAPTEAMS },
+	{ "vote_allow_friendlyfire", CV_SVF_FRIENDLYFIRE },
+	{ "vote_allow_timelimit",        CV_SVF_TIMELIMIT },
+	{ "vote_allow_warmupdamage", CV_SVF_WARMUPDAMAGE },
+	{ "vote_allow_antilag",          CV_SVF_ANTILAG },
+	{ "vote_allow_balancedteams",    CV_SVF_BALANCEDTEAMS },
+	{ "vote_allow_muting",           CV_SVF_MUTING }
+};
+
+int numVotesAvailable = sizeof(voteToggles) / sizeof(voteType_t);
 // L0 - Reinforcements offset
 const unsigned int aReinfSeeds[MAX_REINFSEEDS] = { 11, 3, 13, 7, 2, 5, 1, 17 };
 // L0 - Stats (It matches extWeaponStats_t in bg_public.h)
 // I think i'm missing few...sniper?
 //
-// EDIT: 
+// EDIT:
 // Added Sniper (scoped) & venom
-// 
-// TODO: 
+//
+// TODO:
 // Add poison & FG42 Scope
 //
 // Weapon full names + headshot capability
@@ -4187,7 +4245,6 @@ const weap_ws_t aWeaponInfo[WS_MAX] = {
 	{ qtrue,    "MG42",  "MG-42 Gun"  },  // 16
 	{ qtrue,    "RIFL",  "Mauser" },	  // 17
 	{ qtrue,    "VENM",  "Venom" },		  // 18
-	{ qfalse,   "POIS",  "Poison" },	  // 19
 };
 // strip colors and control codes, copying up to dwMaxLength-1 "good" chars and nul-terminating
 // returns the length of the cleaned string

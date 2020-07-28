@@ -1,7 +1,7 @@
 /*
 ===========================================================================
 
-- L0 
+- L0
 
 Removed default antilag and ported a new one from 1.0 based on unlagged source and few tweaks from s4ndmod.
 
@@ -11,7 +11,7 @@ Last change: 12 Jan / 2013
 
 #include "g_local.h"
 
-// OSP 
+// OSP
 #define IS_ACTIVE( x ) ( \
 		x->r.linked == qtrue &&	\
 		x->client->ps.stats[STAT_HEALTH] > 0 &&	\
@@ -258,57 +258,6 @@ void G_UnTimeShiftAllClients( gentity_t *skip ) {
 	}
 }
 
-/* L0 - This is part of original code I ported back in to resolve some bugs.. */
 
-void G_AttachBodyParts( gentity_t* ent ) {
-	int i;
-	gentity_t   *list;
 
-	for ( i = 0; i < level.numConnectedClients; i++ ) {
-		list = g_entities + level.sortedClients[i];
-		list->client->tempHead = ( list != ent && IS_ACTIVE( list ) ) ? G_BuildHead( list ) : NULL;
-	}
-}
 
-void G_DettachBodyParts(void) {
-	int i;
-	gentity_t   *list;
-
-	for ( i = 0; i < level.numConnectedClients; i++ ) {
-		list = g_entities + level.sortedClients[i];
-		if ( list->client->tempHead != NULL ) {
-			G_FreeEntity( list->client->tempHead );
-		}
-	}
-}
-
-int G_SwitchBodyPartEntity( gentity_t* ent ) {
-	if ( ent->s.eType == ET_TEMPHEAD ) {
-		return ent->parent - g_entities;
-	}
-	return ent - g_entities;
-}
-
-#define POSITION_READJUST										\
-	if ( res != results->entityNum ) {							\
-		VectorSubtract( end, start, dir );						\
-		VectorNormalizeFast( dir );								\
-																\
-		VectorMA( results->endpos, -1, dir, results->endpos );	\
-		results->entityNum = res;								\
-	}
-
-// Run a trace with players in historical positions.
-void G_HistoricalTrace( gentity_t* ent, trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentmask ) {
-	int res;
-	vec3_t dir;
-
-	G_AttachBodyParts( ent ) ;
-	trap_Trace( results, start, mins, maxs, end, passEntityNum, contentmask );
-
-	res = G_SwitchBodyPartEntity( &g_entities[results->entityNum] );
-	POSITION_READJUST
-
-	G_DettachBodyParts();
-	return;
-}

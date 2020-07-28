@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -1585,8 +1585,8 @@ void Fire_Lead( gentity_t *ent, gentity_t *activator, float spread, int damage )
 	VectorMA( end, u, up, end );
 
 	// L0 - Antilag (Restored it back in to cope with mg42 bug)
-	G_HistoricalTrace( ent, &tr, muzzle, NULL, NULL, end, ent->s.number, MASK_SHOT );
 
+	trap_Trace (&tr, muzzle, NULL, NULL, end, ent->s.number, MASK_SHOT);
 	if ( g_gametype.integer == GT_SINGLE_PLAYER ) {
 		AICast_ProcessBullet( activator, muzzle, tr.endpos );
 	}

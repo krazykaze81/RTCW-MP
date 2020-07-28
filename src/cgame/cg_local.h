@@ -716,6 +716,7 @@ typedef struct {
 	char headModelName[MAX_QPATH];
 	gender_t gender;                // from model
 	// -NERVE - SMF
+	int refStatus;						// RtcwPro refStatus added
 } clientInfo_t;
 
 
@@ -828,6 +829,19 @@ typedef struct {
 
 #define MAX_SPAWN_VARS          64
 #define MAX_SPAWN_VARS_CHARS    2048
+// OSPx - Draw HUDnames
+typedef struct specName_s
+{
+	float		x;
+	float		y;
+	float		scale;
+	const char *text;
+	vec3_t		origin;
+	int         lastVisibleTime;
+	int         lastInvisibleTime;
+	qboolean    visible;
+	float		alpha;
+}specName_t;
 
 typedef struct {
 	int clientFrame;                // incremented each frame
@@ -1119,6 +1133,9 @@ typedef struct {
 	// OSP's window's
 	// Auto Actions
 	qboolean	latchAutoActions;
+	// Draw names on hud
+	qboolean	renderingFreeCam;
+	specName_t	specOnScreenNames[MAX_CLIENTS];
 	cg_string_t aStringPool[MAX_STRINGS];
 	cg_window_t *msgWstatsWindow;
 	cg_window_t *msgWtopshotsWindow;
@@ -1636,6 +1653,9 @@ typedef struct {
 	qhandle_t selectCursor;
 	qhandle_t sizeCursor;
 
+// OSPx
+	// Country Flags
+	qhandle_t countryFlags;
 	// Hitsounds
 	sfxHandle_t	headShot;
 	sfxHandle_t	bodyShot;
@@ -1963,6 +1983,7 @@ extern vmCvar_t cg_descriptiveText;
 extern vmCvar_t cg_autoReload;
 extern vmCvar_t cg_antilag;
 
+extern vmCvar_t authLevel;
 // OSPx
 extern vmCvar_t cg_crosshairPulse;
 extern vmCvar_t	cg_showFlags;
@@ -1972,6 +1993,7 @@ extern vmCvar_t cg_crosshairAlpha;
 extern vmCvar_t cg_crosshairAlphaAlt;
 extern vmCvar_t cg_crosshairColor;
 extern vmCvar_t cg_crosshairColorAlt;
+extern vmCvar_t ch_font;
 extern vmCvar_t cg_drawWeaponIconFlash;
 extern vmCvar_t cg_printObjectiveInfo;
 extern vmCvar_t cg_muzzleFlash;
@@ -1981,8 +2003,11 @@ extern vmCvar_t cg_drawReinforcementTime;
 extern vmCvar_t cg_noChat;
 extern vmCvar_t cg_noVoice;
 // nihi added
+extern vmCvar_t	vp_drawnames;
+extern vmCvar_t	cg_drawNames;
 extern vmCvar_t cg_announcer;
 extern vmCvar_t cg_autoAction;
+extern vmCvar_t cg_forceTapout;
 extern vmCvar_t cg_statsList;
 extern vmCvar_t cg_useScreenshotJPEG;
 extern vmCvar_t cg_printObjectiveInfo;
@@ -2006,6 +2031,10 @@ extern vmCvar_t demo_infoWindow;
 extern vmCvar_t int_cl_maxpackets;
 extern vmCvar_t int_cl_timenudge;
 
+
+//added from et - nihi
+extern vmCvar_t cg_spawnTimer_period;
+extern vmCvar_t cg_spawnTimer_set;
 //
 // cg_main.c
 //
@@ -2111,6 +2140,8 @@ void CG_SaveTransTable();
 void CG_ReloadTranslation();
 // -NERVE - SMF
 
+// OSPx - Country Flags
+void CG_DrawPicST(float x, float y, float width, float height, float s0, float t0, float s1, float t1, qhandle_t hShader);
 //
 // cg_draw.c, cg_newDraw.c
 //
@@ -2158,8 +2189,10 @@ void CG_Fade( int r, int g, int b, int a, float time );
 
 
 // - Reinforcement offset
-int CG_CalculateReinfTime(void);
-float CG_CalculateReinfTime_Float(void);
+//int CG_CalculateReinfTime(void);
+//float CG_CalculateReinfTime_Float(void);
+int CG_CalculateReinfTime(qboolean menu);
+float CG_CalculateReinfTime_Float(qboolean menu);
 // PopIn
 void CG_PopinPrint(const char *str, int y, int charWidth, qboolean blink);
 // - Announcer
@@ -2211,6 +2244,8 @@ void CG_PainEvent( centity_t *cent, int health, qboolean crouching );
 void CG_SetEntitySoundPosition( centity_t *cent );
 void CG_AddPacketEntities( void );
 void CG_Beam( centity_t *cent );
+
+//void CG_AdjustPositionForMover(const vec3_t in, int moverNum, int fromTime, int toTime, vec3_t out, vec3_t angles_in, vec3_t angles_out);
 void CG_AdjustPositionForMover( const vec3_t in, int moverNum, int fromTime, int toTime, vec3_t out, vec3_t outDeltaAngles );
 
 void CG_PositionEntityOnTag( refEntity_t *entity, const refEntity_t *parent,

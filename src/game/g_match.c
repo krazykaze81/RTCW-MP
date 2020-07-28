@@ -104,7 +104,49 @@ void CountDown(qboolean restart){
 	//	AAPS(va("sound/match/%s", index));
 level.CNstart++;  // push forward each frame.. :)
 }
+/**
+ * @brief Setting initialization
+ */
+void G_loadMatchGame(void)
+{
+	int  i, dwBlueOffset, dwRedOffset;
+	int  aRandomValues[MAX_REINFSEEDS];
+	char strReinfSeeds[MAX_STRING_CHARS];
 
+	if (server_autoconfig.integer > 0 && (!(z_serverflags.integer & ZSF_COMP) || level.newSession)) {
+		G_configSet(g_gametype.integer, (server_autoconfig.integer == 1));
+		trap_Cvar_Set("z_serverflags", va("%d", z_serverflags.integer | ZSF_COMP));
+	}
+	
+//	G_Printf("Setting MOTD...\n");
+//	trap_SetConfigstring(CS_CUSTMOTD + 0, server_motd0.string);
+//	trap_SetConfigstring(CS_CUSTMOTD + 1, server_motd1.string);
+//	trap_SetConfigstring(CS_CUSTMOTD + 2, server_motd2.string);
+//	trap_SetConfigstring(CS_CUSTMOTD + 3, server_motd3.string);
+//	trap_SetConfigstring(CS_CUSTMOTD + 4, server_motd4.string);
+//	trap_SetConfigstring(CS_CUSTMOTD + 5, server_motd5.string);
+
+	// Voting flags
+//	G_voteFlags();
+
+	// Set up the random reinforcement seeds for both teams and send to clients
+	dwBlueOffset = rand() % MAX_REINFSEEDS;
+	dwRedOffset  = rand() % MAX_REINFSEEDS;
+	Q_strncpyz(strReinfSeeds, va("%d %d", (dwBlueOffset << REINF_BLUEDELT) + (rand() % (1 << REINF_BLUEDELT)),
+	                             (dwRedOffset << REINF_REDDELT)  + (rand() % (1 << REINF_REDDELT))),
+	           MAX_STRING_CHARS);
+
+	for (i = 0; i < MAX_REINFSEEDS; i++)
+	{
+		aRandomValues[i] = (rand() % REINF_RANGE) * aReinfSeeds[i];
+		Q_strcat(strReinfSeeds, MAX_STRING_CHARS, va(" %d", aRandomValues[i]));
+	}
+
+	level.dwBlueReinfOffset = 1000 * aRandomValues[dwBlueOffset] / aReinfSeeds[dwBlueOffset];
+	level.dwRedReinfOffset  = 1000 * aRandomValues[dwRedOffset] / aReinfSeeds[dwRedOffset];
+
+	trap_SetConfigstring(CS_REINFSEEDS, strReinfSeeds);
+}
 /*
 =================
 Pause countdown
@@ -234,4 +276,153 @@ void setDefWeap(gclient_t *client, int clips) {
 void setDefaultWeapon(gclient_t *client, qboolean isSold) {
 
 
+}
+/**
+ * @brief G_delayPrint
+ * @param[in,out] dpent
+ */
+void G_delayPrint(gentity_t *dpent)
+{
+	int      think_next = 0;
+	qboolean fFree      = qtrue;
+
+	switch (dpent->spawnflags)
+	{
+	case DP_PAUSEINFO:
+		if (level.paused > PAUSE_UNPAUSING)
+		{
+			int cSeconds = match_timeoutlength.integer * 1000 - (level.time - dpent->timestamp);
+
+			if (cSeconds > 1000)
+			{
+				AP(va("cp \"^3Match resuming in ^1%d^3 seconds!\n\"", cSeconds / 1000));
+			//	think_next = level.time + 15000;
+				think_next = level.time;
+				fFree      = qfalse;
+			}
+			else
+			{
+				level.paused = PAUSE_UNPAUSING;
+				AP("print \"^3Match resuming in 10 seconds!\n\"");
+				//AAPS("sound/osp/prepare.wav");
+				G_spawnPrintf(DP_UNPAUSING, level.time + 10, NULL);
+			}
+		}
+		break;
+	case DP_UNPAUSING:
+		if (level.paused == PAUSE_UNPAUSING)
+		{
+			int cSeconds = 11 * 1000 - (level.time - dpent->timestamp);
+
+			if (cSeconds > 1000)
+			{
+				AP(va("cp \"^3Match resuming in ^1%d^3 seconds!\n\"", cSeconds / 1000));
+				think_next = level.time + 1000;
+				fFree      = qfalse;
+			}
+			else
+			{
+				level.paused = PAUSE_NONE;
+				//AAPS("sound/osp/fight.wav");
+				//G_printFull("^1FIGHT!", NULL);
+				trap_SetConfigstring(CS_LEVEL_START_TIME, va("%i", level.startTime + level.timeDelta));
+			}
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	dpent->nextthink = think_next;
+	if (fFree)
+	{
+		dpent->think = 0;
+		G_FreeEntity(dpent);
+	}
+}
+
+static char *pszDPInfo[] =
+{
+	"DPRINTF_PAUSEINFO",
+	"DPRINTF_UNPAUSING",
+	"DPRINTF_CONNECTINFO",
+	"DPRINTF_MVSPAWN",
+	"DPRINTF_UNK1",
+	"DPRINTF_UNK2",
+	"DPRINTF_UNK3",
+	"DPRINTF_UNK4",
+	"DPRINTF_UNK5"
+};
+
+/**
+ * @brief G_spawnPrintf
+ * @param[in] print_type
+ * @param[in] print_time
+ * @param[in] owner
+ */
+void G_spawnPrintf(int print_type, int print_time, gentity_t *owner)
+{
+	gentity_t *ent;
+
+	ent = G_Spawn();
+
+	ent->classname  = pszDPInfo[print_type];
+	ent->clipmask   = 0;
+	ent->parent     = owner;
+	ent->r.svFlags |= SVF_NOCLIENT;
+	ent->s.eFlags  |= EF_NODRAW;
+	ent->s.eType    = ET_ITEM;
+
+	ent->spawnflags = print_type;       // Tunnel in DP enum
+	ent->timestamp  = level.time;       // Time entity was created
+
+	ent->nextthink = print_time;
+	ent->think     = G_delayPrint;
+}
+// Simple alias for sure-fire print :)
+void G_printFull(char *str, gentity_t *ent) {
+	if (ent != NULL) {
+		CP(va("print \"%s\n\"", str));
+		CP(va("cp \"%s\n\"", str));
+	}
+	else {
+		AP(va("print \"%s\n\"", str));
+		AP(va("cp \"%s\n\"", str));
+	}
+}
+// Debounces cmd request as necessary.
+qboolean G_cmdDebounce(gentity_t *ent, const char *pszCommandName) {
+	if (ent->client->pers.cmd_debounce > level.time) {
+		CP(va("print \"Wait another %.1fs to issue ^3%s\n\"", 1.0 * (float)(ent->client->pers.cmd_debounce - level.time) / 1000.0,
+			pszCommandName));
+		return(qfalse);
+	}
+
+	ent->client->pers.cmd_debounce = level.time + CMD_DEBOUNCE;
+	return(qtrue);
+}
+// Plays specified sound globally.
+void G_globalSound(char *sound) {
+	gentity_t *te = G_TempEntity(level.intermission_origin, EV_GLOBAL_SOUND);
+	te->s.eventParm = G_SoundIndex(sound);
+	te->r.svFlags |= SVF_BROADCAST;
+}
+void G_resetRoundState(void) {
+	if (g_gametype.integer == GT_WOLF_STOPWATCH) {
+		trap_Cvar_Set("g_currentRound", "0");
+	}
+	/*else if (g_gametype.integer == GT_WOLF_LMS) {
+		trap_Cvar_Set("g_currentRound", "0");
+		trap_Cvar_Set("g_lms_currentMatch", "0");
+	}*/
+}
+void G_resetModeState(void) {
+	if (g_gametype.integer == GT_WOLF_STOPWATCH) {
+		trap_Cvar_Set("g_nextTimeLimit", "0");
+	}
+	/*else if (g_gametype.integer == GT_WOLF_LMS) {
+		trap_Cvar_Set("g_axiswins", "0");
+		trap_Cvar_Set("g_alliedwins", "0");
+	}*/
 }

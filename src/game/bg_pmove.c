@@ -3388,7 +3388,7 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, void( trace ) ( tra
 		return;     // no view changes at all
 	}
 
-	VectorCopy( ps->viewangles, oldViewAngles );
+	VectorCopy( ps->viewangles, oldViewAngles ); 
 
 	// circularly clamp the angles with deltas
 	for ( i = 0 ; i < 3 ; i++ ) {
@@ -3407,6 +3407,7 @@ void PM_UpdateViewAngles( playerState_t *ps, usercmd_t *cmd, void( trace ) ( tra
 	}
 
 	if ( ps->eFlags & EF_MG42_ACTIVE ) {
+//		VectorCopy( ps->viewangles, oldViewAngles ); 
 		float yaw, oldYaw;
 		float degsSec = MG42_YAWSPEED;
 		float arcMin, arcMax, arcDiff;
@@ -3744,6 +3745,10 @@ void PM_Sprint( void ) {
 			pm->ps->sprintTime += 10;
 		} else {
 			if ( pm->gametype != GT_SINGLE_PLAYER ) {
+				extern vmCvar_t	g_crouchRate;
+
+				if (g_crouchRate.integer > 0 && (pm->ps->pm_flags & PMF_DUCKED))
+					pm->ps->sprintTime += g_crouchRate.integer * pml.frametime;
 				pm->ps->sprintTime += 500 * pml.frametime;        // JPW NERVE adjusted for framerate independence
 				if ( pm->ps->sprintTime > 5000 ) {
 					pm->ps->sprintTime += 500 * pml.frametime;    // JPW NERVE adjusted for framerate independence
@@ -3897,6 +3902,7 @@ void PmoveSingle( pmove_t *pmove ) {
 
 	// update the viewangles
 	// Ridah
+/* 
 	if ( !isDummy ) {
 		// done.
 		if ( !( pm->ps->pm_flags & PMF_LIMBO ) ) { // JPW NERVE
@@ -3904,6 +3910,12 @@ void PmoveSingle( pmove_t *pmove ) {
 
 		}
 	}
+*/ // nihi changed to below
+	if (!isDummy)
+		// done.
+	if (!(pm->ps->pm_flags & PMF_LIMBO)) // JPW NERVE
+		PM_UpdateViewAngles(pm->ps, &pm->cmd, pm->trace);	//----(SA)	modified
+
 	AngleVectors( pm->ps->viewangles, pml.forward, pml.right, pml.up );
 
 	if ( pm->cmd.upmove < 10 ) {

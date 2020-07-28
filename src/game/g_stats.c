@@ -418,7 +418,7 @@ char *G_createClientStats( gentity_t *refEnt ) {
 
 	// Info
 	Q_strcat( strClientInfo, sizeof( strClientInfo ),
-		va( "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+		va( "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
 			refEnt->client->sess.kills,
 			refEnt->client->sess.headshots,
 			refEnt->client->sess.deaths,
@@ -433,7 +433,6 @@ char *G_createClientStats( gentity_t *refEnt ) {
 			refEnt->client->sess.med_given,
 			refEnt->client->sess.ammo_given,
 			refEnt->client->sess.revives,
-			refEnt->client->sess.poisoned,
 			refEnt->client->sess.killPeak
 			));
 
@@ -612,7 +611,6 @@ void G_deleteStats( int nClient ) {
 	cl->sess.med_given = 0;
 	cl->sess.ammo_given = 0;
 	cl->sess.gibs = 0;
-	cl->sess.poisoned = 0;
 	cl->sess.revives = 0;
 	cl->sess.acc_hits = 0;
 	cl->sess.acc_shots = 0;
@@ -662,7 +660,6 @@ void G_parseStats( char *pszStatsInfo ) {
 	GETVAL( cl->sess.med_given );
 	GETVAL( cl->sess.ammo_given );
 	GETVAL( cl->sess.gibs );
-	GETVAL( cl->sess.poisoned );
 	GETVAL( cl->sess.revives );
 	GETVAL( cl->sess.acc_shots );
 	GETVAL( cl->sess.acc_hits );
@@ -690,8 +687,7 @@ const int cQualifyingShots[WS_MAX] = {
 	3,      // Smoke (Completelly useless..or maybe for "AS cannister kill" when blocking it?)
 	50,     // MG42
 	10,     // Rifle (sniper/mauser aka scopped-unscopped)
-	100,	// Venom
-	2		// Poison
+	100		// Venom
 };
 
 // ************** TOPSHOTS/BOTTOMSHOTS
@@ -823,7 +819,7 @@ void G_weaponRankings_cmd( gentity_t *ent, unsigned int dwCommand, qboolean stat
 	// Find the weapon
 	trap_Argv( 1, z, sizeof( z ) );
 	if ( ( iWeap = atoi( z ) ) == 0 || iWeap < WS_KNIFE || iWeap >= WS_MAX ) {
-		for ( iWeap = WS_POISON; iWeap >= WS_KNIFE; iWeap-- ) { // Poison is last!
+		for (iWeap = WS_VENOM; iWeap >= WS_KNIFE; iWeap--) {
 			if ( !Q_stricmp( z, aWeaponInfo[iWeap].pszCode ) ) {
 				break;
 			}
@@ -871,7 +867,138 @@ void G_weaponRankings_cmd( gentity_t *ent, unsigned int dwCommand, qboolean stat
 	}
 	CP( va( "astats%s %d %d %d%s", ( ( state ) ? "" : "b" ), c, iWeap, wBestAcc, z ) );
 }
+void G_printMatchInfo( gentity_t *ent ) {
+	int i, j, cnt, eff;
+	float tot_acc = 0.00f;
+	int tot_rev, tot_kills, tot_deaths, tot_gp, tot_hs, tot_sui, tot_tk, tot_dg, tot_dr, tot_td, tot_hits, tot_shots, tot_gib;
+	gclient_t *cl;
+	char *ref;
+	char n1[MAX_NETNAME];
+	char n2[MAX_NETNAME];
 
+	qtime_t ct;
+	trap_RealTime(&ct);
+	CP(va("sc \"\nMod: %s \n^7Server: %s  \n^7Time: ^7%02d:%02d:%02d ^d(^7%02d %s %d^d)\n\n\"",
+			GAMEVERSION, sv_hostname.string, ct.tm_hour, ct.tm_min, ct.tm_sec, ct.tm_mday, dMonths[ct.tm_mon], 1900+ct.tm_year));
+
+	cnt = 0;
+	for ( i = TEAM_RED; i <= TEAM_BLUE; i++ ) {
+		if ( !TeamCount( -1, i ) ) {
+			continue;
+		}
+
+		tot_kills = 0;
+		tot_deaths = 0;
+		tot_hs = 0;
+		tot_sui = 0;
+		tot_tk = 0;
+		tot_dg = 0;
+		tot_dr = 0;
+		tot_td = 0;
+		tot_gib = 0;
+		tot_gp = 0;
+		tot_hits = 0;
+		tot_shots = 0;
+		tot_acc = 0;
+		tot_rev = 0;
+		CP( va("sc \"\n"
+				 "\n^7TEAM   Player          Kll Dth Sui TK Eff ^3Gib^7    ^2DG    ^1DR   ^6TD  ^3Score\n"
+				 "^7--------------------------------------------------------------------------\n\""  ));
+
+		for ( j = 0; j < level.numPlayingClients; j++ ) {
+			cl = level.clients + level.sortedClients[j];
+
+			if ( cl->pers.connected != CON_CONNECTED || cl->sess.sessionTeam != i ) {
+				continue;
+			}
+            //(i == TEAM_RED) ? "^1Axis" : "^4Allied"  )
+			// Bug fix - ^Pentagram always manages to break stats so it needs different approach. ^^
+			DecolorString(cl->pers.netname, n1);
+			SanitizeString(n1, n2);
+			Q_CleanStr(n2);
+			n2[15] = 0;
+            ref = "^7";
+
+			tot_kills += cl->sess.kills;
+			tot_deaths += cl->sess.deaths;
+			tot_sui += cl->sess.suicides;
+			tot_tk += cl->sess.team_kills;
+			tot_hs += cl->sess.headshots;
+			tot_dg += cl->sess.damage_given;
+			tot_gib += cl->sess.gibs;
+			tot_dr += cl->sess.damage_received;
+			tot_td += cl->sess.team_damage;
+			tot_gp += cl->ps.persistant[PERS_SCORE];
+			tot_hits += cl->sess.acc_hits;
+			tot_shots += cl->sess.acc_shots;
+			tot_rev += cl->sess.revives;
+
+			eff = ( cl->sess.deaths + cl->sess.kills == 0 ) ? 0 : 100 * cl->sess.kills / ( cl->sess.deaths + cl->sess.kills );
+			if ( eff < 0 ) {
+				eff = 0;
+			}
+
+			if ( ent->client == cl ||
+				 ( ent->client->sess.sessionTeam == TEAM_SPECTATOR &&
+				   ent->client->sess.spectatorState == SPECTATOR_FOLLOW &&
+				   ent->client->sess.spectatorClient == level.sortedClients[j] ) ) {
+				ref = "^3";
+			}
+
+			cnt++;
+            CP( va( "sc \"%s%-15s^3%4d^7%4d%4d%3d%3d^3%4d^2%4d^1%5d^6%6d^3%6d\n\"",
+//			CP( va( "sc \"%s%-15s^n%4d^7%4d%4d%3d%s^z%4d ^7%6.2f^n%5d%6d%6d%5d^7%7d\n\"",
+                    (i == TEAM_RED) ? "^1Axis" : "^4Allies" ,
+				//	ref,
+					n2,
+					cl->sess.kills,
+					cl->sess.deaths,
+					cl->sess.suicides,
+					cl->sess.team_kills,
+              //      cl->sess.revives,
+				//	ref,
+					eff,
+					cl->sess.gibs,
+				//	( (cl->sess.acc_shots == 0) ? 0.00 : ((float)cl->sess.acc_hits / (float)cl->sess.acc_shots ) * 100.00f ),
+				//	cl->sess.headshots,
+					cl->sess.damage_given,
+					cl->sess.damage_received,
+					cl->sess.team_damage,
+			//		cl->sess.revives,
+					cl->ps.persistant[PERS_SCORE] ) );
+		}
+
+		eff = ( tot_kills + tot_deaths == 0 ) ? 0 : 100 * tot_kills / ( tot_kills + tot_deaths );
+		if ( eff < 0 ) {
+			eff = 0;
+		}
+		tot_acc = ( (tot_shots == 0) ? 0.00 : ((float)tot_hits / (float)tot_shots ) * 100.00f );
+
+		CP( va( "sc \"^7--------------------------------------------------------------------------\n"
+				"%s%-19s^5%4d^7%4d%4d%3d %3d^3%4d ^2%4d^1%5d^6%6d^3%6d\n\"",
+				(i == TEAM_RED) ? "^1Axis" : "^4Allies" ,
+				" ^5Totals^7",
+				tot_kills,
+				tot_deaths,
+				tot_sui,
+				tot_tk,
+				eff,
+				tot_gib,
+				//tot_acc,
+				//tot_hs,
+				tot_dg,
+				tot_dr,
+				tot_td,
+				//tot_rev,
+				tot_gp ) );
+	}
+	CP( va( "sc \"%s\n\" 0", ( ( !cnt ) ? "^3\nNo scores to report." : "" ) ) );
+}
+
+
+
+// Backup of old stats output
+/*
 // Prints current player match info.
 // Prints current player match info.
 //	--> FIXME: put the pretty print on the client
@@ -911,7 +1038,7 @@ void G_printMatchInfo( gentity_t *ent ) {
 
 		CP( va("sc \"%s ^7Team\n"
 			     "^7--------------------------------------------------------------------------"
-				 "\nPlayer          ^eKll ^7Dth Sui TK ^cEff ^7Accrcy   ^eHS    DG    DR   TD  Rev ^7Score\n"
+				 "\nPlayer          ^5Kll ^7Dth Sui TK ^3Eff ^7Accrcy   ^5HS    DG    DR   TD  Rev ^7Score\n"
 				 "^7--------------------------------------------------------------------------\n\"", (i == TEAM_RED) ? "^1Axis" : "^4Allied"  ));
 
 		for ( j = 0; j < level.numPlayingClients; j++ ) {
@@ -926,8 +1053,8 @@ void G_printMatchInfo( gentity_t *ent ) {
 			SanitizeString(n1, n2);
 			Q_CleanStr(n2);
 			n2[15] = 0;
+            ref = "^7";
 
-			ref = "^7";
 			tot_kills += cl->sess.kills;
 			tot_deaths += cl->sess.deaths;
 			tot_sui += cl->sess.suicides;
@@ -950,11 +1077,11 @@ void G_printMatchInfo( gentity_t *ent ) {
 				 ( ent->client->sess.sessionTeam == TEAM_SPECTATOR &&
 				   ent->client->sess.spectatorState == SPECTATOR_FOLLOW &&
 				   ent->client->sess.spectatorClient == level.sortedClients[j] ) ) {
-				ref = "^7";
+				ref = "^3";
 			}
 
 			cnt++;
-            CP( va( "sc \"%s%-15s^e%4d^7%4d%4d%3d%s^c%4d ^7%6.2f^e%5d%6d%6d%5d%3d^7%7d\n\"",
+            CP( va( "sc \"%s%-15s^5%4d^7%4d%4d%3d%s^3%4d ^7%6.2f^5%5d%6d%6d%5d%3d^7%7d\n\"",
 //			CP( va( "sc \"%s%-15s^n%4d^7%4d%4d%3d%s^z%4d ^7%6.2f^n%5d%6d%6d%5d^7%7d\n\"",
 					ref,
 					n2,
@@ -980,8 +1107,8 @@ void G_printMatchInfo( gentity_t *ent ) {
 		}
 		tot_acc = ( (tot_shots == 0) ? 0.00 : ((float)tot_hits / (float)tot_shots ) * 100.00f );
 
-		CP( va( "sc \"^7----------------------------------------------------------------------\n"
-				"%-19s^e%4d^7%4d%4d%3d^c%4d ^7%6.2f^e%5d%6d%6d%5d%3d^7%7d\n\n\n\"",
+		CP( va( "sc \"^7--------------------------------------------------------------------------\n"
+				"%-19s^5%4d^7%4d%4d%3d^3%4d ^7%6.2f^5%5d%6d%6d%5d%3d^7%7d\n\n\n\"",
 				"^eTotals^7",
 				tot_kills,
 				tot_deaths,
@@ -996,9 +1123,9 @@ void G_printMatchInfo( gentity_t *ent ) {
 				tot_rev,
 				tot_gp ) );
 	}
-	CP( va( "sc \"%s\n\" 0", ( ( !cnt ) ? "^c\nNo scores to report." : "" ) ) );
+	CP( va( "sc \"%s\n\" 0", ( ( !cnt ) ? "^3\nNo scores to report." : "" ) ) );
 }
-
+*/
 // Dumps end-of-match info
 // L0 - FIXME!!!!!!!!!
 void G_matchInfoDump( unsigned int dwDumpType ) {

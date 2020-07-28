@@ -2,9 +2,9 @@
 ===========================================================================
 
 Return to Castle Wolfenstein multiplayer GPL Source Code
-Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company. 
+Copyright (C) 1999-2010 id Software LLC, a ZeniMax Media company.
 
-This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).  
+This file is part of the Return to Castle Wolfenstein multiplayer GPL Source Code (RTCW MP Source Code).
 
 RTCW MP Source Code is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -328,18 +328,18 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 	G_LogPrintf( "Kill: %i %i %i: %s killed %s by %s\n",
 				 killer, self->s.number, meansOfDeath, killerName,
 				 self->client->pers.netname, obit );
-	// L0 - Stats 
+	// L0 - Stats
 	if (attacker && attacker->client){
 		// Life kills & death spress
-		if (!OnSameTeam(attacker, self)){		
+		if (!OnSameTeam(attacker, self)){
 			// attacker->client->pers.spreeDeaths = 0; // Reset deaths for death spress  // nihi commented out
-			attacker->client->pers.life_kills++;		// life kills		
-	
-				
+			attacker->client->pers.life_kills++;		// life kills
+
+
 		// Count teamkill
 		} else {
 			// Don't count self kills..
-			if (attacker != self) {				
+			if (attacker != self) {
 				// Admin bot - teamKills
 				sb_maxTeamKill(attacker);
 
@@ -398,11 +398,11 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			}
 			// L0 - Life stats
 			if (g_lifeStats.integer) {
-				float acc = 0.00f; 
-				
-				acc = (self->client->pers.life_acc_shots == 0) ? 
-					0.00 : ((float)self->client->pers.life_acc_hits / (float)self->client->pers.life_acc_shots ) * 100.00f ;	
-			
+				float acc = 0.00f;
+
+				acc = (self->client->pers.life_acc_shots == 0) ?
+					0.00 : ((float)self->client->pers.life_acc_hits / (float)self->client->pers.life_acc_shots ) * 100.00f ;
+
 					CPx(self-g_entities, va("chat \"^zLast life: ^7Kills:^z%d ^7Headshots:^z%d ^7Acc:^z%2.2f\n\"",
 						self->client->pers.life_kills, self->client->pers.life_headshots, acc));
 			} // End
@@ -418,13 +418,13 @@ void player_die( gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int
 			attacker->client->lastKillTime = level.time;
 			// L0 - Life stats
 			if (g_lifeStats.integer) {
-				float acc = 0.00f; 
-				
-				acc = (self->client->pers.life_acc_shots == 0) ? 
-					0.00 : ((float)self->client->pers.life_acc_hits / (float)self->client->pers.life_acc_shots ) * 100.00f ;	
-						
+				float acc = 0.00f;
+
+				acc = (self->client->pers.life_acc_shots == 0) ?
+					0.00 : ((float)self->client->pers.life_acc_hits / (float)self->client->pers.life_acc_shots ) * 100.00f ;
+
 					CPx(self-g_entities, va("chat \"^zLast life: ^7Kills:^z%d ^7Headshots:^z%d ^7Acc:^z%2.2f ^7Killer: %s^z(%ihp)\n\"",
-						self->client->pers.life_kills, self->client->pers.life_headshots, 
+						self->client->pers.life_kills, self->client->pers.life_headshots,
 						acc, attacker->client->pers.netname, attacker->health ));
 			} // End
 		}
@@ -701,10 +701,13 @@ qboolean IsHeadShot( gentity_t *targ, qboolean isAICharacter, vec3_t dir, vec3_t
 
 			AngleVectors( angles, forward, right, up );
 			VectorScale( forward, 5, v );
+            VectorScale(right, 3, v);	//Elver added this for more aligned head box
+		//	VectorMA( v, 18, up, v );
 			VectorMA( v, 18, up, v );
 
 			VectorAdd( v, head->r.currentOrigin, head->r.currentOrigin );
-			head->r.currentOrigin[2] += height / 2;
+            head->r.currentOrigin[2] += height / 2;
+			head->r.currentOrigin[2] += 1;   //nihi added for more accurate headshot //elver added from nihi src
 			// -NERVE - SMF
 		}
 
@@ -791,10 +794,12 @@ gentity_t* G_BuildHead( gentity_t *ent ) {
 
 		AngleVectors( angles, forward, right, up );
 		VectorScale( forward, 5, v );
-		VectorMA( v, 18, up, v );
+		//VectorMA( v, 18, up, v );
+        VectorMA( v, 18, up, v );
 
 		VectorAdd( v, head->r.currentOrigin, head->r.currentOrigin );
 		head->r.currentOrigin[2] += height / 2;
+		head->r.currentOrigin[2] += 1;   //nihi added for more accurate headshot
 		// -NERVE - SMF
 	}
 
@@ -893,7 +898,7 @@ void G_ArmorDamage( gentity_t *targ ) {
 }
 /*
 ==============
-L0 
+L0
 
 Hitsounds
 Note that it requires pack for it.
@@ -902,14 +907,14 @@ TODO: Hook this under colors?
 */
 void Hitsounds( gentity_t *targ, gentity_t *attacker, qboolean body ) {
 
-	qboolean 	onSameTeam = OnSameTeam( targ, attacker); 
+	qboolean 	onSameTeam = OnSameTeam( targ, attacker);
 	gentity_t	*te;
 
 	if (g_hitsounds.integer) {
 
 		// if player is hurting him self don't give any sounds
 		if (targ->client == attacker->client) {
-			return;  // this happens at flaming your self... just return silence...			
+			return;  // this happens at flaming your self... just return silence...
 		}
 
 		// if team mate
@@ -919,8 +924,8 @@ void Hitsounds( gentity_t *targ, gentity_t *attacker, qboolean body ) {
 				return;
 			}
 
-			te = G_TempEntity( attacker->s.pos.trBase, EV_GLOBAL_CLIENT_SOUND );			
-			te->s.eventParm = G_SoundIndex("xmod/sound/game/hitTeam.wav");			
+			te = G_TempEntity( attacker->s.pos.trBase, EV_GLOBAL_CLIENT_SOUND );
+			te->s.eventParm = G_SoundIndex("xmod/sound/game/hitTeam.wav");
 			te->s.teamNum = attacker->s.clientNum;
 		}
 
@@ -933,8 +938,8 @@ void Hitsounds( gentity_t *targ, gentity_t *attacker, qboolean body ) {
 				attacker->s.number != ENTITYNUM_WORLD &&
 				attacker != targ &&
 				g_gamestate.integer == GS_PLAYING &&
-				!onSameTeam )	
-		{   
+				!onSameTeam )
+		{
 			if (!(attacker->client->sess.clientFlags & CFLAGS_HITSOUNDS)) {
 				return;
 			}
@@ -1071,13 +1076,13 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 	if ( knockback > 200 ) {
 		knockback = 200;
 	}
+	else { knockback = .5*knockback;}   //nihi added to reduce knockback
 	if ( targ->flags & FL_NO_KNOCKBACK ) {
 		knockback = 0;
 	}
 	if ( dflags & DAMAGE_NO_KNOCKBACK ) {
 		knockback = 0;
 	}
-
 	// figure momentum add, even if the damage won't be taken
 	if ( knockback && targ->client && ( g_friendlyFire.integer || !OnSameTeam( targ, attacker ) ) ) {
 		vec3_t kvel;
@@ -1229,12 +1234,12 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 	}
 
 	// L0 - Hitsounds
-	if ( attacker->client && targ->client && targ != attacker && g_hitsounds.integer ) {	
-		qboolean onSameTeam = OnSameTeam( targ, attacker); 
+	if ( attacker->client && targ->client && targ != attacker && g_hitsounds.integer ) {
+		qboolean onSameTeam = OnSameTeam( targ, attacker);
 
 		if(onSameTeam)
 			attacker->client->ps.persistant[PERS_HIT] -= damage;
-		else 
+		else
 			attacker->client->ps.persistant[PERS_HIT] += damage;
 	} // End
 	// See if it's the player hurting the emeny flag carrier
@@ -1310,8 +1315,8 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker,
 				G_Script_ScriptEvent( targ, "pain", va( "%d %d", targ->health, targ->health + take ) );
 			}
 		// L0 - OSP - update weapon/dmg stats
-		} else {		
-			G_addStats( targ, attacker, take, mod );		
+		} else {
+			G_addStats( targ, attacker, take, mod );
 		} // End
 
 		//G_ArmorDamage(targ);	//----(SA)	moved out to separate routine

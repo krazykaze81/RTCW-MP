@@ -1768,7 +1768,6 @@ static void CG_Prop( centity_t *cent ) {
 
 }
 
-
 /*
 =========================
 CG_AdjustPositionForMover
@@ -1780,6 +1779,8 @@ void CG_AdjustPositionForMover( const vec3_t in, int moverNum, int fromTime, int
 	centity_t   *cent;
 	vec3_t oldOrigin, origin, deltaOrigin;
 	vec3_t oldAngles, angles, deltaAngles;
+//	vec3_t	matrix[3], transpose[3];
+//	vec3_t	org, org2, move2;
 
 	if ( outDeltaAngles ) {
 		VectorClear( outDeltaAngles );
@@ -1787,6 +1788,7 @@ void CG_AdjustPositionForMover( const vec3_t in, int moverNum, int fromTime, int
 
 	if ( moverNum <= 0 || moverNum >= ENTITYNUM_MAX_NORMAL ) {
 		VectorCopy( in, out );
+//		VectorCopy(angles_in, angles_out);
 		return;
 	}
 
@@ -1794,6 +1796,7 @@ void CG_AdjustPositionForMover( const vec3_t in, int moverNum, int fromTime, int
 
 	if ( cent->currentState.eType != ET_MOVER ) {
 		VectorCopy( in, out );
+//		VectorCopy(angles_in, angles_out);
 		return;
 	}
 
@@ -1806,12 +1809,14 @@ void CG_AdjustPositionForMover( const vec3_t in, int moverNum, int fromTime, int
 	VectorSubtract( origin, oldOrigin, deltaOrigin );
 	VectorSubtract( angles, oldAngles, deltaAngles );
 
+
+
 	VectorAdd( in, deltaOrigin, out );
 	if ( outDeltaAngles ) {
 		VectorCopy( deltaAngles, outDeltaAngles );
 	}
 
-	// FIXME: origin change when on a rotating object
+//	VectorAdd( angles_in, deltaAngles, angles_out );
 }
 
 
@@ -1886,8 +1891,10 @@ static void CG_CalcEntityLerpPositions( centity_t *cent ) {
 	// player state
 	if ( cent != &cg.predictedPlayerEntity ) {
 		CG_AdjustPositionForMover( cent->lerpOrigin, cent->currentState.groundEntityNum,
-								   cg.snap->serverTime, cg.time, cent->lerpOrigin, NULL );
-	}
+							cg.snap->serverTime, cg.time, cent->lerpOrigin, NULL );
+							//							cg.snap->serverTime, cg.time, cent->lerpOrigin, cent->lerpAngles, cent->lerpAngles);
+	} // nihi 
+
 }
 
 /*

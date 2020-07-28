@@ -1,29 +1,34 @@
 /*
-===========================================================================
-
-- L0
-
-This is basically a ET port with some help from S4NDMoD
-
-Last change: 15 May / 2014
-=======================================
+sswolf - antiwarp, original credit to zinx
+Port: etPro > etPub > S4NDMOD > rtcwPubJ > OSPx
+Warping occurs when the server receives several new commands from a player in a very short period of time.
+This happens because packets from the player were lost or never sent.
+The player will appear to cross a great distance in a very short period of time, making them hard to hit.
+The antiwarp system delays commands when they are recieved too quickly.
+Thus, when a player sends 700ms worth of commands in 50ms, the commands will be spread out over 700ms,
+causing the player to move smoothly (unwarp them) to other players.
+The net effect is that players with unreliable or congested upstream will not benefit from their situation;
+rather they (in a sense) are penalized for it, while all the other players on the server are not.
 */
 
 #include "g_local.h"
 
-// Dens: fixes spectator bugs
-qboolean G_DoAntiwarp(gentity_t *ent) {
+qboolean G_DoAntiwarp(gentity_t* ent) {
 
 	// only antiwarp if requested
-	if (!g_antiWarp.integer) {
+	if (!g_antiWarp.integer)
+	{
 		return qfalse;
 	}
 
-	if (level.intermissiontime) { 
+	//dont use for intermission to fix high ping on results screen
+	if (level.intermissiontime)
+	{
 		return qfalse;
 	}
 
-	if (ent && ent->client) {
+	if (ent && ent->client)
+	{
 		// don't antiwarp spectators
 		if (ent->client->sess.sessionTeam == TEAM_SPECTATOR ||
 			ent->client->ps.pm_flags & PMF_LIMBO) {
@@ -42,34 +47,49 @@ qboolean G_DoAntiwarp(gentity_t *ent) {
 			return qfalse;
 		}
 	}
+
 	return qtrue;
 }
 
-void etpro_AddUsercmd(int clientNum, usercmd_t *cmd) {
-	gentity_t *ent = g_entities + clientNum;
+void AW_AddUserCmd(int clientNum, usercmd_t* cmd) {
+
+	gentity_t* ent = g_entities + clientNum;
 
 	int idx = (ent->client->cmdhead + ent->client->cmdcount) % LAG_MAX_COMMANDS;
 	ent->client->cmds[idx] = *cmd;
 
-	if (ent->client->cmdcount < LAG_MAX_COMMANDS) {
+	if (ent->client->cmdcount < LAG_MAX_COMMANDS)
+	{
 		ent->client->cmdcount++;
 	}
-	else {
+	else
+	{
 		ent->client->cmdhead = (ent->client->cmdhead + 1) % LAG_MAX_COMMANDS;
 	}
 }
 
 // zinx - G_CmdScale is a hack :x
 extern float pm_proneSpeedScale;
-static float G_CmdScale(gentity_t *ent, usercmd_t *cmd) {
+static float AW_CmdScale(gentity_t* ent, usercmd_t* cmd) {
+
 	float scale;
 
+#ifdef CGAMEDLL
+	int gametype = cg_gameType.integer;
+	int movespeed = cg_movespeed.integer;
+#elif GAMEDLL
+	int gametype = g_gametype.integer;
+	int movespeed = g_speed.integer;
+#endif
+
 	scale = abs(cmd->forwardmove);
-	if (abs(cmd->rightmove) > scale) {
+	if (abs(cmd->rightmove) > scale)
+	{
 		scale = abs(cmd->rightmove);
 	}
 	// zinx - don't count crouch/jump; just count moving in water
-	if (ent->waterlevel && abs(cmd->upmove) > scale) {
+	if (ent->waterlevel && abs(cmd->upmove) > scale)
+	{
 		scale = abs(cmd->upmove);
 	}
 
@@ -100,7 +120,14 @@ static float G_CmdScale(gentity_t *ent, usercmd_t *cmd) {
 		}
 	}
 #endif
-	
+
+	/*if (gametype == GT_SINGLE_PLAYER)
+	{
+		// Adjust the movespeed
+		scale *= (((float)movespeed) / (float)127);
+
+	} // if (gametype == GT_SINGLE_PLAYER)...*/
+
 #if 0   // zinx - not letting them go at sprint speed for now.
 	if (ent->client->ps.eFlags & EF_PRONE) {
 		scale *= pm_proneSpeedScale;
@@ -113,28 +140,35 @@ static float G_CmdScale(gentity_t *ent, usercmd_t *cmd) {
 	return scale;
 }
 
-void ClientThink_cmd(gentity_t *ent, usercmd_t *cmd);
-void DoClientThinks(gentity_t *ent) {
+void ClientThink_cmd(gentity_t* ent, usercmd_t* cmd);
+
+void DoClientThinks(gentity_t* ent) {
+
 	int lastCmd, lastTime;
 	int latestTime;
 	int drop_threshold = LAG_MAX_DROP_THRESHOLD;
 	int startPackets = ent->client->cmdcount;
 	//	usercmd_t newcmd;
-	if (ent->client->cmdcount <= 0) {
+
+	if (ent->client->cmdcount <= 0)
+	{
 		return;
 	}
 
 	// allow some more movement if time has passed
 	latestTime = trap_Milliseconds();
-	if (ent->client->lastCmdRealTime > latestTime) {
+	if (ent->client->lastCmdRealTime > latestTime)
+	{
 		// zinx - stoopid server went backwards in time, reset the delta
 		// instead of giving them even -less- movement ability
 		ent->client->cmddelta = 0;
 	}
-	else {
+	else
+	{
 		ent->client->cmddelta -= (latestTime - ent->client->lastCmdRealTime);
 	}
-	if (ent->client->cmdcount <= 1 && ent->client->cmddelta < 0) {
+	if (ent->client->cmdcount <= 1 && ent->client->cmddelta < 0)
+	{
 		ent->client->cmddelta = 0;
 	}
 	ent->client->lastCmdRealTime = latestTime;
@@ -144,8 +178,9 @@ void DoClientThinks(gentity_t *ent) {
 	lastTime = ent->client->ps.commandTime;
 	latestTime = ent->client->cmds[lastCmd].serverTime;
 
-	while (ent->client->cmdcount > 0) {
-		usercmd_t *cmd = &ent->client->cmds[ent->client->cmdhead];
+	while (ent->client->cmdcount > 0)
+	{
+		usercmd_t* cmd = &ent->client->cmds[ent->client->cmdhead];
 		float speed, delta, scale;
 		int savedTime;
 		qboolean deltahax = qfalse;
@@ -154,48 +189,55 @@ void DoClientThinks(gentity_t *ent) {
 		int totalDelta = latestTime - cmd->serverTime;
 		int timeDelta;
 
-		if (ent->client->pers.pmoveFixed) {
+		if (ent->client->pers.pmoveFixed)
+		{
 			serverTime = ((serverTime + pmove_msec.integer - 1) / pmove_msec.integer) * pmove_msec.integer;
 		}
 
 		timeDelta = serverTime - lastTime;
 
-		if (totalDelta >= drop_threshold) {
+		if (totalDelta >= drop_threshold)
+		{
 			// zinx - whoops. too lagged.
 			drop_threshold = LAG_MIN_DROP_THRESHOLD;
 			lastTime = ent->client->ps.commandTime = cmd->serverTime;
 			goto drop_packet;
 		}
 
-		if (totalDelta < 0) {
+		if (totalDelta < 0)
+		{
 			// zinx - oro? packet from the future
 			goto drop_packet;
 		}
 
-		if (timeDelta <= 0) {
+		if (timeDelta <= 0)
+		{
 			// zinx - packet from the past
 			goto drop_packet;
 		}
 
 		scale = 1.f / LAG_DECAY;
 
-		speed = G_CmdScale(ent, cmd);
+		speed = AW_CmdScale(ent, cmd);
 		delta = (speed * (float)timeDelta);
 		delta *= scale;
 
-		if (timeDelta > 50) {
+		if (timeDelta > 50)
+		{
 			timeDelta = 50;
 			delta = (speed * (float)timeDelta);
 			delta *= scale;
 			deltahax = qtrue;
 		}
 
-		if ((ent->client->cmddelta + delta) >= LAG_MAX_DELTA) {
+		if ((ent->client->cmddelta + delta) >= LAG_MAX_DELTA)
+		{
 			// too many commands this server frame
 
 			// if it'll fit in the next frame, just wait until then.
 			if (delta < LAG_MAX_DELTA
-				&& (totalDelta + delta) < LAG_MIN_DROP_THRESHOLD) {
+				&& (totalDelta + delta) < LAG_MIN_DROP_THRESHOLD)
+			{
 				break;
 			}
 
@@ -205,7 +247,8 @@ void DoClientThinks(gentity_t *ent) {
 			timeDelta = ceil(delta / speed); // prefer speedup
 			delta = (float)timeDelta * speed;
 
-			if (timeDelta < 1) {
+			if (timeDelta < 1)
+			{
 				break;
 			}
 
@@ -215,11 +258,13 @@ void DoClientThinks(gentity_t *ent) {
 
 		ent->client->cmddelta += delta;
 
-		if (deltahax) {
+		if (deltahax)
+		{
 			savedTime = cmd->serverTime;
 			cmd->serverTime = lastTime + timeDelta;
 		}
-		else {
+		else
+		{
 			savedTime = 0;  // zinx - shut up compiler
 		}
 
@@ -228,17 +273,22 @@ void DoClientThinks(gentity_t *ent) {
 		ClientThink_cmd(ent, cmd);
 		lastTime = ent->client->ps.commandTime;
 
-		if (deltahax) {
+		if (deltahax)
+		{
 			cmd->serverTime = savedTime;
 
-			if (delta <= 0.1f) {
+			if (delta <= 0.1f)
+			{
 				break;
 			}
+
 			continue;
 		}
 
 	drop_packet:
-		if (ent->client->cmdcount <= 0) {
+
+		if (ent->client->cmdcount <= 0)
+		{
 			// ent->client was cleared...
 			break;
 		}
@@ -250,16 +300,18 @@ void DoClientThinks(gentity_t *ent) {
 
 	// zinx - added ping, packets processed this frame
 	// warning: eats bandwidth like popcorn
-	if (g_antiWarp.integer & 32) {
+	if (g_antiWarp.integer & 32)
+	{
 		trap_SendServerCommand(
 			ent - g_entities,
 			va("cp \"%d %d\n\"", latestTime - lastTime, startPackets - ent->client->cmdcount)
-			);
+		);
 	}
 
 	// zinx - debug; size is added lag (amount above player's network lag)
 	// rotation is time
-	if ((g_antiWarp.integer & 16) && ent->client->cmdcount) {
+	if ((g_antiWarp.integer & 16) && ent->client->cmdcount)
+	{
 		vec3_t org, parms;
 
 		VectorCopy(ent->client->ps.origin, org);
@@ -267,9 +319,16 @@ void DoClientThinks(gentity_t *ent) {
 
 		parms[0] = 3;
 		parms[1] = (float)(latestTime - ent->client->ps.commandTime) / 10.f;
-		if (parms[1] < 1.f) {
+		if (parms[1] < 1.f)
+		{
 			parms[1] = 1.f;
 		}
 		parms[2] = (ent->client->ps.commandTime * 180.f) / 1000.f;
+
+		//etpro_AddDebugLine( org, parms, ((ent - g_entities) % 32), LINEMODE_SPOKES, LINESHADER_RAILCORE, 0, qfalse );
 	}
+
+	//ent->client->ps.stats[STAT_ANTIWARP_DELAY] = latestTime - ent->client->ps.commandTime;
+	//if (ent->client->ps.stats[STAT_ANTIWARP_DELAY] < 0)
+	//	ent->client->ps.stats[STAT_ANTIWARP_DELAY] = 0;
 }

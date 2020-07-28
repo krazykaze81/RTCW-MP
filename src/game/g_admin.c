@@ -1893,6 +1893,25 @@ void cmd_pause(gentity_t *ent, qboolean resume) {
 	}
 
 	tag = sortTag(ent);
+/*	if (!resume) {
+		//level.paused = !PAUSE_NONE; // nihi commented
+		 level.paused = 100 + ((ent) ? (1 + ent - g_entities) : 0);
+		trap_SetConfigstring( CS_PAUSED, va( "%i", level.paused ));
+		G_spawnPrintf(DP_PAUSEINFO, level.time + 15000, NULL);   // nihi added
+		//G_spawnPrintf(DP_PAUSEINFO, level.time, NULL);   // nihi added
+		AP(va("chat \"^zconsole: ^7%s has ^3Paused ^7a match!\n\"", tag));
+		AAPS("sound/world/klaxon1.wav");
+	} else if (level.paused != PAUSE_UNPAUSING){
+		if (level.paused == PAUSE_NONE) {
+			CP("print \"^jError: ^7Match is not paused^j!\n\"");
+		return;
+		}
+
+		level.CNstart = 0; // Resets countdown if it was aborted before
+		level.paused = PAUSE_UNPAUSING;
+		G_spawnPrintf(DP_UNPAUSING, level.time + 10, NULL);
+		AP(va("chat \"^zconsole: ^7%s has ^3Unpaused ^7a match!\n\"", tag));
+	}*/
 	if (!resume) {
 		level.paused = !PAUSE_NONE;
 		trap_SetConfigstring( CS_PAUSED, va( "%i", level.paused ));
@@ -1908,6 +1927,8 @@ void cmd_pause(gentity_t *ent, qboolean resume) {
 		level.paused = PAUSE_UNPAUSING;
 		AP(va("chat \"^zconsole: ^7%s has ^3Unpaused ^7a match!\n\"", tag));
 	}
+
+
 
 	// Log it
 	action = (resume) ? "resumed the match." : "paused a match.";

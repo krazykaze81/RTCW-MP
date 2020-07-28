@@ -119,12 +119,13 @@ void Shaker_think( gentity_t *ent ) {
 		if ( len > radius ) { // largest bomb blast = 600
 			continue;
 		}
-
+		bounceamt = 1.0f - (len/radius);
 		// NERVE - SMF - client side camera shake
 		//DAJ BUGFIX va() not doing %f's correctly
-		bounceamt = min( 1.0f, 1.0f - ( len / radius ) );
-		sprintf( cmd, "shake %.4f", bounceamt );   //DAJ
-		trap_SendServerCommand( player->s.clientNum, cmd );
+//		bounceamt = min( 1.0f, 1.0f - ( len / radius ) );
+//		sprintf( cmd, "shake %.4f", bounceamt );   //DAJ
+	//	trap_SendServerCommand( player->s.clientNum, cmd );
+		trap_SendServerCommand( player->s.clientNum, va( "shake %f", min( 1.f, bounceamt)));
 //DAJ BUGFIX		trap_SendServerCommand( player->s.clientNum, va( "shake %f", &bounceamt));
 	}
 }

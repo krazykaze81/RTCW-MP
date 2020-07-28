@@ -109,7 +109,7 @@ void pCmd_players(gentity_t *ent, qboolean fParam) {
 			}
 		}
 
-		if (cl->sess.admin && !cl->sess.incognito) {
+		if ((cl->sess.admin || cl->sess.referee) && !cl->sess.incognito) {
 			strcpy(ref, sortTag(ent));
 		}
 		/*
@@ -570,7 +570,7 @@ void pCmd_teamReady(gentity_t *ent, qboolean ready) {
 	int team = ent->client->sess.sessionTeam;
 	gentity_t *cl;
 
-	if (!g_doWarmup.integer) {
+	if (!g_tournament.integer) {
 		return;
 	}
 	if (team_nocontrols.integer) {
@@ -640,6 +640,30 @@ void pCmd_pauseHandle(gentity_t *ent, qboolean dPause) {
 	DecolorString(aTeams[team], tName);
 
 	if (!dPause) {
+/*	//	level.paused = !PAUSE_NONE;  // nihi commented
+		level.paused = team + 128; // nihi added
+		G_spawnPrintf(DP_PAUSEINFO, level.time + 15000, NULL); // nihi added
+
+		trap_SetConfigstring( CS_PAUSED, va( "%i", level.paused ));
+		AP(va("chat \"^zconsole: ^7%s has ^3Paused ^7a match!\n\"", tName));
+		AAPS("sound/world/klaxon1.wav");
+	}
+   // else if (level.paused != PAUSE_UNPAUSING){
+    else if (team + 128 != level.paused) {// nihi added
+		if (level.paused == PAUSE_NONE) {
+			CP("print \"^jError: ^7Match is not paused^j!\n\"");
+		return;
+		}
+        CP("cpm \"^3Your team didn't call the timeout!\n\"");
+        return;
+    }
+    else {
+		level.CNstart = 0; // Resets countdown if it was aborted before
+		level.paused = PAUSE_UNPAUSING;
+		AP(va("chat \"^zconsole: ^7%s has ^3Unpaused ^7a match!\n\"", tName));
+		G_spawnPrintf(DP_UNPAUSING, level.time + 10, NULL); // nihi added
+	}
+	*/
 		level.paused = !PAUSE_NONE;
 		trap_SetConfigstring( CS_PAUSED, va( "%i", level.paused ));
 		AP(va("chat \"^zconsole: ^7%s has ^3Paused ^7a match!\n\"", tName));
@@ -655,9 +679,103 @@ void pCmd_pauseHandle(gentity_t *ent, qboolean dPause) {
 		AP(va("chat \"^zconsole: ^7%s has ^3Unpaused ^7a match!\n\"", tName));
 	}
 
-
 }
 
+/*
+===========
+Lock or Unlock game
+
+What a mess...
+===========
+*/
+void pCmd_gamelocked(gentity_t *ent, qboolean unlock) {
+    int team = ent->client->sess.sessionTeam;
+    char tName[MAX_NETNAME];
+	char *tag, *log;
+
+	if (team_nocontrols.integer) {
+		CP("print \"Team commands are not enabled on this server.\n\"");
+		return;
+	}
+	//tag = sortTag(ent);
+    DecolorString(aTeams[team], tName);
+
+	// Deals with unlocking
+	// Deals with unlocking
+	if (unlock) {
+		if (!g_gamelocked.integer) {
+			CP(va("print \"Both teams are already unlocked^z!\n\""));
+		return;
+		} else {
+			// Axis
+			if (!strcmp(tName,"red") || !strcmp(tName,"Axis")) {
+				if (g_gamelocked.integer == 1) {
+					trap_Cvar_Set( "g_gamelocked", "0" );
+					AP(va("chat \"^zconsole:^7 %s has unlocked ^1Axis ^7team^z!\n\"", tName));
+				} else if (g_gamelocked.integer == 3) {
+					trap_Cvar_Set( "g_gamelocked", "2" );
+					AP(va("chat \"^zconsole:^7 %s has unlocked ^1Axis ^7team^z!\n\"", tName));
+				} else {
+					CP(va("print \"^1Axis ^7team is already unlocked^z!\n\""));
+				return;
+				}
+			}
+			// Allied
+			else if (!strcmp(tName,"blue") || !strcmp(tName,"Allies")) {
+				if (g_gamelocked.integer == 2) {
+					trap_Cvar_Set( "g_gamelocked", "0" );
+					AP(va("chat \"^zconsole:^7 %s has unlocked ^4Allied ^7team^z!\n\"", tName));
+				} else if (g_gamelocked.integer == 3) {
+					trap_Cvar_Set( "g_gamelocked", "1" );
+					AP(va("chat \"^zconsole:^7 %s has unlocked ^1Allied ^7team^z!\n\"", tName));
+				} else {
+					CP(va("print \"^4Allied ^7team is already unlocked^z!\n\""));
+				return;
+				}
+			// Both
+			}
+
+		}
+	return;
+	// Deals with locking
+	} else {
+		if (g_gamelocked.integer == 3) {
+			CP(va("print \"Both teams are already locked^z!\n\""));
+		return;
+		} else {
+			// Axis
+			if (!strcmp(tName,"red") || !strcmp(tName,"Axis")) {
+				if (!g_gamelocked.integer) {
+					trap_Cvar_Set( "g_gamelocked", "1" );
+					AP(va("chat \"^zconsole:^7 %s has locked ^1Axis ^7team^z!\n\"", tName));
+				} else if (g_gamelocked.integer == 2) {
+					trap_Cvar_Set( "g_gamelocked", "3" );
+					AP(va("chat \"^zconsole:^7 %s has locked ^1Axis ^7team^z!\n\"", tName));
+				} else {
+					CP(va("print \"^1Axis ^7team is already locked^1!\n\""));
+				return;
+				}
+			}
+			// Allied
+			else if (!strcmp(tName,"blue") || !strcmp(tName,"Allies")) {
+				if (!g_gamelocked.integer) {
+					trap_Cvar_Set( "g_gamelocked", "2" );
+					AP(va("chat \"^zconsole:^7 %s has locked ^4Allied ^7team^z!\n\"", tName));
+				} else if (g_gamelocked.integer == 1) {
+					trap_Cvar_Set( "g_gamelocked", "3" );
+					AP(va("chat \"^zconsole:^7 %s has locked ^1Allied ^7team^z!\n\"", tName));
+				} else {
+					CP(va("print \"^4Allied ^7team is already unlocked^z!\n\""));
+				return;
+				}
+			// Both
+			}
+		// Log it
+
+		}
+	return;
+	}
+}
 /*
 ===================
 OSP's stats
@@ -678,6 +796,7 @@ qboolean playerCmds (gentity_t *ent, char *cmd ) {
 	if(!Q_stricmp(cmd, "pm")
 		 || !Q_stricmp(cmd, "msg"))					{ cmd_pmsg(ent);	return qtrue;}
 //	else if(!Q_stricmp(cmd, "smoke"))				{ cmd_pSmoke(ent);			return qtrue;}
+	else if (!Q_stricmp(cmd, "ref"))				{ G_ref_cmd(ent, qtrue);	return qtrue; }
 	else if(!Q_stricmp(cmd, "readyteam"))			{ pCmd_teamReady(ent, qtrue);	return qtrue;}
 	else if(!Q_stricmp(cmd, "speclock"))			{ cmd_speclock(ent, qtrue);	return qtrue;}
 	else if(!Q_stricmp(cmd, "players"))			    { pCmd_players(ent, qfalse);	return qtrue;}
@@ -696,6 +815,8 @@ qboolean playerCmds (gentity_t *ent, char *cmd ) {
 	else if(!Q_stricmp(cmd, "topshots"))			{ G_weaponRankings_cmd( ent, qtrue, qtrue );	return qtrue;}
 	else if(!Q_stricmp(cmd, "weaponstats"))			{ G_weaponStats_cmd( ent );	return qtrue;}
 	//Tardo Ready/Unready
+	else if (!strcmp(cmd,"lock"))			        { pCmd_gamelocked(ent, qfalse); return qtrue;}
+	else if (!strcmp(cmd,"unlock"))		        	{ pCmd_gamelocked(ent, qtrue);  return qtrue;}
     else if(!Q_stricmp(cmd, "pause"))				{ pCmd_pauseHandle( ent, qfalse ); return qtrue;}
     else if(!Q_stricmp(cmd, "unpause"))				{ pCmd_pauseHandle( ent, qtrue ); return qtrue;}
 	else if(!Q_stricmp(cmd, "ready"))				{ G_ready_cmd( ent, qtrue ); return qtrue;}
@@ -704,3 +825,4 @@ qboolean playerCmds (gentity_t *ent, char *cmd ) {
 	else
 		return qfalse;
 }
+

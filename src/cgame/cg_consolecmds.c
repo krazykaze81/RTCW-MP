@@ -704,7 +704,10 @@ void CG_dumpStats_f( void ) {
 		trap_SendClientCommand( ( (cgs.clientinfo[cg.snap->ps.clientNum].team == TEAM_SPECTATOR) ) ? "statsall" : "weaponstats" );
 	}
 }
-
+// Force tapout
+void CG_ForceTapOut_f(void) {
+	trap_SendClientCommand("forcetapout");
+}
 /************ L0 - OSP dump ends here ************/
 typedef struct {
 	char    *cmd;
@@ -773,7 +776,7 @@ static consoleCommand_t commands[] = {
 	{ "-stats", CG_StatsUp_f },
 	{ "+wtopshots", CG_topshotsDown_f },
 	{ "-wtopshots", CG_topshotsUp_f },
-//	{ "forcetapout", CG_ForceTapOut_f },
+	{ "forcetapout", CG_ForceTapOut_f },
 	// -OSPx
 
 	// Arnout
@@ -877,6 +880,8 @@ void CG_InitConsoleCommands( void ) {
 	// -NERVE - SMF
 	// L0 - Make it more available..
 	trap_AddCommand( "getstatus" );		// Prints user info (IP, GUID, STATUS..)
+	trap_AddCommand( "ref" );
+	trap_AddCommand( "?" );
 	trap_AddCommand( "login" );			// Logs user as admin
 	trap_AddCommand( "@login" );		// Silently logs user as admin
 	trap_AddCommand( "logout" );		// Logs out user and revokes admin/ref status
@@ -887,6 +892,9 @@ void CG_InitConsoleCommands( void ) {
 	trap_AddCommand( "smoke" );			// Toggles between smoke and Air Strike (only for LT's)
 	trap_AddCommand( "private" );		// Private chat for admins
 	trap_AddCommand( "commands" );
+    trap_AddCommand( "help" );
+    trap_AddCommand( "commandsHelp" );
+
 	trap_AddCommand( "speclock" );		// Locks team from specs
 	trap_AddCommand( "specunlock" );	// Opens team for specs
 	trap_AddCommand( "specinvite" );		// Invites player to spec team
@@ -899,6 +907,7 @@ void CG_InitConsoleCommands( void ) {
 	trap_AddCommand("timeout");
 	// Ready
 	trap_AddCommand("readyteam");
+	trap_AddCommand("ready");
 	// Misc
 	trap_AddCommand("players");
 	// Stats
@@ -910,4 +919,65 @@ void CG_InitConsoleCommands( void ) {
 	trap_AddCommand( "statsall" );		// Dumps stats of all players
 	trap_AddCommand( "statsdump" );		// Dumps current stats
 	// End
+}
+/**
+ * @brief ETPro style enemy spawntimer
+ */
+static void CG_TimerSet_f(void)
+{
+	if (cgs.gamestate != GS_PLAYING)
+	{
+		CG_Printf("You may only use this command during the match.\n");
+		return;
+	}
+
+	if (trap_Argc() == 1)
+	{
+		trap_Cvar_Set("cg_spawnTimer_set", "-1");
+	}
+	else if (trap_Argc() == 2)
+	{
+		char buff[32] = { "" };
+		int  spawnPeriod;
+
+		trap_Argv(1, buff, sizeof(buff));
+		spawnPeriod = atoi(buff);
+
+		if (spawnPeriod == 0)
+		{
+			trap_Cvar_Set("cg_spawnTimer_set", "-1");
+		}
+		else if (spawnPeriod < 1 || spawnPeriod > 60)
+		{
+			CG_Printf("Argument must be a number between 1 and 60 - no argument will disable the spawn timer.\n");
+		}
+		else
+		{
+			int msec = (int)(cgs.timelimit * 60000.f) - (cg.time - cgs.levelStartTime);  // 60.f * 1000.f
+
+			trap_Cvar_Set("cg_spawnTimer_period", buff);
+			trap_Cvar_Set("cg_spawnTimer_set", va("%d", msec / 1000));
+		}
+	}
+	else
+	{
+		CG_Printf("Usage: timerSet [seconds]\n");
+	}
+}
+
+/**
+ * @brief ETPro style timer resetting
+ */
+static void CG_TimerReset_f(void)
+{
+	int msec;
+
+	if (cgs.gamestate != GS_PLAYING)
+	{
+		CG_Printf("You may only use this command during the match.\n");
+		return;
+	}
+
+	msec = (int)(cgs.timelimit * 60000.f) - (cg.time - cgs.levelStartTime); // 60.f * 1000.f
+	trap_Cvar_Set("cg_spawnTimer_set", va("%d", msec / 1000));
 }

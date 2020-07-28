@@ -578,7 +578,7 @@ static void CG_OffsetFirstPersonView( void ) {
 	}
 
 	// add angles based on weapon kick
-	VectorAdd( angles, cg.kick_angles, angles );
+	VectorAdd( angles, cg.kick_angles, angles );  //nihi comment
 
 	// RF, add new weapon kick angles
 	CG_KickAngles();
@@ -969,7 +969,8 @@ static int CG_CalcZoomedFov(void) {
 		value = cg_zoomedSens.value;
 
 	
-	if (cg.snap->ps.pm_type == PM_FREEZE || (cg.snap->ps.pm_type == PM_DEAD && (cg.snap->ps.pm_flags & PMF_LIMBO)) || cg.snap->ps.pm_flags & PMF_TIME_LOCKPLAYER) {
+//	if (cg.snap->ps.pm_type == PM_FREEZE || (cg.snap->ps.pm_type == PM_DEAD && (cg.snap->ps.pm_flags & PMF_LIMBO)) || cg.snap->ps.pm_flags & PMF_TIME_LOCKPLAYER) {
+if (cg.snap->ps.pm_type == PM_FREEZE) {
 		// No movement for pauses
 		cg.zoomSensitivity = 0;
 	}
@@ -1125,7 +1126,8 @@ static int CG_CalcFov( void ) {
 	cg.refdef.fov_y = fov_y;
 
 	// L0 - Freezed 
-	if ( cg.snap->ps.pm_type == PM_FREEZE || ( cg.snap->ps.pm_type == PM_DEAD && ( cg.snap->ps.pm_flags & PMF_LIMBO ) ) || cg.snap->ps.pm_flags & PMF_TIME_LOCKPLAYER ) {
+//	if ( cg.snap->ps.pm_type == PM_FREEZE || ( cg.snap->ps.pm_type == PM_DEAD && ( cg.snap->ps.pm_flags & PMF_LIMBO ) ) || cg.snap->ps.pm_flags & PMF_TIME_LOCKPLAYER ) {
+	if ( cg.snap->ps.pm_type == PM_FREEZE ) { // nihi changed
 		// No movement for pauses
 		cg.zoomSensitivity = 0;
 	} else if ( !cg.zoomedBinoc ) {

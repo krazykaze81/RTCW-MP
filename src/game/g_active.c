@@ -641,6 +641,10 @@ void ClientEvents( gentity_t *ent, int oldEventSequence ) {
 			break;
 // jpw
 		case EV_FIRE_WEAPON_MG42:
+			// L0 - disable invincible time when player spawns and starts shooting
+			if (g_disableInv.integer)
+				ent->client->ps.powerups[PW_INVULNERABLE] = 0;
+			// end
 			mg42_fire( ent );
 			break;
 
@@ -781,6 +785,7 @@ If "g_synchronousClients 1" is set, this will be called exactly
 once for each server frame, which makes for smooth demo recording.
 ==============
 */
+int teamRespawnTime(int team, qboolean warmup); // OSPx
 void ClientThink_real( gentity_t *ent ) {
 	gclient_t   *client;
 	pmove_t pm;
@@ -937,11 +942,13 @@ void ClientThink_real( gentity_t *ent ) {
 
 	// JPW drop button drops secondary weapon so new one can be picked up
 	// TTimo explicit braces to avoid ambiguous 'else'
+
 	if ( g_gametype.integer != GT_SINGLE_PLAYER ) {
 		if ( ucmd->wbuttons & WBUTTON_DROP ) {
-			if ( !client->dropWeaponTime ) {
+			if ( !client->dropWeaponTime  ) {
 				client->dropWeaponTime = 1; // just latch it for now
-				if ( ( client->ps.stats[STAT_PLAYER_CLASS] == PC_SOLDIER ) || ( client->ps.stats[STAT_PLAYER_CLASS] == PC_LT ) ) {
+
+				if ( ( client->ps.stats[STAT_PLAYER_CLASS] == PC_SOLDIER ) || ( client->ps.stats[STAT_PLAYER_CLASS] == PC_LT ) || (client->ps.stats[STAT_PLAYER_CLASS] == PC_MEDIC )) {
 					for ( i = 0; i < MAX_WEAPS_IN_BANK_MP; i++ ) {
 						weapon = weapBanksMultiPlayer[3][i];
 						if ( COM_BitCheck( client->ps.weapons,weapon ) ) {
@@ -996,6 +1003,8 @@ void ClientThink_real( gentity_t *ent ) {
 			client->dropWeaponTime = 0;
 		}
 	}
+
+
 // jpw
 
 	// check for inactivity timer, but never drop the local client of a non-dedicated server
@@ -1082,6 +1091,10 @@ void ClientThink_real( gentity_t *ent ) {
 		pm.noWeapClips = qtrue; // ensure AI characters don't use clips if they're not supposed to.
 
 	}
+		// OSPx - Fixed physics
+	//if (g_fixedphysics.integer) {
+	//	pm.fixedphysicsfps = 125;
+	//}
 	// Ridah
 //	if (ent->r.svFlags & SVF_NOFOOTSTEPS)
 //		pm.noFootsteps = qtrue;
@@ -1282,6 +1295,7 @@ void ClientThink_real( gentity_t *ent ) {
 				// jpw
 			}
 			// dhm - Nerve :: end
+
 			// NERVE - SMF - we want to immediately go to limbo mode if gibbed
 			else if ( client->ps.stats[STAT_HEALTH] <= GIB_HEALTH && !( ent->client->ps.pm_flags & PMF_LIMBO ) ) {
 				if ( g_gametype.integer >= GT_WOLF ) {
@@ -1291,7 +1305,7 @@ void ClientThink_real( gentity_t *ent ) {
 				}
 			}
 			// -NERVE - SMF
-		}
+		} // -OSPx
 		return;
 	}
 
@@ -1304,6 +1318,18 @@ void ClientThink_real( gentity_t *ent ) {
 
 /*
 ==================
+ClientThink_cmd
+==================
+*/
+void ClientThink_cmd(gentity_t* ent, usercmd_t* cmd) {
+
+	ent->client->pers.oldcmd = ent->client->pers.cmd;
+	ent->client->pers.cmd = *cmd;
+	ClientThink_real(ent);
+}
+
+/*
+==================
 ClientThink
 
 A new command has arrived from the client
@@ -1311,25 +1337,47 @@ A new command has arrived from the client
 */
 void ClientThink( int clientNum ) {
 	gentity_t *ent;
+	usercmd_t newcmd;
 
 	ent = g_entities + clientNum;
-	ent->client->pers.oldcmd = ent->client->pers.cmd;
-	trap_GetUsercmd( clientNum, &ent->client->pers.cmd );
+
+	// sswolf - this goes above
+	//ent->client->pers.oldcmd = ent->client->pers.cmd;
+	// new cmd
+	//trap_GetUsercmd( clientNum, &ent->client->pers.cmd );
+	trap_GetUsercmd(clientNum, &newcmd);
 
 	// mark the time we got info, so we can display the
 	// phone jack if they don't get any for a while
 	ent->client->lastCmdTime = level.time;
 
-	if ( !g_synchronousClients.integer ) {
-		ClientThink_real( ent );
+	if (G_DoAntiwarp(ent))
+	{
+		AW_AddUserCmd(clientNum, &newcmd);
+		DoClientThinks(ent);
 	}
+	else
+	{
+		ClientThink_cmd(ent, &newcmd);
+	}
+
+	/*if ( !g_synchronousClients.integer ) {
+		ClientThink_real( ent );
+	}*/
 }
 
-
 void G_RunClient( gentity_t *ent ) {
-	if ( !g_synchronousClients.integer ) {
+
+	if (G_DoAntiwarp(ent)) 
+	{
+		DoClientThinks(ent);
+	}
+
+	if ( !g_synchronousClients.integer ) 
+	{
 		return;
 	}
+
 	ent->client->pers.cmd.serverTime = level.time;
 	ClientThink_real( ent );
 }
@@ -1341,38 +1389,40 @@ SpectatorClientEndFrame
 ==================
 */
 void SpectatorClientEndFrame( gentity_t *ent ) {
-	gclient_t   *cl;
-	int do_respawn = 0; // JPW NERVE
-	int savedScore;     // DHM - Nerve
-	int savedRespawns;  // DHM - Nerve
-	int savedClass;     // NERVE - SMF
-	int flags;
-	int testtime;
-
+	int savedClass;		// NERVE - SMF
 	// if we are doing a chase cam or a remote view, grab the latest info
-	if ( ( ent->client->sess.spectatorState == SPECTATOR_FOLLOW ) || ( ent->client->ps.pm_flags & PMF_LIMBO ) ) { // JPW NERVE for limbo
-		int clientNum;
+	if (ent->client->sess.spectatorState == SPECTATOR_FOLLOW || (ent->client->ps.pm_flags & PMF_LIMBO))
+	{
+		int       clientNum, testtime;
+		gclient_t *cl;
+		qboolean  do_respawn = qfalse;
 
-		if ( ent->client->sess.sessionTeam == TEAM_RED ) {
-			testtime = level.time % g_redlimbotime.integer;
-			if ( testtime < ent->client->pers.lastReinforceTime ) {
-				do_respawn = 1;
-			}
+		// Players can respawn quickly in warmup
+		if (g_gamestate.integer != GS_PLAYING && ent->client->respawnTime <= level.timeCurrent &&
+		    ent->client->sess.sessionTeam != TEAM_SPECTATOR)
+		{
+			do_respawn = qtrue;
+		}
+		else if (ent->client->sess.sessionTeam == TEAM_RED)
+		{
+			testtime                            = (level.dwRedReinfOffset + level.timeCurrent - level.startTime) % g_redlimbotime.integer;
+			do_respawn                          = (testtime < ent->client->pers.lastReinforceTime);
 			ent->client->pers.lastReinforceTime = testtime;
-		} else if ( ent->client->sess.sessionTeam == TEAM_BLUE )     {
-			testtime = level.time % g_bluelimbotime.integer;
-			if ( testtime < ent->client->pers.lastReinforceTime ) {
-				do_respawn = 1;
-			}
+		}
+		else if (ent->client->sess.sessionTeam == TEAM_BLUE)
+		{
+			testtime                            = (level.dwBlueReinfOffset + level.timeCurrent - level.startTime) % g_bluelimbotime.integer;
+			do_respawn                          = (testtime < ent->client->pers.lastReinforceTime);
 			ent->client->pers.lastReinforceTime = testtime;
 		}
 
-		if ( ( g_maxlives.integer > 0 || g_alliedmaxlives.integer > 0 || g_axismaxlives.integer > 0 ) && ent->client->ps.persistant[PERS_RESPAWNS_LEFT] == 0 ) {
-			do_respawn = 0;
-		}
 
-		if ( do_respawn ) {
-			reinforce( ent );
+
+
+
+		if (do_respawn)
+		{
+			reinforce(ent);
 			return;
 		}
 
@@ -1389,25 +1439,25 @@ void SpectatorClientEndFrame( gentity_t *ent ) {
 			if ( cl->pers.connected == CON_CONNECTED && cl->sess.sessionTeam != TEAM_SPECTATOR ) {
 				// L0 - Ping & Score bug fix
 				// This solves the /serverstatus and score table (who's specing/demoing you) bug..
-				int ping = ent->client->ps.ping; 
+				int ping = ent->client->ps.ping;
 				int score = ent->client->ps.persistant[PERS_SCORE];
 				// DHM - Nerve :: carry flags over
-				flags = ( cl->ps.eFlags & ~( EF_VOTED ) ) | ( ent->client->ps.eFlags & ( EF_VOTED ) );
+                int	flags = ( cl->ps.eFlags & ~( EF_VOTED ) ) | ( ent->client->ps.eFlags & ( EF_VOTED ) );
 				// JPW NERVE -- limbo latch
 				if ( ent->client->sess.sessionTeam != TEAM_SPECTATOR && ent->client->ps.pm_flags & PMF_LIMBO ) {
 					// abuse do_respawn var
-					savedScore = ent->client->ps.persistant[PERS_SCORE];
+			//		savedScore = ent->client->ps.persistant[PERS_SCORE];
 					do_respawn = ent->client->ps.pm_time;
-					savedRespawns = ent->client->ps.persistant[PERS_RESPAWNS_LEFT];
+			//		savedRespawns = ent->client->ps.persistant[PERS_RESPAWNS_LEFT];
 					savedClass = ent->client->ps.stats[STAT_PLAYER_CLASS];
 
 					ent->client->ps = cl->ps;
 					ent->client->ps.pm_flags |= PMF_FOLLOW;
 					ent->client->ps.pm_flags |= PMF_LIMBO;
 
-					ent->client->ps.persistant[PERS_RESPAWNS_LEFT] = savedRespawns;
+				//	ent->client->ps.persistant[PERS_RESPAWNS_LEFT] = savedRespawns;
 					ent->client->ps.pm_time = do_respawn;                           // put pm_time back
-					ent->client->ps.persistant[PERS_SCORE] = savedScore;            // put score back
+				//	ent->client->ps.persistant[PERS_SCORE] = savedScore;            // put score back
 					ent->client->ps.stats[STAT_PLAYER_CLASS] = savedClass;          // NERVE - SMF - put player class back
 				} else {
 					ent->client->ps = cl->ps;
@@ -1417,7 +1467,7 @@ void SpectatorClientEndFrame( gentity_t *ent ) {
 				// DHM - Nerve :: carry flags over
 				ent->client->ps.eFlags = flags;
 				// L0 - Ping & Score bug fix
-				ent->client->ps.ping = ping; 
+				ent->client->ps.ping = ping;
 				ent->client->ps.persistant[PERS_SCORE] = score;
 				return;
 			} else {
@@ -1655,7 +1705,7 @@ void ClientEndFrame( gentity_t *ent ) {
 		ent->client->pers.teamState.lasthurtcarrier += time_delta;
 		ent->client->pers.teamState.lastfraggedcarrier += time_delta;
 		ent->client->ps.classWeaponTime += time_delta;
-		ent->client->respawnTime += time_delta;
+	//	ent->client->respawnTime += time_delta;
 		ent->client->sniperRifleFiredTime += time_delta;
 		ent->lastHintCheckTime += time_delta;
 		ent->pain_debounce_time += time_delta;
