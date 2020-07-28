@@ -9,6 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+*pak0.pk3 ## ignore this as it's over the 100MB limit for GitHub
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
